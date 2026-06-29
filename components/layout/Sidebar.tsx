@@ -16,6 +16,7 @@ const NAV = [
   { href: "/catalogo", label: "Control de catálogo", icon: "▤" },
   { href: "/resenas", label: "Reseñas", icon: "★" },
   { href: "/usuarios", label: "Usuarios", icon: "◑" },
+  { href: "/firmas", label: "Firmas", icon: "✎" },
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?" },
 ];
 

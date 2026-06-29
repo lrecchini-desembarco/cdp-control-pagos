@@ -31,6 +31,8 @@ el rol se deriva del store (no se puede escalar tocando la cookie).
 - **¿Qué puedo hacer?** (`/guia`) — guía de orientación: qué se puede hacer desde la app y cómo, paso a paso, con accesos directos.
 - **Reseñas** (`/resenas`) — elegí un local, calificá el QA (1–5 por criterio) e imprimí la planilla de visita.
 - **Usuarios** (`/usuarios`, solo admin) — alta/baja de emails y su rol.
+- **Firmas** (`/firmas`) — generador de firmas de empleados embebido (proyecto aparte en GitHub Pages),
+  unificado acá. URL configurable con `NEXT_PUBLIC_FIRMAS_URL`.
 - **Resumen** (`/`) — estado del último día: pedido al CDP, venta equivalente, desvío neto y líneas a revisar.
   Arriba, una banda con el estado de las alertas.
 - **Alertas** (`/alertas`) — centro de monitoreo: detecta quiebres, sobre-pedidos, desvíos recurrentes y
