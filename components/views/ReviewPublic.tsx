@@ -11,6 +11,7 @@ type Paso = "bienvenida" | "calificar" | "gracias";
 export default function ReviewPublic() {
   const [locales, setLocales] = useState<Local[]>([]);
   const [local, setLocal] = useState("");
+  const [q, setQ] = useState("");
   const [paso, setPaso] = useState<Paso>("bienvenida");
   const [estrellas, setEstrellas] = useState(0);
   const [hover, setHover] = useState(0);
@@ -26,6 +27,12 @@ export default function ReviewPublic() {
   }, []);
 
   const localObj = useMemo(() => locales.find((l) => l.nombre === local), [locales, local]);
+  const filtrados = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    const base = t ? locales.filter((l) => l.nombre.toLowerCase().includes(t)) : locales;
+    return base.slice(0, 8);
+  }, [locales, q]);
+  const mostrarLista = q.trim().length > 0 && q !== local;
 
   async function enviar() {
     setEnviando(true);
@@ -65,20 +72,42 @@ export default function ReviewPublic() {
               </p>
               <div className="mt-6 text-left">
                 <label className="mb-1 block text-2xs font-medium uppercase tracking-wide text-faint">
-                  Seleccioná el local
+                  Buscá tu local
                 </label>
-                <select
-                  className="w-full rounded-lg border border-line bg-surface px-3 py-3 text-base text-ink focus:border-action"
-                  value={local}
-                  onChange={(e) => setLocal(e.target.value)}
-                >
-                  <option value="">— Elegí tu local —</option>
-                  {locales.map((l) => (
-                    <option key={l.nombre} value={l.nombre}>
-                      {l.nombre}
-                    </option>
-                  ))}
-                </select>
+                <input
+                  className="w-full rounded-lg border border-line bg-surface px-3 py-3 text-base text-ink placeholder:text-faint focus:border-action"
+                  placeholder="Escribí el barrio o el nombre…"
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value);
+                    setLocal("");
+                  }}
+                />
+                {mostrarLista && (
+                  <div className="mt-1 max-h-56 overflow-y-auto rounded-lg border border-line">
+                    {filtrados.length === 0 ? (
+                      <p className="px-3 py-2 text-sm text-faint">Sin resultados…</p>
+                    ) : (
+                      filtrados.map((l) => (
+                        <button
+                          key={l.nombre}
+                          onClick={() => {
+                            setLocal(l.nombre);
+                            setQ(l.nombre);
+                          }}
+                          className="block w-full border-b border-line px-3 py-2.5 text-left text-sm text-ink last:border-0 hover:bg-ink/5"
+                        >
+                          {l.nombre}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+                {local && (
+                  <p className="mt-2 text-sm text-ink">
+                    Local: <span className="font-semibold">{local}</span>
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setPaso("calificar")}

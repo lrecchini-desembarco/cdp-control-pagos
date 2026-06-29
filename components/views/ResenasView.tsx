@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { ratingDeUrl, resumenGoogle } from "@/lib/google-ratings";
 import { Badge, Button, Card, EmptyState, inputClass } from "@/components/ui/primitives";
 
 interface Local {
@@ -79,6 +80,8 @@ export default function ResenasView() {
     [reviews, filtro]
   );
 
+  const repuGoogle = useMemo(() => resumenGoogle(locales.map((l) => l.googleUrl)), [locales]);
+
   return (
     <div className="space-y-5">
       <div>
@@ -126,6 +129,18 @@ export default function ResenasView() {
             </div>
           </div>
         </Card>
+      </div>
+
+      {/* Reputación en Google (snapshot del Excel) */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi label="Locales en Google" value={String(repuGoogle.locales)} />
+        <Kpi
+          label="Promedio Google"
+          value={repuGoogle.locales ? `${repuGoogle.promedio.toFixed(2)} ★` : "—"}
+          tone={repuGoogle.promedio >= 4.3 ? "ok" : repuGoogle.promedio >= 3.8 ? "warn" : repuGoogle.locales ? "bad" : undefined}
+        />
+        <Kpi label="Reseñas Google (total)" value={repuGoogle.totalReviews.toLocaleString("es-AR")} />
+        <Kpi label="Reseñas internas" value={String(resumen.total)} />
       </div>
 
       {/* Locales + link de Google */}
@@ -225,11 +240,18 @@ function LocalRow({
 }) {
   const [url, setUrl] = useState(local.googleUrl ?? "");
   const dirty = url !== (local.googleUrl ?? "");
+  const rating = ratingDeUrl(local.googleUrl);
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-line p-3 sm:flex-row sm:items-center">
-      <span className="w-40 shrink-0 text-sm font-medium text-ink">
+      <span className="w-52 shrink-0 text-sm font-medium text-ink">
         {local.nombre}
-        {local.googleUrl ? <Badge tone="ok">Google ✓</Badge> : null}
+        {rating ? (
+          <span className="ml-2 whitespace-nowrap text-2xs font-normal text-warn" title={`${rating.reviews} reseñas en Google`}>
+            ★ {rating.score} <span className="text-faint">({rating.reviews})</span>
+          </span>
+        ) : local.googleUrl ? (
+          <Badge tone="ok">Google ✓</Badge>
+        ) : null}
       </span>
       <input
         className={inputClass}
