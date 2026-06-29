@@ -10,29 +10,19 @@ interface Local {
   googleUrl?: string;
   marca?: string;
 }
-interface Review {
-  id: string;
-  creadoEn: string;
-  local: string;
-  estrellas: number;
-  comentario: string;
-}
-interface Resumen {
+interface Derivaciones {
   total: number;
-  promedio: number;
-  porEstrella: Record<number, number>;
+  porLocal: { local: string; cantidad: number }[];
 }
 
 export default function ResenasView() {
   const [locales, setLocales] = useState<Local[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [resumen, setResumen] = useState<Resumen>({ total: 0, promedio: 0, porEstrella: {} });
+  const [deriv, setDeriv] = useState<Derivaciones>({ total: 0, porLocal: [] });
   const [qr, setQr] = useState("");
   const [qrSel, setQrSel] = useState("general"); // "general" | "marca:<slug>" | "local:<nombre>"
   const [origin, setOrigin] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [nuevo, setNuevo] = useState({ nombre: "", googleUrl: "", marca: "desembarco" });
-  const [filtro, setFiltro] = useState("");
 
   const MARCA_LABEL: Record<string, string> = {
     desembarco: "El Desembarco",
@@ -64,15 +54,10 @@ export default function ResenasView() {
       .then((r) => r.json())
       .then((j) => j.ok && setLocales(j.locales));
   }
-  function cargarReviews() {
-    fetch("/api/reviews")
+  function cargarDerivaciones() {
+    fetch("/api/derivaciones")
       .then((r) => r.json())
-      .then((j) => {
-        if (j.ok) {
-          setReviews(j.reviews);
-          setResumen(j.resumen);
-        }
-      });
+      .then((j) => j.ok && setDeriv(j.resumen));
   }
 
   useEffect(() => {
@@ -80,7 +65,7 @@ export default function ResenasView() {
     setOrigin(o);
     setBaseUrl(o);
     cargarLocales();
-    cargarReviews();
+    cargarDerivaciones();
   }, []);
   useEffect(() => {
     if (reviewUrl) QRCode.toDataURL(reviewUrl, { width: 320, margin: 1 }).then(setQr).catch(() => {});
@@ -105,11 +90,6 @@ export default function ResenasView() {
     const j = await (await fetch(`/api/locales?nombre=${encodeURIComponent(nombre)}`, { method: "DELETE" })).json();
     if (j.ok) setLocales(j.locales);
   }
-
-  const visibles = useMemo(
-    () => (filtro ? reviews.filter((r) => r.local === filtro) : reviews),
-    [reviews, filtro]
-  );
 
   const repuGoogle = useMemo(() => resumenGoogle(locales.map((l) => l.googleUrl)), [locales]);
 
@@ -227,7 +207,7 @@ export default function ResenasView() {
           tone={repuGoogle.promedio >= 4.3 ? "ok" : repuGoogle.promedio >= 3.8 ? "warn" : repuGoogle.locales ? "bad" : undefined}
         />
         <Kpi label="Reseñas Google (total)" value={repuGoogle.totalReviews.toLocaleString("es-AR")} />
-        <Kpi label="Reseñas internas" value={String(resumen.total)} />
+        <Kpi label="Derivaciones a Google" value={String(deriv.total)} />
       </div>
 
       {/* Locales + link de Google */}
@@ -269,54 +249,29 @@ export default function ResenasView() {
           </div>
           <p className="text-2xs text-faint">
             El link de Google es el de “escribir reseña” del local (Google Maps → Reseñas → Escribir → copiar
-            enlace). Si no lo cargás, el cliente igual deja su reseña interna.
+            enlace). Sin ese link, el cliente no puede calificar ese local.
           </p>
         </div>
       </Card>
 
-      {/* Reseñas recibidas */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Reseñas recibidas" value={String(resumen.total)} />
-        <Kpi
-          label="Promedio"
-          value={resumen.total ? `${resumen.promedio.toFixed(1)} ★` : "—"}
-          tone={resumen.promedio >= 4 ? "ok" : resumen.promedio >= 3 ? "warn" : resumen.total ? "bad" : undefined}
-        />
-        <Kpi label="5★" value={String(resumen.porEstrella?.[5] ?? 0)} />
-        <Kpi label="1–2★" value={String((resumen.porEstrella?.[1] ?? 0) + (resumen.porEstrella?.[2] ?? 0))} tone="bad" />
-      </div>
-
+      {/* Derivaciones a Google (embudo) */}
       <Card className="no-print overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-          <span className="text-2xs font-medium uppercase tracking-wide text-faint">Reseñas de clientes</span>
-          <select className={`${inputClass} max-w-[200px] py-1`} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="">Todos los locales</option>
-            {locales.map((l) => (
-              <option key={l.nombre} value={l.nombre}>
-                {l.nombre}
-              </option>
-            ))}
-          </select>
+        <div className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">
+          Derivaciones a Google · {deriv.total} en total
         </div>
-        {visibles.length === 0 ? (
+        {deriv.porLocal.length === 0 ? (
           <div className="p-6">
-            <EmptyState title="Sin reseñas todavía" desc="Cuando los clientes escaneen el QR y opinen, vas a verlas acá." />
+            <EmptyState
+              title="Sin derivaciones todavía"
+              desc="Cuando un cliente escanee el QR, elija su local y toque “Calificar en Google”, lo vas a contar acá."
+            />
           </div>
         ) : (
           <div className="divide-y divide-line">
-            {visibles.map((r) => (
-              <div key={r.id} className="flex items-start gap-3 px-4 py-3">
-                <span className="w-20 shrink-0 text-warn" title={`${r.estrellas} estrellas`}>
-                  {"★".repeat(r.estrellas)}
-                  <span className="text-line">{"★".repeat(5 - r.estrellas)}</span>
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm text-ink">
-                    <span className="font-medium">{r.local}</span>
-                    {r.comentario ? <span className="text-muted"> — {r.comentario}</span> : null}
-                  </p>
-                  <p className="mt-0.5 text-2xs text-faint">{new Date(r.creadoEn).toLocaleString("es-AR")}</p>
-                </div>
+            {deriv.porLocal.map((d) => (
+              <div key={d.local} className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-sm text-ink">{d.local}</span>
+                <span className="font-mono text-sm tnum text-muted">{d.cantidad}</span>
               </div>
             ))}
           </div>
