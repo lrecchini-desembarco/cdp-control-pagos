@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BASE = "https://api.ravenfood.app/data/items";
+// Configurables por entorno (Vercel → Settings → Environment Variables).
+// Si no se definen, usa el endpoint público actual.
+const BASE = process.env.RAVEN_BASE_URL ?? "https://api.ravenfood.app/data/items";
+const TOKEN = process.env.RAVEN_TOKEN; // solo si Raven pide auth en el futuro
 
 // GET /api/raven?code=050027&date=2026-06-25
 export async function GET(req: NextRequest) {
@@ -23,7 +26,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const url = `${BASE}/${encodeURIComponent(code)}?date=${encodeURIComponent(date)}`;
-    const r = await fetch(url, { cache: "no-store" });
+    const headers: Record<string, string> = {};
+    if (TOKEN) headers["Authorization"] = `Bearer ${TOKEN}`;
+
+    const r = await fetch(url, { cache: "no-store", headers });
     const text = await r.text();
     if (!r.ok) {
       return NextResponse.json(
