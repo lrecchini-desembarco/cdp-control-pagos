@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { buildCruce, SUCURSALES, PRODUCTO_MAP } from "@/lib/mock";
+import { resumenAlertas } from "@/lib/alertas";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { Card } from "@/components/ui/primitives";
 
 export default function Page() {
   const cruce = buildCruce();
+  const alertas = resumenAlertas();
   const ultimaFecha = cruce.map((r) => r.fecha).sort().reverse()[0];
   const hoy = cruce.filter((r) => r.fecha === ultimaFecha);
   const pedido = hoy.reduce((s, r) => s + r.pedidoCdp, 0);
@@ -24,6 +26,46 @@ export default function Page() {
           Estado de la operación CDP al {ultimaFecha}.
         </p>
       </div>
+
+      {/* Banda de alertas: lo primero que tiene que ver el operador al entrar */}
+      <Link href="/alertas">
+        <Card
+          className={`group flex items-center gap-3 p-4 transition-colors ${
+            alertas.critica > 0
+              ? "border-bad/30 bg-bad/5 hover:border-bad/50"
+              : alertas.total > 0
+              ? "border-warn/30 bg-warn/5 hover:border-warn/50"
+              : "hover:border-action/40"
+          }`}
+        >
+          <span
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-base font-bold ${
+              alertas.critica > 0
+                ? "bg-bad/15 text-bad"
+                : alertas.total > 0
+                ? "bg-warn/15 text-warn"
+                : "bg-ok/15 text-ok"
+            }`}
+          >
+            {alertas.total > 0 ? "!" : "✓"}
+          </span>
+          <div className="flex-1">
+            <p className="font-display text-sm font-semibold text-ink">
+              {alertas.total === 0
+                ? "Sin alertas abiertas"
+                : `${alertas.total} alerta${alertas.total === 1 ? "" : "s"} abiertas`}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              {alertas.total === 0
+                ? "El control está al día: ningún desvío ni punto ciego."
+                : `${alertas.critica} críticas · ${alertas.alta} altas · ${alertas.media} medias`}
+            </p>
+          </div>
+          <span className="text-sm font-medium text-muted group-hover:text-action">
+            Ver alertas →
+          </span>
+        </Card>
+      </Link>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Pedido al CDP" value={fmtInt(pedido)} sub="último día" />

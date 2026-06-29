@@ -14,6 +14,10 @@ npm run dev      # http://localhost:3000
 ## Pantallas
 
 - **Resumen** (`/`) — estado del último día: pedido al CDP, venta equivalente, desvío neto y líneas a revisar.
+  Arriba, una banda con el estado de las alertas.
+- **Alertas** (`/alertas`) — centro de monitoreo: detecta quiebres, sobre-pedidos, desvíos recurrentes y
+  puntos ciegos (sucursales sin mapear, insumos sin receta), ordenados por urgencia y con acción directa.
+  Ver [`docs/alertas.md`](docs/alertas.md).
 - **Cruce CDP vs ventas** (`/cruce`) — la pantalla central. Filtros por fecha, marca y búsqueda;
   tabla con la **barra de desvío divergente** (izquierda = sub-pedido, derecha = sobre-pedido) y
   semáforo por tolerancia (≤5% / 5–15% / >15%).
@@ -42,9 +46,10 @@ npm run dev      # http://localhost:3000
 ```
 app/            páginas + route handler /api/raven
 components/ui   primitivos (Card, Badge, Button, EmptyState, ErrorState…)
-components/views  CruceView · RavenExplorer · MapeosView
+components/views  AlertasView · CruceView · RavenExplorer · MapeosView · DetalleModal
 components/layout Sidebar · Topbar
-lib/            tipos, marcas/format, mock
+lib/            tipos, marcas/format, mock, motor de alertas (alertas.ts)
+docs/           documentación funcional (alertas.md)
 ```
 
 ## Próximo paso

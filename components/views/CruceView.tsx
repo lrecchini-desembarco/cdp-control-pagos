@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildCruce } from "@/lib/mock";
 import { BRANDS, brandById, fmtInt, fmtPct, severidad } from "@/lib/brands";
 import type { BrandId, CruceRow } from "@/lib/types";
@@ -45,6 +45,18 @@ export default function CruceView() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("desvio");
   const [detalle, setDetalle] = useState<RowDev | null>(null);
+
+  // Deep-link desde Alertas: /cruce?fecha=2026-06-29&q=Flores&brand=tasty
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const f = sp.get("fecha");
+    if (f && dates.includes(f)) setFecha(f);
+    const b = sp.get("brand");
+    if (b) setBrand(b as BrandId | "all");
+    const query = sp.get("q");
+    if (query) setQ(query);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rows = useMemo(() => {
     let r: CruceRow[] = all.filter((x) => x.fecha === fecha);

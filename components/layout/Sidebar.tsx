@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
+import { resumenAlertas } from "@/lib/alertas";
 
 const NAV = [
   { href: "/", label: "Resumen", icon: "◰" },
+  { href: "/alertas", label: "Alertas", icon: "!" },
   { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄" },
   { href: "/raven", label: "Consultar Raven", icon: "↧" },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
@@ -12,6 +15,11 @@ const NAV = [
 
 export default function Sidebar() {
   const path = usePathname();
+  // Contador de alertas urgentes (críticas + altas) para el badge de navegación.
+  const urgentes = useMemo(() => {
+    const r = resumenAlertas();
+    return r.critica + r.alta;
+  }, []);
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-white">
       <div className="flex items-center gap-2.5 px-5 py-5">
@@ -40,6 +48,11 @@ export default function Sidebar() {
             >
               <span className="w-4 text-center text-base opacity-80">{n.icon}</span>
               {n.label}
+              {n.href === "/alertas" && urgentes > 0 && (
+                <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white">
+                  {urgentes}
+                </span>
+              )}
             </Link>
           );
         })}

@@ -10,6 +10,9 @@ export const SUCURSALES: Sucursal[] = [
   { ravenCode: "1042", canonico: "DS-CAS", nombre: "Castelar", brand: "desembarco", activa: false },
   { ravenCode: "2003", canonico: "MT-PIL", nombre: "Pilar", brand: "tasty", activa: true },
   { ravenCode: "2008", canonico: "MT-CAB", nombre: "Caballito", brand: "tasty", activa: true },
+  // Sucursal nueva que Raven ya reporta pero todavía sin código canónico:
+  // está activa y vendiendo, pero no entra al cruce -> punto ciego (genera alerta).
+  { ravenCode: "2011", canonico: "", nombre: "Nordelta", brand: "tasty", activa: true },
   { ravenCode: "3001", canonico: "MG-NUN", nombre: "Núñez", brand: "mila", activa: true },
 ];
 
@@ -21,11 +24,15 @@ export const PRODUCTO_MAP: ProductoMap[] = [
   { codigoCdp: "150001", insumoNombre: "Milanesa de carne", skuVenta: "150001", skuNombre: "Milanesa clásica de carne", factor: 1, modo: "directo" },
 ];
 
-const PRODUCTS: { code: string; name: string; unit: string; brand: BrandId }[] = [
+/** Insumos que el CDP entrega. Si un insumo no tiene regla en PRODUCTO_MAP,
+ *  sus pedidos no se pueden contrastar contra ventas (genera alerta). */
+export const PRODUCTS: { code: string; name: string; unit: string; brand: BrandId }[] = [
   { code: "050027", name: "Bolas Blend 100g", unit: "un", brand: "desembarco" },
   { code: "040022", name: "Medallón Tuki 80g", unit: "un", brand: "tasty" },
   { code: "080002", name: "Panceta feteada", unit: "g", brand: "tasty" },
   { code: "150001", name: "Milanesa de carne", unit: "un", brand: "mila" },
+  // Insumo que el CDP despacha pero todavía sin receta cargada -> punto ciego.
+  { code: "060015", name: "Pan brioche", unit: "un", brand: "tasty" },
 ];
 
 // PRNG determinístico para mock estable entre renders
@@ -62,7 +69,9 @@ export function buildCruce(): CruceRow[] {
   for (const p of PRODUCTS) {
     const reglas = PRODUCTO_MAP.filter((m) => m.codigoCdp === p.code);
     if (reglas.length === 0) continue;
-    const branches = SUCURSALES.filter((s) => s.brand === p.brand && s.activa);
+    // Solo sucursales mapeadas: una sin código canónico no puede cruzarse
+    // (queda como punto ciego y se reporta aparte en Alertas).
+    const branches = SUCURSALES.filter((s) => s.brand === p.brand && s.activa && s.canonico);
     for (const s of branches) {
       for (const fecha of dates) {
         const r = rng(seed++);
