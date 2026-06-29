@@ -1,293 +1,263 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { QA_CATEGORIAS, ESCALA, ESCALA_LABEL, TODOS_CRITERIOS } from "@/lib/resenas-template";
-import { Badge, Button, Card, Field, inputClass } from "@/components/ui/primitives";
+import QRCode from "qrcode";
+import { Badge, Button, Card, EmptyState, inputClass } from "@/components/ui/primitives";
 
-const hoyISO = () => new Date().toISOString().slice(0, 10);
-const k = (cat: string, cr: string) => `${cat} · ${cr}`;
-
-type Paso = "bienvenida" | "calificar" | "listo";
-interface ResenaHist {
+interface Local {
+  nombre: string;
+  googleUrl?: string;
+}
+interface Review {
   id: string;
   creadoEn: string;
-  fecha: string;
   local: string;
-  evaluador: string;
-  pct: number;
+  estrellas: number;
+  comentario: string;
+}
+interface Resumen {
+  total: number;
+  promedio: number;
+  porEstrella: Record<number, number>;
 }
 
 export default function ResenasView() {
-  const [paso, setPaso] = useState<Paso>("bienvenida");
-  const [locales, setLocales] = useState<string[]>([]);
-  const [local, setLocal] = useState("");
-  const [nuevoLocal, setNuevoLocal] = useState("");
-  const [fecha, setFecha] = useState(hoyISO());
-  const [evaluador, setEvaluador] = useState("");
-  const [scores, setScores] = useState<Record<string, number>>({});
-  const [obs, setObs] = useState("");
-  const [hist, setHist] = useState<ResenaHist[]>([]);
-  const [guardando, setGuardando] = useState(false);
+  const [locales, setLocales] = useState<Local[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [resumen, setResumen] = useState<Resumen>({ total: 0, promedio: 0, porEstrella: {} });
+  const [qr, setQr] = useState("");
+  const [reviewUrl, setReviewUrl] = useState("");
+  const [nuevo, setNuevo] = useState({ nombre: "", googleUrl: "" });
+  const [filtro, setFiltro] = useState("");
 
-  useEffect(() => {
+  function cargarLocales() {
     fetch("/api/locales")
       .then((r) => r.json())
-      .then((j) => j.ok && setLocales(j.locales))
-      .catch(() => {});
-    fetch("/api/auth/me")
+      .then((j) => j.ok && setLocales(j.locales));
+  }
+  function cargarReviews() {
+    fetch("/api/reviews")
       .then((r) => r.json())
-      .then((j) => j.ok && setEvaluador(j.email))
-      .catch(() => {});
+      .then((j) => {
+        if (j.ok) {
+          setReviews(j.reviews);
+          setResumen(j.resumen);
+        }
+      });
+  }
+
+  useEffect(() => {
+    const url = `${window.location.origin}/review`;
+    setReviewUrl(url);
+    QRCode.toDataURL(url, { width: 260, margin: 1 }).then(setQr).catch(() => {});
+    cargarLocales();
+    cargarReviews();
   }, []);
 
-  const totales = useMemo(() => {
-    const vals = TODOS_CRITERIOS.map((c) => scores[c]).filter((v): v is number => typeof v === "number");
-    const suma = vals.reduce((a, v) => a + v, 0);
-    const max = vals.length * 5;
-    return { completados: vals.length, total: TODOS_CRITERIOS.length, suma, max, pct: max ? suma / max : 0 };
-  }, [scores]);
-
-  const tono = totales.pct >= 0.8 ? "text-ok" : totales.pct >= 0.6 ? "text-warn" : "text-bad";
-  const completa = totales.completados === totales.total;
-
-  async function agregarLocal() {
-    const nombre = nuevoLocal.trim();
-    if (!nombre) return;
+  async function guardarLocal(nombre: string, googleUrl: string) {
     const j = await (
       await fetch("/api/locales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre }),
+        body: JSON.stringify({ nombre, googleUrl }),
       })
     ).json();
-    if (j.ok) {
-      setLocales(j.locales);
-      setLocal(nombre);
-      setNuevoLocal("");
-    }
+    if (j.ok) setLocales(j.locales);
+  }
+  async function agregar() {
+    if (!nuevo.nombre.trim()) return;
+    await guardarLocal(nuevo.nombre, nuevo.googleUrl);
+    setNuevo({ nombre: "", googleUrl: "" });
+  }
+  async function quitar(nombre: string) {
+    const j = await (await fetch(`/api/locales?nombre=${encodeURIComponent(nombre)}`, { method: "DELETE" })).json();
+    if (j.ok) setLocales(j.locales);
   }
 
-  function comenzar() {
-    setScores({});
-    setObs("");
-    setFecha(hoyISO());
-    setPaso("calificar");
-  }
+  const visibles = useMemo(
+    () => (filtro ? reviews.filter((r) => r.local === filtro) : reviews),
+    [reviews, filtro]
+  );
 
-  async function subir() {
-    setGuardando(true);
-    try {
-      const j = await (
-        await fetch("/api/resenas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            local,
-            fecha,
-            evaluador,
-            scores,
-            observaciones: obs,
-            suma: totales.suma,
-            max: totales.max,
-            pct: totales.pct,
-          }),
-        })
-      ).json();
-      if (j.ok) {
-        const h = await (await fetch(`/api/resenas?local=${encodeURIComponent(local)}`)).json();
-        if (h.ok) setHist(h.resenas);
-        setPaso("listo");
-      }
-    } finally {
-      setGuardando(false);
-    }
-  }
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-xl font-semibold text-ink">Reseñas — consola</h1>
+        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+          Generá el QR para los locales, cargá el link de Google de cada uno y mirá lo que dejan los clientes.
+        </p>
+      </div>
 
-  // ───────────────────────── Paso 1: bienvenida ─────────────────────────
-  if (paso === "bienvenida") {
-    return (
-      <div className="mx-auto max-w-xl py-6">
-        <Card className="p-6 text-center">
-          <p className="text-2xs font-medium uppercase tracking-wide text-faint">DS Group</p>
-          <h1 className="mt-1 font-display text-2xl font-semibold text-ink">
-            Bienvenidos al sistema de reseñas
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            {local ? `Local: ${local}` : "Seleccioná tu local para empezar."}
-          </p>
-
-          <div className="mx-auto mt-5 max-w-sm space-y-3 text-left">
-            <Field label="Local">
-              <select className={inputClass} value={local} onChange={(e) => setLocal(e.target.value)}>
-                <option value="">— Elegí un local —</option>
-                {locales.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <details className="rounded-lg border border-line bg-paper px-3 py-2">
-              <summary className="cursor-pointer select-none text-2xs font-medium text-muted">
-                ¿No está tu local? Agregalo
-              </summary>
-              <div className="mt-2 flex gap-2">
-                <input
-                  className={inputClass}
-                  placeholder="Nombre del local"
-                  value={nuevoLocal}
-                  onChange={(e) => setNuevoLocal(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), agregarLocal())}
-                />
-                <Button variant="outline" className="!py-2 !text-xs" onClick={agregarLocal} disabled={!nuevoLocal.trim()}>
-                  Agregar
-                </Button>
-              </div>
-            </details>
-
-            <Button className="w-full" onClick={comenzar} disabled={!local}>
-              Comenzar reseña →
-            </Button>
+      {/* QR general (imprimible) */}
+      <div id="print-area">
+        <Card className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-center">
+          {qr ? (
+            <img src={qr} alt="QR de reseñas" className="h-40 w-40 shrink-0 rounded-lg border border-line" />
+          ) : (
+            <div className="h-40 w-40 shrink-0 rounded-lg bg-ink/5" />
+          )}
+          <div className="text-center sm:text-left">
+            <p className="font-display text-base font-semibold text-ink">QR de reseñas (general)</p>
+            <p className="mt-1 text-sm text-muted">
+              Imprimilo y pegalo en cada local. El cliente lo escanea, elige su local y deja la reseña.
+            </p>
+            <p className="mt-2 break-all font-mono text-2xs text-faint">{reviewUrl}</p>
+            <div className="no-print mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+              {qr && (
+                <a
+                  href={qr}
+                  download="qr-resenas-ds.png"
+                  className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
+                >
+                  Descargar PNG
+                </a>
+              )}
+              <Button variant="outline" className="!py-1.5 !text-xs" onClick={() => window.print()}>
+                Imprimir QR
+              </Button>
+              <a
+                href="/review"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
+              >
+                Ver pantalla del cliente →
+              </a>
+            </div>
           </div>
         </Card>
       </div>
-    );
-  }
 
-  // ──────────────────── Paso 2 y 3: calificar / listo ────────────────────
-  return (
-    <div className="space-y-4">
-      <div className="no-print flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-xl font-semibold text-ink">Reseña — {local}</h1>
-          <p className="mt-0.5 text-sm text-muted">
-            {paso === "listo"
-              ? "Reseña guardada. Podés imprimirla o cargar una nueva."
-              : "Calificá cada punto del 1 al 5 y subila."}
+      {/* Locales + link de Google */}
+      <Card className="no-print overflow-hidden">
+        <div className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">
+          Locales y link de Google
+        </div>
+        <div className="space-y-2 p-4">
+          {locales.map((l) => (
+            <LocalRow key={l.nombre} local={l} onGuardar={guardarLocal} onQuitar={quitar} />
+          ))}
+          {/* Alta */}
+          <div className="flex flex-col gap-2 rounded-lg border border-dashed border-line p-3 sm:flex-row">
+            <input
+              className={inputClass}
+              placeholder="Nombre del local nuevo"
+              value={nuevo.nombre}
+              onChange={(e) => setNuevo((n) => ({ ...n, nombre: e.target.value }))}
+            />
+            <input
+              className={inputClass}
+              placeholder="Link de Google (opcional)"
+              value={nuevo.googleUrl}
+              onChange={(e) => setNuevo((n) => ({ ...n, googleUrl: e.target.value }))}
+            />
+            <Button className="shrink-0" onClick={agregar} disabled={!nuevo.nombre.trim()}>
+              Agregar
+            </Button>
+          </div>
+          <p className="text-2xs text-faint">
+            El link de Google es el de “escribir reseña” del local (Google Maps → Reseñas → Escribir → copiar
+            enlace). Si no lo cargás, el cliente igual deja su reseña interna.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {paso === "listo" && <Badge tone="ok">Subida ✓</Badge>}
-          <Button variant="ghost" className="!py-1.5 !text-xs" onClick={() => setPaso("bienvenida")}>
-            ← Cambiar local
-          </Button>
-          <Button variant="outline" className="!py-1.5 !text-xs" onClick={() => window.print()}>
-            Imprimir
-          </Button>
-          {paso === "calificar" ? (
-            <Button className="!py-1.5 !text-xs" onClick={subir} disabled={guardando || totales.completados === 0}>
-              {guardando ? "Subiendo…" : "Subir reseña"}
-            </Button>
-          ) : (
-            <Button className="!py-1.5 !text-xs" onClick={comenzar}>
-              Nueva reseña
-            </Button>
-          )}
-        </div>
+      </Card>
+
+      {/* Reseñas recibidas */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi label="Reseñas recibidas" value={String(resumen.total)} />
+        <Kpi
+          label="Promedio"
+          value={resumen.total ? `${resumen.promedio.toFixed(1)} ★` : "—"}
+          tone={resumen.promedio >= 4 ? "ok" : resumen.promedio >= 3 ? "warn" : resumen.total ? "bad" : undefined}
+        />
+        <Kpi label="5★" value={String(resumen.porEstrella?.[5] ?? 0)} />
+        <Kpi label="1–2★" value={String((resumen.porEstrella?.[1] ?? 0) + (resumen.porEstrella?.[2] ?? 0))} tone="bad" />
       </div>
 
-      {paso === "calificar" && !completa && (
-        <p className="no-print text-2xs text-faint">
-          {totales.completados}/{totales.total} puntos calificados. Podés subir igual, pero lo ideal es
-          completar todos.
-        </p>
-      )}
-
-      {/* Planilla imprimible */}
-      <div id="print-area">
-        <Card className="p-5">
-          <div className="mb-4 flex items-start justify-between border-b border-line pb-3">
-            <div>
-              <p className="font-display text-base font-semibold text-ink">Reseña de calidad — {local}</p>
-              <p className="mt-0.5 text-xs text-muted">
-                Fecha: {fecha} · Evaluador: {evaluador || "—"}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xs uppercase tracking-wide text-faint">Puntaje</p>
-              <p className={`font-display text-2xl font-semibold tnum ${tono}`}>{Math.round(totales.pct * 100)}%</p>
-              <p className="text-2xs text-faint">
-                {totales.suma}/{totales.max || 0} · {totales.completados}/{totales.total} ítems
-              </p>
-            </div>
+      <Card className="no-print overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+          <span className="text-2xs font-medium uppercase tracking-wide text-faint">Reseñas de clientes</span>
+          <select className={`${inputClass} max-w-[200px] py-1`} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+            <option value="">Todos los locales</option>
+            {locales.map((l) => (
+              <option key={l.nombre} value={l.nombre}>
+                {l.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        {visibles.length === 0 ? (
+          <div className="p-6">
+            <EmptyState title="Sin reseñas todavía" desc="Cuando los clientes escaneen el QR y opinen, vas a verlas acá." />
           </div>
-
-          <div className="space-y-4">
-            {QA_CATEGORIAS.map((cat) => (
-              <div key={cat.nombre}>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">{cat.nombre}</p>
-                <div className="divide-y divide-line">
-                  {cat.criterios.map((cr) => {
-                    const key = k(cat.nombre, cr);
-                    const val = scores[key];
-                    return (
-                      <div key={cr} className="flex items-center justify-between gap-3 py-2">
-                        <span className="text-sm text-ink">{cr}</span>
-                        <div className="flex items-center gap-1">
-                          {ESCALA.map((n) => (
-                            <button
-                              key={n}
-                              type="button"
-                              onClick={() => setScores((s) => ({ ...s, [key]: n }))}
-                              title={ESCALA_LABEL[n]}
-                              className={`grid h-8 w-8 place-items-center rounded-md border text-xs font-medium transition-colors ${
-                                val === n ? "border-action bg-action text-white" : "border-line text-muted hover:bg-ink/5"
-                              }`}
-                            >
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+        ) : (
+          <div className="divide-y divide-line">
+            {visibles.map((r) => (
+              <div key={r.id} className="flex items-start gap-3 px-4 py-3">
+                <span className="w-20 shrink-0 text-warn" title={`${r.estrellas} estrellas`}>
+                  {"★".repeat(r.estrellas)}
+                  <span className="text-line">{"★".repeat(5 - r.estrellas)}</span>
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm text-ink">
+                    <span className="font-medium">{r.local}</span>
+                    {r.comentario ? <span className="text-muted"> — {r.comentario}</span> : null}
+                  </p>
+                  <p className="mt-0.5 text-2xs text-faint">{new Date(r.creadoEn).toLocaleString("es-AR")}</p>
                 </div>
               </div>
             ))}
           </div>
-
-          <div className="mt-4 border-t border-line pt-3">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">Observaciones</p>
-            <textarea
-              className={`${inputClass} min-h-[64px] resize-y`}
-              placeholder="Comentarios, pendientes, compromisos para la próxima visita…"
-              value={obs}
-              onChange={(e) => setObs(e.target.value)}
-            />
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-8 pt-6 text-2xs text-faint">
-            <div className="border-t border-ink/30 pt-1 text-center">Firma evaluador</div>
-            <div className="border-t border-ink/30 pt-1 text-center">Firma encargado del local</div>
-          </div>
-          <p className="mt-3 text-2xs text-faint">Escala: 1 Malo · 2 Regular · 3 Bien · 4 Muy bien · 5 Excelente</p>
-        </Card>
-      </div>
-
-      {/* Historial del local */}
-      {paso === "listo" && hist.length > 0 && (
-        <Card className="no-print overflow-hidden">
-          <div className="border-b border-line px-4 py-2 text-2xs font-medium uppercase tracking-wide text-faint">
-            Historial de {local}
-          </div>
-          <table className="w-full text-sm">
-            <tbody>
-              {hist.slice(0, 8).map((h) => (
-                <tr key={h.id} className="border-b border-line/70 last:border-0">
-                  <td className="px-4 py-2 text-ink">{h.fecha}</td>
-                  <td className="px-4 py-2 text-2xs text-muted">{h.evaluador}</td>
-                  <td className="px-4 py-2 text-right">
-                    <Badge tone={h.pct >= 0.8 ? "ok" : h.pct >= 0.6 ? "warn" : "bad"}>
-                      {Math.round(h.pct * 100)}%
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+        )}
+      </Card>
     </div>
+  );
+}
+
+function LocalRow({
+  local,
+  onGuardar,
+  onQuitar,
+}: {
+  local: Local;
+  onGuardar: (nombre: string, googleUrl: string) => void;
+  onQuitar: (nombre: string) => void;
+}) {
+  const [url, setUrl] = useState(local.googleUrl ?? "");
+  const dirty = url !== (local.googleUrl ?? "");
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-line p-3 sm:flex-row sm:items-center">
+      <span className="w-40 shrink-0 text-sm font-medium text-ink">
+        {local.nombre}
+        {local.googleUrl ? <Badge tone="ok">Google ✓</Badge> : null}
+      </span>
+      <input
+        className={inputClass}
+        placeholder="Link de Google (escribir reseña)"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+      />
+      <Button
+        variant="outline"
+        className="!py-1.5 !text-xs"
+        onClick={() => onGuardar(local.nombre, url)}
+        disabled={!dirty}
+      >
+        Guardar
+      </Button>
+      <button onClick={() => onQuitar(local.nombre)} className="text-2xs font-medium text-bad hover:underline">
+        Quitar
+      </button>
+    </div>
+  );
+}
+
+function Kpi({ label, value, tone }: { label: string; value: string; tone?: "ok" | "warn" | "bad" }) {
+  const color = tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : "text-ink";
+  return (
+    <Card className="p-4">
+      <p className="text-2xs font-medium uppercase tracking-wide text-faint">{label}</p>
+      <p className={`mt-1 font-display text-2xl font-semibold tnum ${color}`}>{value}</p>
+    </Card>
   );
 }

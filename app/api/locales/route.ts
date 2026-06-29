@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
-import { getLocales, addLocal, removeLocal } from "@/lib/locales-store";
+import { getLocales, upsertLocal, removeLocal } from "@/lib/locales-store";
 
 export const dynamic = "force-dynamic";
 
+// GET es PÚBLICO: el consumidor (sin login) necesita la lista de locales.
 export async function GET() {
-  if (!getSesion()) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   return NextResponse.json({ ok: true, locales: getLocales() });
 }
 
+// Mutaciones: solo con sesión (admin/operaciones cargan locales y su link Google).
 export async function POST(req: NextRequest) {
   if (!getSesion()) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   try {
-    const { nombre } = (await req.json()) as { nombre?: string };
-    const locales = addLocal(String(nombre ?? ""));
+    const { nombre, googleUrl } = (await req.json()) as { nombre?: string; googleUrl?: string };
+    const locales = upsertLocal(String(nombre ?? ""), googleUrl);
     return NextResponse.json({ ok: true, locales });
   } catch (e) {
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "No se pudo agregar." },
+      { ok: false, error: e instanceof Error ? e.message : "No se pudo guardar." },
       { status: 400 }
     );
   }

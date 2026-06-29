@@ -20,5 +20,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login).*)"],
+  // /review es público (lo abre el consumidor por QR, sin login).
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login|review).*)"],
 };
