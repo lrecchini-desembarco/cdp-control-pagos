@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:tango": "node scripts/test-tango.mjs"
   },
   "dependencies": {
     "mssql": "^11.0.1",

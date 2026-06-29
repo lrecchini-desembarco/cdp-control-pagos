@@ -63,6 +63,10 @@ variable `DATA_SOURCE` (`live` por defecto, `mock` para desarrollo).
 **Para quedar 100% productivo falta** (infra del cliente): `RAVEN_TOKEN`, la vista de
 Tango creada + usuario solo-lectura, y las credenciales `TANGO_*`. Detalle en `docs/datos.md`.
 
+**Conectar datos reales (paso a paso):** ver **[`docs/conectar-tango.md`](docs/conectar-tango.md)**.
+SQL listo para Sistemas en [`docs/sql/tango-setup.sql`](docs/sql/tango-setup.sql); validá la
+conexión con `npm run test:tango` antes de poner `DATA_SOURCE=live`.
+
 ## Heurísticas de Nielsen aplicadas
 
 1. Visibilidad del estado — indicador de conexión a Raven en la barra superior, skeletons de carga.
