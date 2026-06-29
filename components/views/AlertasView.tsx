@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { brandById } from "@/lib/brands";
 import type { Alerta, AlertaTipo, ResumenAlertas, Severidad } from "@/lib/types";
-import { Badge, Card, EmptyState, ErrorState, Skeleton } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState, ErrorState, Skeleton } from "@/components/ui/primitives";
 
 const RESUMEN_VACIO: ResumenAlertas = { total: 0, critica: 0, alta: 0, media: 0, info: 0 };
 
@@ -42,6 +42,30 @@ export default function AlertasView() {
   const [sev, setSev] = useState<FiltroSev>("todas");
   const [tipo, setTipo] = useState<FiltroTipo>("todos");
 
+  const [notifBusy, setNotifBusy] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function enviarResumen() {
+    setNotifBusy(true);
+    setNotifMsg(null);
+    try {
+      const r = await fetch("/api/notify", { method: "POST" });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error ?? "No se pudo enviar.");
+      const text =
+        j.canal === "none"
+          ? "Canal sin configurar: configurá NOTIFY_CHANNEL=slack y SLACK_WEBHOOK_URL para que se envíe solo."
+          : j.enviado
+          ? `Resumen enviado por ${j.canal}.`
+          : j.info;
+      setNotifMsg({ ok: j.enviado || j.canal === "none", text });
+    } catch (e) {
+      setNotifMsg({ ok: false, text: e instanceof Error ? e.message : "Error al enviar." });
+    } finally {
+      setNotifBusy(false);
+    }
+  }
+
   async function cargar() {
     setStatus("loading");
     try {
@@ -70,12 +94,24 @@ export default function AlertasView() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Alertas</h1>
-        <p className="mt-0.5 text-sm text-muted">
-          Todo lo que merece atención hoy, ordenado por urgencia. El sistema vigila los datos por vos
-          y te dice qué pasa, por qué importa y dónde resolverlo.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-xl font-semibold text-ink">Alertas</h1>
+          <p className="mt-0.5 text-sm text-muted">
+            Todo lo que merece atención hoy, ordenado por urgencia. El sistema vigila los datos por vos
+            y te dice qué pasa, por qué importa y dónde resolverlo.
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <Button variant="outline" className="!py-1.5 !text-xs" onClick={enviarResumen} disabled={notifBusy}>
+            {notifBusy ? "Enviando…" : "Enviar resumen ahora"}
+          </Button>
+          {notifMsg && (
+            <p className={`mt-1.5 max-w-[260px] text-2xs ${notifMsg.ok ? "text-ok" : "text-warn"}`}>
+              {notifMsg.text}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* KPIs por severidad */}

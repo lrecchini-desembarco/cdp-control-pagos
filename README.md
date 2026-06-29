@@ -28,6 +28,8 @@ Para iterar sin red (sin Tango/token), poné `DATA_SOURCE=mock` en `.env.local`.
 - **Mapeos** (`/mapeos`) — sucursales (Raven → código canónico) y productos (insumo CDP → SKU → factor/BOM).
 - **Control de catálogo** (`/catalogo`) — audita el maestro de Tango (precio $0, cross-brand, sin marca,
   candidatos a baja), prioriza y exporta la lista "a corregir". Ver [`docs/catalogo.md`](docs/catalogo.md).
+- **Notificaciones** — resumen de alertas + catálogo crítico por Slack/cron. Botón "Enviar resumen ahora"
+  en `/alertas` y endpoint `/api/notify`. Ver [`docs/notificaciones.md`](docs/notificaciones.md).
 
 ## Datos
 
@@ -59,7 +61,7 @@ Tango creada + usuario solo-lectura, y las credenciales `TANGO_*`. Detalle en `d
 ## Estructura
 
 ```
-app/              páginas + route handlers (/api/raven · /api/cruce · /api/alertas · /api/catalogo)
+app/              páginas + route handlers (/api/raven · /api/cruce · /api/alertas · /api/catalogo · /api/notify)
 components/ui     primitivos (Card, Badge, Button, EmptyState, ErrorState…)
 components/views  AlertasView · CruceView · RavenExplorer · MapeosView · CatalogoView · DetalleModal
 components/layout Sidebar · Topbar
