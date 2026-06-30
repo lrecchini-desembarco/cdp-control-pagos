@@ -56,12 +56,22 @@ Para que quede prendido siempre: instalarlo como servicio (`cloudflared service 
 
 ### Dejarlo 24/7 (sin consola abierta)
 
-**Bridge como tarea de Windows** (arranca al prender la máquina, se reinicia solo):
-```powershell
-# PowerShell COMO ADMINISTRADOR, en la carpeta del repo:
-powershell -ExecutionPolicy Bypass -File scripts\instalar-bridge-servicio.ps1
-```
-Desinstalar: `Unregister-ScheduledTask -TaskName "CDP Tango Bridge" -Confirm:$false`
+**Bridge como tarea de Windows.** Dos opciones:
+
+- **Con admin (recomendado para un servidor):** arranca al prender la máquina
+  (antes del login), corre como SYSTEM y se reinicia solo.
+  ```powershell
+  # PowerShell COMO ADMINISTRADOR, en la carpeta del repo:
+  powershell -ExecutionPolicy Bypass -File scripts\instalar-bridge-servicio.ps1
+  ```
+  Desinstalar: `Unregister-ScheduledTask -TaskName "CDP Tango Bridge" -Confirm:$false`
+
+- **Sin admin:** arranca al iniciar sesión tu usuario, oculto (sirve si la
+  máquina queda logueada).
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File scripts\instalar-bridge-usuario.ps1
+  ```
+  Desinstalar: `Unregister-ScheduledTask -TaskName "CDP Tango Bridge (usuario)" -Confirm:$false`
 
 **Cloudflare Tunnel como servicio** (requiere tunnel con nombre, paso de arriba):
 ```powershell
