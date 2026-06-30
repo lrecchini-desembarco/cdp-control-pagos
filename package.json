@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:tango": "node scripts/test-tango.mjs"
+    "test:tango": "node scripts/test-tango.mjs",
+    "bridge": "node scripts/tango-bridge.mjs"
   },
   "dependencies": {
     "@vercel/kv": "^3.0.0",

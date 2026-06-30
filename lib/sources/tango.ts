@@ -34,11 +34,42 @@ async function getPool() {
   return poolPromise;
 }
 
+// Mapea una fila de la vista (venga de SQL directo o del bridge HTTP) a VentaSku.
+function filaAVenta(r: any): VentaSku {
+  return {
+    fecha: String(r.fecha),
+    sku: String(r.sku),
+    nombre: r.nombre != null ? String(r.nombre) : undefined,
+    sucursalCanonico: String(r.sucursal_canonico),
+    unidades: Number(r.unidades) || 0,
+    turno: r.turno ? String(r.turno) : undefined,
+  };
+}
+
+// Vercel (cloud) no llega al SQL interno. Si está TANGO_BRIDGE_URL, las ventas se
+// piden a un bridge HTTP que corre en la red de la empresa (ver scripts/tango-bridge.mjs),
+// publicado por Cloudflare Tunnel. En la red interna se usa SQL directo (sin bridge).
+async function ventasViaBridge(q: RangoQuery): Promise<VentaSku[]> {
+  const base = process.env.TANGO_BRIDGE_URL!.replace(/\/$/, "");
+  const u = new URL(`${base}/ventas`);
+  u.searchParams.set("desde", q.desde);
+  u.searchParams.set("hasta", q.hasta);
+  const res = await fetch(u.toString(), {
+    headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "" },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Bridge Tango respondió ${res.status} ${res.statusText}`);
+  const rows = (await res.json()) as any[];
+  return rows.map(filaAVenta);
+}
+
 export const tangoVentasSource: VentasSource = {
   async getVentas(q: RangoQuery): Promise<VentaSku[]> {
+    if (process.env.TANGO_BRIDGE_URL) return ventasViaBridge(q);
+
     if (!process.env.TANGO_DB_HOST) {
       throw new Error(
-        "Tango no está configurado (falta TANGO_DB_HOST). Configurá las variables TANGO_* o usá DATA_SOURCE=mock."
+        "Tango no está configurado (falta TANGO_DB_HOST o TANGO_BRIDGE_URL). Configurá las variables TANGO_* / el bridge, o usá DATA_SOURCE=mock."
       );
     }
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -48,26 +79,22 @@ export const tangoVentasSource: VentasSource = {
       .request()
       .input("desde", sql.Date, q.desde)
       .input("hasta", sql.Date, q.hasta)
-      .query(`
-        SELECT
-          CONVERT(varchar(10), fecha, 23) AS fecha,
-          sucursal_canonico,
-          sku,
-          nombre,
-          turno,
-          unidades
-        FROM dbo.vw_VentasInsumoDiaria
-        WHERE fecha BETWEEN @desde AND @hasta
-        ORDER BY fecha, sucursal_canonico, sku;
-      `);
+      .query(VENTAS_QUERY);
 
-    return result.recordset.map((r: any) => ({
-      fecha: r.fecha,
-      sku: String(r.sku),
-      nombre: r.nombre != null ? String(r.nombre) : undefined,
-      sucursalCanonico: String(r.sucursal_canonico),
-      unidades: Number(r.unidades) || 0,
-      turno: r.turno ? String(r.turno) : undefined,
-    }));
+    return result.recordset.map(filaAVenta);
   },
 };
+
+// Query de la vista (compartida por el SQL directo y el bridge HTTP).
+export const VENTAS_QUERY = `
+  SELECT
+    CONVERT(varchar(10), fecha, 23) AS fecha,
+    sucursal_canonico,
+    sku,
+    nombre,
+    turno,
+    unidades
+  FROM dbo.vw_VentasInsumoDiaria
+  WHERE fecha BETWEEN @desde AND @hasta
+  ORDER BY fecha, sucursal_canonico, sku;
+`;
