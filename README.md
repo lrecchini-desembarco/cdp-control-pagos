@@ -14,6 +14,9 @@ npm run dev                  # http://localhost:3000
 
 Para iterar sin red (sin Tango/token), poné `DATA_SOURCE=mock` en `.env.local`.
 
+**Deploy a Vercel:** ver **[`docs/deploy.md`](docs/deploy.md)** (env vars, Vercel KV para
+persistencia, cron de notificaciones y smoke test).
+
 ## Acceso y roles
 
 Login por **email + clave genérica** (`APP_PASSWORD`, default `cdp2026`). El admin da
