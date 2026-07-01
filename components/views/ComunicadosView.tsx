@@ -3,14 +3,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import assets from "@/lib/firma-assets.json";
 import { Card, inputClass } from "@/components/ui/primitives";
+import {
+  construirEmailHTML,
+  estadoBase,
+  FOOTER_DEFAULT,
+  MAILS_SUGERIDOS,
+  type Estado,
+} from "@/lib/comunicado-email";
 
 // ============================================================================
-// Config editable — marcas, mails sugeridos y datos de pie del comunicado.
+// Presets de marca (logos base64 = los mismos que Firmas, de firma-assets.json).
+// El logo final se resuelve por prioridad: URL > subido > este base64 > texto.
 // ============================================================================
 const LOGOS = assets.logos as Record<string, string>;
 
-// Presets de marca: precargan logo (base64, sin hosting) + color de acento.
-// El color es editable con el color picker; estos son solo el punto de partida.
 const MARCAS: Record<string, { label: string; color: string; logo: string }> = {
   desembarco: { label: "El Desembarco", color: "#C1121F", logo: LOGOS.desembarco ?? "" },
   tasty: { label: "Mr. Tasty", color: "#E4572E", logo: LOGOS.tasty ?? "" },
@@ -18,135 +24,17 @@ const MARCAS: Record<string, { label: string; color: string; logo: string }> = {
   ds: { label: "DS Group", color: "#155E63", logo: "" }, // sin logo -> texto de marca
 };
 
-// Sugeridos para el email de contacto del pie (datalist).
-const MAILS_SUGERIDOS = [
-  "sistemas@eldesembarco.com",
-  "marketing@eldesembarco.com",
-  "rrhh@eldesembarco.com",
-  "administracion@eldesembarco.com",
-];
-
-// Valores por defecto del pie.
-const FOOTER_DEFAULT = {
-  grupo: "DS Group",
-  marcasLinea: "El Desembarco · Mr. Tasty · Mila & Go",
-  area: "",
-  email: "sistemas@eldesembarco.com",
-  web: "www.eldesembarco.com",
-  ubicacion: "Buenos Aires, Argentina",
-  legal: "Este mensaje es de uso interno de DS Group.",
-};
-
 const LS_KEY = "cdp_comunicados_v1";
-
-interface Estado {
-  marca: string;
-  logoCustom: string; // base64; si está, pisa el logo de la marca
-  color: string;
-  etiquetaLateral: string;
-  asunto: string;
-  eyebrow: string;
-  titulo: string;
-  saludo: string;
-  cuerpo: string; // un párrafo por línea
-  botonTexto: string;
-  botonLink: string;
-  grupo: string;
-  marcasLinea: string;
-  area: string;
-  email: string;
-  web: string;
-  ubicacion: string;
-  legal: string;
-}
 
 function estadoInicial(): Estado {
   return {
-    marca: "ds",
-    logoCustom: "",
+    ...estadoBase,
     color: MARCAS.ds.color,
-    etiquetaLateral: "SISTEMAS",
-    asunto: "Comunicado interno · DS Group",
-    eyebrow: "Comunicado",
-    titulo: "Título del comunicado",
-    saludo: "Hola equipo,",
-    cuerpo: "Escribí acá el mensaje.\nCada línea es un párrafo.",
-    botonTexto: "",
-    botonLink: "",
     ...FOOTER_DEFAULT,
   };
 }
 
-function esc(s: string) {
-  return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-// ============================================================================
-// Armado del email HTML (Gmail-safe: tablas 600px, estilos inline, text-align:left)
-// ============================================================================
-function construirEmailHTML(e: Estado): string {
-  const logo = e.logoCustom || MARCAS[e.marca]?.logo || "";
-  const color = e.color || "#155E63";
-  const parrafos = e.cuerpo.split("\n").map((l) => l.trim()).filter(Boolean);
-  const link = e.botonLink.trim();
-  const href = link ? (/^https?:\/\//.test(link) ? link : "https://" + link) : "";
-
-  const logoCell = logo
-    ? `<img src="${esc(logo)}" alt="${esc(MARCAS[e.marca]?.label ?? "")}" height="34" style="height:34px;display:block;border:0" />`
-    : `<span style="font:700 20px Arial,Helvetica,sans-serif;color:${color}">${esc(MARCAS[e.marca]?.label ?? e.grupo)}</span>`;
-
-  const etiqueta = e.etiquetaLateral.trim()
-    ? `<span style="display:inline-block;font:700 10px Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;background:${color};border-radius:5px;padding:5px 9px">${esc(
-        e.etiquetaLateral
-      )}</span>`
-    : "";
-
-  const filaFooter = (html: string, extra = "") =>
-    `<div style="text-align:left;${extra}">${html}</div>`;
-
-  const footer = [
-    e.grupo ? filaFooter(esc(e.grupo), "font-weight:700;color:#6b6860") : "",
-    e.marcasLinea ? filaFooter(esc(e.marcasLinea)) : "",
-    e.area ? filaFooter(esc(e.area)) : "",
-    e.email ? filaFooter(`<a href="mailto:${esc(e.email)}" style="color:${color};text-decoration:none">${esc(e.email)}</a>`) : "",
-    e.web ? filaFooter(esc(e.web)) : "",
-    e.ubicacion ? filaFooter(esc(e.ubicacion)) : "",
-    e.legal ? filaFooter(esc(e.legal), "padding-top:8px;color:#c8c5bd") : "",
-  ]
-    .filter(Boolean)
-    .join("");
-
-  return `
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f7f5;padding:24px 0;margin:0">
-  <tr><td align="center" style="text-align:center">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #e6e3db;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">
-      <tr><td style="height:6px;background:${color};font-size:0;line-height:0">&nbsp;</td></tr>
-      <tr><td style="padding:24px 32px 0 32px;text-align:left">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-          <td style="text-align:left;vertical-align:middle">${logoCell}</td>
-          <td style="text-align:right;vertical-align:middle">${etiqueta}</td>
-        </tr></table>
-      </td></tr>
-      ${e.eyebrow ? `<tr><td style="padding:22px 32px 0 32px;text-align:left"><span style="font:700 12px Arial,Helvetica,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:${color}">${esc(e.eyebrow)}</span></td></tr>` : ""}
-      ${e.titulo ? `<tr><td style="padding:6px 32px 0 32px;text-align:left"><h1 style="margin:0;font:700 24px Arial,Helvetica,sans-serif;line-height:1.25;color:#18181b">${esc(e.titulo)}</h1></td></tr>` : ""}
-      ${e.saludo ? `<tr><td style="padding:16px 32px 0 32px;text-align:left;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:#3f3f46">${esc(e.saludo)}</td></tr>` : ""}
-      ${parrafos
-        .map(
-          (p) =>
-            `<tr><td style="padding:12px 32px 0 32px;text-align:left;font:400 15px/1.6 Arial,Helvetica,sans-serif;color:#3f3f46">${esc(p)}</td></tr>`
-        )
-        .join("")}
-      ${
-        e.botonTexto.trim()
-          ? `<tr><td style="padding:24px 32px 0 32px;text-align:left"><a href="${esc(href)}" style="display:inline-block;background:${color};color:#ffffff;text-decoration:none;font:600 15px Arial,Helvetica,sans-serif;padding:12px 22px;border-radius:8px">${esc(e.botonTexto)}</a></td></tr>`
-          : ""
-      }
-      <tr><td style="padding:28px 32px 0 32px"><div style="border-top:1px solid #e6e3db;font-size:0;line-height:0">&nbsp;</div></td></tr>
-      <tr><td style="padding:16px 32px 28px 32px;text-align:left;font:400 12px/1.7 Arial,Helvetica,sans-serif;color:#9c998f">${footer}</td></tr>
-    </table>
-  </td></tr>
-</table>`.trim();
-}
+const logoDeMarca = (k: string) => MARCAS[k] ?? { logo: "", label: "" };
 
 // ============================================================================
 export default function ComunicadosView() {
@@ -168,12 +56,12 @@ export default function ComunicadosView() {
     } catch {}
   }, [e]);
 
-  const html = useMemo(() => construirEmailHTML(e), [e]);
+  const html = useMemo(() => construirEmailHTML(e, logoDeMarca(e.marca)), [e]);
   const set = (patch: Partial<Estado>) => setE((s) => ({ ...s, ...patch }));
 
   function elegirMarca(k: string) {
     const m = MARCAS[k];
-    set({ marca: k, logoCustom: "", color: m.color });
+    set({ marca: k, logoCustom: "", logoUrl: "", color: m.color });
   }
 
   function subirLogo(file?: File) {
@@ -241,7 +129,7 @@ export default function ComunicadosView() {
                   key={k}
                   onClick={() => elegirMarca(k)}
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    e.marca === k && !e.logoCustom
+                    e.marca === k && !e.logoCustom && !e.logoUrl
                       ? "border-action bg-action/10 text-action"
                       : "border-line bg-surface text-muted hover:text-ink"
                   }`}
@@ -269,6 +157,21 @@ export default function ComunicadosView() {
                   className="h-7 w-9 cursor-pointer rounded border border-line bg-surface"
                 />
               </label>
+            </div>
+            <div>
+              <span className="mb-0.5 block text-2xs font-medium uppercase tracking-wide text-faint">
+                Logo por URL (opcional · recomendado para emails)
+              </span>
+              <input
+                className={inputClass}
+                placeholder="https://…/logo.png"
+                value={e.logoUrl}
+                onChange={(ev) => set({ logoUrl: ev.target.value })}
+              />
+              <p className="mt-1 text-2xs text-faint">
+                Los presets usan el logo base64 (igual que Firmas). Al pegar en Gmail suele funcionar, pero si algún
+                cliente no muestra la imagen, cargá acá una <b>URL hospedada</b> y el email la usa.
+              </p>
             </div>
             <Campo label="Etiqueta lateral (opcional)" value={e.etiquetaLateral} onChange={(v) => set({ etiquetaLateral: v })} />
           </Card>
