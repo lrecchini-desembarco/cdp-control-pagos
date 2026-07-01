@@ -66,7 +66,14 @@ export default function RemitosView() {
     const head = rows[0].map((h) => norm(h));
     const idx = (name: string) => head.findIndex((h) => h.includes(name));
     const iF = idx("fecha"), iM = idx("marca"), iS = idx("sucursal"), iC = idx("codigo"), iD = idx("descripcion"), iQ = idx("cantidad"), iR = idx("remito");
-    if (iS < 0 || iC < 0 || iQ < 0) return setError("Faltan columnas (sucursal, codigo, cantidad). Usá el CSV de scripts/parsear-remitos.py.");
+    if (iS < 0 || iC < 0 || iQ < 0) {
+      const esAuditoria = head.some((h) => h.includes("tiene remito") || h.includes("tiene ventas") || h === "estado");
+      return setError(
+        esAuditoria
+          ? "Ese es el CSV de AUDITORÍA (la salida de esta pantalla), no el de entrada. Subí el DETALLE de remitos: remitos_consolidado.csv (o remitos_16-30-06_detalle.csv), que tiene columnas 'codigo' y 'cantidad' por fila."
+          : "Faltan columnas (sucursal, codigo, cantidad). Subí el DETALLE de remitos (remitos_consolidado.csv), el que genera scripts/parsear-remitos.py."
+      );
+    }
     const parsed: Remito[] = rows.slice(1).filter((r) => r.length > iQ).map((r) => ({
       fecha: r[iF] ?? "",
       marca: r[iM] ?? "",
@@ -169,7 +176,7 @@ export default function RemitosView() {
       {/* Carga */}
       <Card className="p-4">
         <label className="mb-1 block text-2xs font-medium uppercase tracking-wide text-faint">
-          CSV de remitos (formato: fecha, marca, sucursal, codigo, descripcion, cantidad, remito)
+          CSV de remitos — <b>remitos_consolidado.csv</b> (columnas: fecha, marca, sucursal, codigo, descripcion, cantidad, remito). No es el de auditoría.
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <label className="cursor-pointer rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">
