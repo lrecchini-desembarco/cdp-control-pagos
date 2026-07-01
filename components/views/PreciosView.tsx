@@ -29,11 +29,26 @@ interface Comparacion {
   precioWeb: number;
   precioTango: number | null;
   tangoNombre: string | null;
+  tangoActualizado: string | null;
   diffPct: number | null;
   estado: "ok" | "dif" | "alerta" | "nomatch";
 }
 
 const money = (n: number) => "$" + Math.round(n || 0).toLocaleString("es-AR");
+
+// Activo en Tango = con venta en los últimos 30 días (por la fecha de "actualizado").
+const HACE_30D = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+const esActivo = (actualizado?: string | null) => !!actualizado && actualizado >= HACE_30D;
+
+function TagTango({ actualizado }: { actualizado?: string | null }) {
+  if (!actualizado) return <span className="text-2xs text-faint">—</span>;
+  const act = esActivo(actualizado);
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${act ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}>
+      {act ? "Activo" : "Inactivo"}
+    </span>
+  );
+}
 
 export default function PreciosView() {
   const [general, setGeneral] = useState<General[]>([]);
@@ -99,26 +114,28 @@ export default function PreciosView() {
   const gen = useMemo(() => general.filter((p) => coincide(p.nombre, p.sku)), [general, t]);
   const fil = useMemo(() => filas.filter((p) => coincide(p.nombre, p.sku)), [filas, t]);
 
+  const estadoTango = (a?: string | null) => (a ? (esActivo(a) ? "Activo" : "Inactivo") : "sin dato");
+
   function exportar() {
     if (modo === "general") {
       descargarCSV(
         "precios_general",
-        ["Producto", "SKU", "Precio (c/imp.)", "Neto", "Mín sucursal", "Máx sucursal", "Sucursales"],
-        gen.map((p) => [p.nombre, p.sku, p.precio, p.precioNeto, p.min, p.max, p.sucursales])
+        ["Producto", "SKU", "Estado Tango", "Precio (c/imp.)", "Neto", "Mín sucursal", "Máx sucursal", "Sucursales", "Última venta"],
+        gen.map((p) => [p.nombre, p.sku, estadoTango(p.actualizado), p.precio, p.precioNeto, p.min, p.max, p.sucursales, p.actualizado ?? ""])
       );
     } else if (modo === "sucursal") {
       descargarCSV(
         `precios_${suc || "sucursal"}`,
-        ["Producto", "SKU", "Precio (c/imp.)", "Neto", "Actualizado"],
-        fil.map((p) => [p.nombre, p.sku, p.precio, p.precioNeto, p.actualizado ?? ""])
+        ["Producto", "SKU", "Estado Tango", "Precio (c/imp.)", "Neto", "Actualizado"],
+        fil.map((p) => [p.nombre, p.sku, estadoTango(p.actualizado), p.precio, p.precioNeto, p.actualizado ?? ""])
       );
     } else {
       descargarCSV(
         "precios_web_vs_tango",
-        ["Producto (web)", "Web (lista)", "Tango (efectivo)", "Dif %", "Estado", "Match Tango"],
+        ["Producto (web)", "En web", "Estado Tango", "Web (lista)", "Tango (efectivo)", "Dif %", "Match Tango"],
         compFil
           .filter((c) => c.precioTango != null)
-          .map((c) => [c.nombre, c.precioWeb, c.precioTango, c.diffPct, c.estado, c.tangoNombre ?? ""])
+          .map((c) => [c.nombre, "sí", estadoTango(c.tangoActualizado), c.precioWeb, c.precioTango, c.diffPct, c.tangoNombre ?? ""])
       );
     }
   }
@@ -195,10 +212,11 @@ export default function PreciosView() {
       <Card className="overflow-hidden">
         {modo === "general" && (
           <Tabla
-            cols={["Producto", "Precio (c/imp.)", "Neto", "Rango entre sucursales", "Sucursales"]}
+            cols={["Producto", "Tango", "Precio (c/imp.)", "Neto", "Rango entre sucursales", "Sucursales"]}
             vacio={cargando ? "Cargando…" : "Sin productos."}
             filas={gen.map((p) => [
               <Prod key="p" nombre={p.nombre} sku={p.sku} />,
+              <TagTango key="t" actualizado={p.actualizado} />,
               <b key="pr" className="font-mono tnum text-ink">{money(p.precio)}</b>,
               <span key="n" className="font-mono tnum text-muted">{money(p.precioNeto)}</span>,
               <span key="r" className="text-2xs text-faint">
@@ -210,10 +228,11 @@ export default function PreciosView() {
         )}
         {modo === "sucursal" && (
           <Tabla
-            cols={["Producto", "Precio (c/imp.)", "Neto", "Actualizado"]}
+            cols={["Producto", "Tango", "Precio (c/imp.)", "Neto", "Actualizado"]}
             vacio={!suc ? "Elegí una sucursal arriba." : cargando ? "Cargando…" : "Sin productos en esta sucursal."}
             filas={fil.map((p) => [
               <Prod key="p" nombre={p.nombre} sku={p.sku} />,
+              <TagTango key="t" actualizado={p.actualizado} />,
               <b key="pr" className="font-mono tnum text-ink">{money(p.precio)}</b>,
               <span key="n" className="font-mono tnum text-muted">{money(p.precioNeto)}</span>,
               <span key="a" className="text-2xs text-faint">{p.actualizado ?? "—"}</span>,
@@ -222,13 +241,15 @@ export default function PreciosView() {
         )}
         {modo === "web" && (
           <Tabla
-            cols={["Producto (web)", "Web (lista)", "Tango (efectivo)", "Dif", "Match Tango"]}
+            cols={["Producto (web)", "En web", "Tango", "Web (lista)", "Tango (efectivo)", "Dif", "Match Tango"]}
             vacio={compCargando ? "Comparando con la web…" : "Sin datos."}
             filas={compFil
               .filter((c) => c.precioTango != null)
               .sort((a, b) => Math.abs(b.diffPct ?? 0) - Math.abs(a.diffPct ?? 0))
               .map((c) => [
                 <span key="p" className="text-sm text-ink">{c.nombre}</span>,
+                <span key="ew" className="rounded-full bg-ok/10 px-2 py-0.5 text-2xs font-medium text-ok">En menú</span>,
+                <TagTango key="tg" actualizado={c.tangoActualizado} />,
                 <b key="w" className="font-mono tnum text-ink">{money(c.precioWeb)}</b>,
                 <span key="t" className="font-mono tnum text-muted">{money(c.precioTango!)}</span>,
                 <Dif key="d" pct={c.diffPct} estado={c.estado} />,

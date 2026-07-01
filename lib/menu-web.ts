@@ -14,6 +14,7 @@ export interface Comparacion {
   precioWeb: number;
   precioTango: number | null;
   tangoNombre: string | null;
+  tangoActualizado: string | null; // última venta del match en Tango (para el tag activo/inactivo)
   diffPct: number | null; // (tango - web) / web
   estado: "ok" | "dif" | "alerta" | "nomatch";
 }
@@ -63,7 +64,7 @@ export async function scrapearMenus(menus = MENUS_WEB): Promise<WebProducto[]> {
 }
 
 // Mejor match en Tango: exacto normalizado > contiene, evitando promos/combos.
-export function matchTango(web: string, tango: { nombre: string; precio: number }[]) {
+export function matchTango(web: string, tango: { nombre: string; precio: number; actualizado?: string }[]) {
   const w = norm(web);
   const exact = tango.filter((g) => norm(g.nombre) === w);
   if (exact.length) return exact.sort((a, b) => a.nombre.length - b.nombre.length)[0];
@@ -77,7 +78,10 @@ export function matchTango(web: string, tango: { nombre: string; precio: number 
   return cont[0] || null;
 }
 
-export function comparar(web: WebProducto[], tango: { nombre: string; precio: number }[]): Comparacion[] {
+export function comparar(
+  web: WebProducto[],
+  tango: { nombre: string; precio: number; actualizado?: string }[]
+): Comparacion[] {
   return web.map((p) => {
     const t = matchTango(p.nombre, tango);
     const diffPct = t && p.precio ? Math.round(((t.precio - p.precio) / p.precio) * 100) : null;
@@ -89,6 +93,7 @@ export function comparar(web: WebProducto[], tango: { nombre: string; precio: nu
       precioWeb: p.precio,
       precioTango: t?.precio ?? null,
       tangoNombre: t?.nombre ?? null,
+      tangoActualizado: t?.actualizado ?? null,
       diffPct,
       estado,
     };
