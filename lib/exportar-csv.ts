@@ -1,13 +1,23 @@
-// Genera y descarga un CSV (UTF-8 con BOM) que se abre bien en Google Sheets y Excel
-// (el BOM evita que se rompan los acentos). Uso client-side, sin backend.
+// Genera y descarga un CSV que se abre BIEN al doble-clic en Excel y Google Sheets
+// en configuración regional español (Argentina):
+//  - separador ";" (Excel es-AR usa punto y coma como separador de lista)
+//  - números con coma decimal (2892,5) y sin separador de miles
+//  - BOM UTF-8 para que no se rompan los acentos
+// Uso client-side, sin backend.
+
+const SEP = ";";
 
 function celda(v: string | number | null | undefined): string {
+  if (typeof v === "number") {
+    return Number.isFinite(v) ? v.toLocaleString("es-AR", { useGrouping: false, maximumFractionDigits: 2 }) : "";
+  }
   const s = v == null ? "" : String(v);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  // Entrecomilla si tiene el separador, comillas o saltos de línea.
+  return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 export function descargarCSV(nombreArchivo: string, columnas: string[], filas: (string | number | null)[][]): void {
-  const lineas = [columnas, ...filas].map((row) => row.map(celda).join(","));
+  const lineas = [columnas, ...filas].map((row) => row.map(celda).join(SEP));
   const csv = "﻿" + lineas.join("\r\n"); // BOM + CRLF (compat. Excel/Sheets)
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
   const a = document.createElement("a");
