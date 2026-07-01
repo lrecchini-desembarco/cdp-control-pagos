@@ -98,18 +98,25 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
                 soltar(n.href);
               }}
               aria-current={active ? "page" : undefined}
-              className={`group mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              className={`group mb-0.5 flex cursor-grab items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors active:cursor-grabbing ${
                 active ? "bg-white/10 text-white" : "text-sidebar-muted hover:bg-white/5 hover:text-white"
               }`}
               title="Arrastrá para reordenar"
             >
               <span className="w-4 text-center text-base opacity-80">{n.icon}</span>
-              {n.label}
+              <span className="flex-1 truncate">{n.label}</span>
               {n.href === "/alertas" && urgentes > 0 && (
-                <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white">
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white">
                   {urgentes}
                 </span>
               )}
+              {/* Grip: aparece al hover para indicar que se puede arrastrar */}
+              <span
+                aria-hidden
+                className="-mr-1 select-none text-sidebar-muted opacity-0 transition-opacity group-hover:opacity-80"
+              >
+                ⠿
+              </span>
             </Link>
           );
         })}
