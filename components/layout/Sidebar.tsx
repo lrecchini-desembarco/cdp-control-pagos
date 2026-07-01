@@ -17,6 +17,7 @@ const NAV = [
   { href: "/resenas", label: "Reseñas", icon: "★" },
   { href: "/usuarios", label: "Usuarios", icon: "◑" },
   { href: "/firmas", label: "Firmas", icon: "✎" },
+  { href: "/comunicados", label: "Comunicados", icon: "✉" },
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?" },
 ];
 

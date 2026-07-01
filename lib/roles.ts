@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/ventas", "/raven", "/mapeos", "/catalogo", "/resenas", "/usuarios", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/ventas", "/raven", "/mapeos", "/catalogo", "/resenas", "/usuarios", "/firmas", "/comunicados", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/ventas", "/raven", "/mapeos", "/catalogo", "/resenas", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/ventas", "/raven", "/mapeos", "/catalogo", "/resenas", "/firmas", "/comunicados", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
