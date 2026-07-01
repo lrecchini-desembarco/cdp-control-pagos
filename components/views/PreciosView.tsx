@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, inputClass } from "@/components/ui/primitives";
+import { descargarCSV } from "@/lib/exportar-csv";
 
 interface General {
   sku: string;
@@ -98,6 +99,30 @@ export default function PreciosView() {
   const gen = useMemo(() => general.filter((p) => coincide(p.nombre, p.sku)), [general, t]);
   const fil = useMemo(() => filas.filter((p) => coincide(p.nombre, p.sku)), [filas, t]);
 
+  function exportar() {
+    if (modo === "general") {
+      descargarCSV(
+        "precios_general",
+        ["Producto", "SKU", "Precio (c/imp.)", "Neto", "Mín sucursal", "Máx sucursal", "Sucursales"],
+        gen.map((p) => [p.nombre, p.sku, p.precio, p.precioNeto, p.min, p.max, p.sucursales])
+      );
+    } else if (modo === "sucursal") {
+      descargarCSV(
+        `precios_${suc || "sucursal"}`,
+        ["Producto", "SKU", "Precio (c/imp.)", "Neto", "Actualizado"],
+        fil.map((p) => [p.nombre, p.sku, p.precio, p.precioNeto, p.actualizado ?? ""])
+      );
+    } else {
+      descargarCSV(
+        "precios_web_vs_tango",
+        ["Producto (web)", "Web (lista)", "Tango (efectivo)", "Dif %", "Estado", "Match Tango"],
+        compFil
+          .filter((c) => c.precioTango != null)
+          .map((c) => [c.nombre, c.precioWeb, c.precioTango, c.diffPct, c.estado, c.tangoNombre ?? ""])
+      );
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -155,6 +180,13 @@ export default function PreciosView() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
+        <button
+          onClick={exportar}
+          title="Descarga un CSV para abrir en Google Sheets (Archivo → Importar) o Excel"
+          className="shrink-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-action/40 hover:text-action"
+        >
+          ⬇ Exportar (Sheets/Excel)
+        </button>
       </Card>
 
       {error && <Card className="p-4 text-sm text-bad">{error}</Card>}

@@ -23,6 +23,13 @@ En Windows, para matar los dev viejos por puerto (PowerShell):
   select -Unique | %{ Stop-Process -Id $_ -Force -EA SilentlyContinue }
 ```
 
+### Variante en build (`PageNotFoundError` / `Cannot find module './xxx.js'`)
+Si `npm run build` falla con "Failed to collect page data" o "Cannot find module" en
+una ruta que no tocaste, es el mismo `.next` corrupto. Rebuild 100% limpio:
+```bash
+rm -rf .next node_modules/.cache && npm run build
+```
+
 ### Reglas para que NO vuelva a pasar
 - **Nunca** dejar un `next build` y después `next dev` sin borrar `.next` en el medio.
 - Tener **un solo** dev server corriendo.

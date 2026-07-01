@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TURNOS } from "@/lib/turnos";
 import { BRANDS, brandById, fmtInt, todayISO } from "@/lib/brands";
 import { Card, EmptyState, ErrorState, Field, inputClass, Skeleton } from "@/components/ui/primitives";
+import { descargarCSV } from "@/lib/exportar-csv";
 
 interface Articulo {
   sku: string;
@@ -64,6 +65,18 @@ export default function VentasView() {
 
   const pct = (n: number) => (data.total ? Math.round((n / data.total) * 100) : 0);
 
+  function exportar() {
+    const cols = ["Artículo", "Código", "Marca", ...TURNOS.map((t) => t.label), "Total"];
+    const filas = visibles.map((a) => [
+      a.nombre,
+      a.sku,
+      a.marca,
+      ...TURNOS.map((t) => a.porTurno[t.slug] ?? 0),
+      a.total,
+    ]);
+    descargarCSV(`ventas_${desde}_a_${hasta}`, cols, filas);
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -122,8 +135,19 @@ export default function VentasView() {
 
       {/* Tabla artículo × turno */}
       <Card className="overflow-hidden">
-        <div className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">
-          {status === "ok" ? `${visibles.length} artículos` : "Cargando…"}
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2">
+          <span className="text-2xs font-medium uppercase tracking-wide text-faint">
+            {status === "ok" ? `${visibles.length} artículos` : "Cargando…"}
+          </span>
+          {status === "ok" && visibles.length > 0 && (
+            <button
+              onClick={exportar}
+              title="Descarga un CSV para abrir en Google Sheets (Archivo → Importar) o Excel"
+              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-action/40 hover:text-action"
+            >
+              ⬇ Exportar (Sheets/Excel)
+            </button>
+          )}
         </div>
         {status === "loading" ? (
           <div className="space-y-2 p-4">
