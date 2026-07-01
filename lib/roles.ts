@@ -31,10 +31,39 @@ export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local"];
 
 export const esRol = (v: unknown): v is Rol => v === "admin" || v === "operaciones" || v === "local";
 
-/** /guia es accesible para todos; el resto según el rol. */
+// Catálogo maestro de items del menú (href + label + ícono). El QUÉ VE cada rol
+// se define eligiendo de acá (editable desde /usuarios, persistido en el store).
+export interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+}
+export const NAV_CATALOG: NavItem[] = [
+  { href: "/", label: "Resumen", icon: "◰" },
+  { href: "/alertas", label: "Alertas", icon: "!" },
+  { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄" },
+  { href: "/ventas", label: "Ventas por turno", icon: "▦" },
+  { href: "/precios", label: "Precios", icon: "$" },
+  { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉" },
+  { href: "/raven", label: "Consultar Raven", icon: "↧" },
+  { href: "/mapeos", label: "Mapeos", icon: "⊞" },
+  { href: "/catalogo", label: "Control de catálogo", icon: "▤" },
+  { href: "/resenas", label: "Reseñas", icon: "★" },
+  { href: "/usuarios", label: "Usuarios", icon: "◑" },
+  { href: "/firmas", label: "Firmas", icon: "✎" },
+  { href: "/guia", label: "¿Qué puedo hacer?", icon: "?" },
+];
+
+// /guia y /usuarios (para admin) son "fijas": nunca se pueden sacar (evita autobloqueo).
+export const NAV_SIEMPRE = ["/guia"];
+
+/** /guia es accesible para todos; el resto según el rol (defaults de ROLES). */
 export function puedeVer(rol: Rol, href: string): boolean {
   if (href === "/guia") return true;
   return ROLES[rol].nav.includes(href);
 }
-
 export const homeDe = (rol: Rol) => ROLES[rol].nav[0];
+
+// Versiones "config-aware": operan sobre un array de nav (el del store, editable).
+export const puedeVerNav = (nav: string[], href: string): boolean => href === "/guia" || nav.includes(href);
+export const homeDeNav = (nav: string[]): string => nav.find((h) => h !== "/guia") ?? nav[0] ?? "/guia";

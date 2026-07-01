@@ -6,7 +6,8 @@ import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import { getSesion } from "@/lib/session";
-import { ROLES, puedeVer, homeDe } from "@/lib/roles";
+import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav } from "@/lib/roles";
+import { getRolesNav } from "@/lib/roles-store";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
@@ -26,18 +27,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const pathname = headers().get("x-pathname") ?? "";
   const ruta = pathname === "/" ? "/" : "/" + (pathname.split("/").filter(Boolean)[0] ?? "");
 
-  // Gating por rol (la fuente de verdad es el store, vía getSesion): si el rol
-  // no puede ver esta ruta, lo mandamos a su home.
-  if (sesion && pathname && !puedeVer(sesion.rol, ruta)) {
-    redirect(homeDe(sesion.rol));
+  // Nav por rol: editable desde /usuarios, persistido en el store.
+  const navByRol = sesion ? await getRolesNav() : null;
+  const miNav = navByRol && sesion ? navByRol[sesion.rol] ?? [] : [];
+  // Gating por rol: si el rol no puede ver esta ruta, lo mandamos a su home.
+  if (sesion && pathname && !puedeVerNav(miNav, ruta)) {
+    redirect(homeDeNav(miNav));
   }
+  // Items del menú que ve este rol (con su ícono/label del catálogo).
+  const itemsNav = NAV_CATALOG.filter((i) => puedeVerNav(miNav, i.href));
 
   const body = (
     <html lang="es" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body className="font-sans">
         {sesion ? (
           <div className="flex h-screen overflow-hidden">
-            <Sidebar rol={sesion.rol} />
+            <Sidebar rol={sesion.rol} items={itemsNav} />
             <div className="flex flex-1 flex-col overflow-hidden">
               <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} />
               <main className="flex-1 overflow-y-auto px-6 py-6">{children}</main>

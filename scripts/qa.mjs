@@ -13,11 +13,11 @@ let problemas = 0;
 const fail = (m) => { problemas++; console.log("  ✗ " + m); };
 const ok = (m) => console.log("  ✓ " + m);
 
-// 1) Rutas del menú (Sidebar) y de roles
-const sidebar = readFileSync(rel("components/layout/Sidebar.tsx"), "utf8");
-const navHrefs = [...sidebar.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1]);
-
+// 1) Catálogo de nav (NAV_CATALOG en roles.ts) y nav por rol (ROLES)
 const roles = readFileSync(rel("lib/roles.ts"), "utf8");
+const catalogo = roles.slice(roles.indexOf("NAV_CATALOG"));
+const navHrefs = [...catalogo.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1]);
+
 const rolesNav = [...roles.matchAll(/nav:\s*\[([^\]]+)\]/g)]
   .flatMap((m) => [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]));
 const rutasRoles = [...new Set(rolesNav)];
@@ -38,17 +38,17 @@ function paginasApp(dir = rel("app"), base = "") {
 const paginas = new Set(paginasApp());
 if (existsSync(rel("app/page.tsx"))) paginas.add("/");
 
-console.log("== Rutas del menú (Sidebar) tienen su página ==");
+console.log("== Rutas del catálogo (NAV_CATALOG) tienen su página ==");
 for (const href of navHrefs) {
   const pagPath = href === "/" ? "app/page.tsx" : `app${href}/page.tsx`;
   if (existsSync(rel(pagPath))) ok(`${href}`);
-  else fail(`${href} está en el menú pero NO existe ${pagPath} → daría 404`);
+  else fail(`${href} está en el catálogo pero NO existe ${pagPath} → daría 404`);
 }
 
-console.log("\n== Rutas de roles (lib/roles.ts) están en el Sidebar ==");
+console.log("\n== Rutas de roles (lib/roles.ts) están en el catálogo ==");
 for (const r of rutasRoles) {
   if (r === "/guia" || navHrefs.includes(r)) ok(`${r}`);
-  else fail(`${r} está en roles pero no en el NAV del Sidebar (no se vería / inconsistente)`);
+  else fail(`${r} está en roles pero no en NAV_CATALOG (no se vería / inconsistente)`);
 }
 
 console.log("\n== Páginas de app/ que NO están en el menú (info) ==");

@@ -25,6 +25,13 @@ export default function UsuariosView() {
   const [pass, setPass] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // Permisos del menú por rol (editable)
+  const [navByRol, setNavByRol] = useState<Record<string, string[]>>({});
+  const [catalog, setCatalog] = useState<{ href: string; label: string; icon: string }[]>([]);
+  const [rolesMeta, setRolesMeta] = useState<{ id: Rol; label: string }[]>([]);
+  const [fijas, setFijas] = useState<string[]>([]);
+  const [guardandoRol, setGuardandoRol] = useState("");
+
   async function cargar() {
     setStatus("loading");
     try {
@@ -36,9 +43,43 @@ export default function UsuariosView() {
       setStatus("error");
     }
   }
+  async function cargarRoles() {
+    try {
+      const j = await (await fetch("/api/roles")).json();
+      if (j.ok) {
+        setNavByRol(j.navByRol);
+        setCatalog(j.catalog);
+        setRolesMeta(j.roles);
+        setFijas(j.fijas ?? []);
+      }
+    } catch {}
+  }
   useEffect(() => {
     cargar();
+    cargarRoles();
   }, []);
+
+  async function toggle(rol: Rol, href: string) {
+    if (fijas.includes(href) || (rol === "admin" && href === "/usuarios")) return; // fijas
+    const cur = navByRol[rol] ?? [];
+    const nuevo = cur.includes(href) ? cur.filter((h) => h !== href) : [...cur, href];
+    setNavByRol((s) => ({ ...s, [rol]: nuevo })); // optimista
+    setGuardandoRol(rol);
+    try {
+      const j = await (
+        await fetch("/api/roles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rol, nav: nuevo }),
+        })
+      ).json();
+      if (j.ok) setNavByRol(j.navByRol);
+      else setMsg({ ok: false, text: j.error ?? "No se pudo guardar el permiso." });
+    } finally {
+      setGuardandoRol("");
+    }
+  }
+  const esFija = (rol: Rol, href: string) => fijas.includes(href) || (rol === "admin" && href === "/usuarios");
 
   async function agregar(e: React.FormEvent) {
     e.preventDefault();
@@ -117,6 +158,50 @@ export default function UsuariosView() {
         </p>
       </Card>
 
+      {/* Permisos del menú por rol */}
+      {rolesMeta.length > 0 && (
+        <Card className="space-y-4 p-4">
+          <div>
+            <p className="text-2xs font-medium uppercase tracking-wide text-faint">Qué ve cada rol en el menú</p>
+            <p className="mt-0.5 text-2xs text-faint">
+              Tildá las pantallas que puede ver cada rol. Se guarda al instante. (“¿Qué puedo hacer?” y Usuarios para
+              admin quedan siempre activas.)
+            </p>
+          </div>
+          {rolesMeta.map((r) => (
+            <div key={r.id} className="rounded-lg border border-line p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Badge tone={tonoRol[r.id]}>{r.label}</Badge>
+                <span className="text-2xs text-faint">
+                  {(navByRol[r.id] ?? []).filter((h) => h !== "/guia").length} pantallas
+                  {guardandoRol === r.id && " · guardando…"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {catalog.map((it) => {
+                  const on = (navByRol[r.id] ?? []).includes(it.href);
+                  const fija = esFija(r.id, it.href);
+                  return (
+                    <button
+                      key={it.href}
+                      onClick={() => toggle(r.id, it.href)}
+                      disabled={fija}
+                      title={fija ? "Siempre visible" : it.href}
+                      className={`rounded-full border px-2.5 py-1 text-2xs font-medium transition-colors ${
+                        on ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"
+                      } ${fija ? "cursor-default opacity-70" : ""}`}
+                    >
+                      {on ? "✓ " : ""}
+                      {it.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+
       {/* Lista */}
       {status === "loading" ? (
         <Card className="space-y-2 p-4">
@@ -149,7 +234,7 @@ export default function UsuariosView() {
                     {u.tieneClave ? "propia" : "genérica"}
                   </td>
                   <td className="px-4 py-2.5 text-2xs text-muted">
-                    {ROLES[u.rol].nav.filter((h) => h !== "/guia").length} pantallas
+                    {(navByRol[u.rol] ?? ROLES[u.rol].nav).filter((h) => h !== "/guia").length} pantallas
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
