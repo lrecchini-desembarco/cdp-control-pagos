@@ -17,35 +17,46 @@
 USE [CENTRAL_ESTADISTICA];
 GO
 
+-- Precio vigente = el precio unitario MÁS FRECUENTE (moda) de los últimos 90 días
+-- por producto x sucursal. La moda + ventana reciente + piso descartan outliers
+-- (ventas a $1, correcciones, promos) y reflejan el precio actual (clave con inflación).
 CREATE OR ALTER VIEW dbo.vw_PreciosProducto AS
-WITH ult AS (
+WITH v AS (
   SELECT
     d.ID_CTA_ARTICULO,
     d.ID_SUCURSAL,
-    d.IMPORTE_NETO,
-    d.IMPORTE_CON_IMPUESTOS,
-    d.CANTIDAD,
-    d.FECHA,
-    ROW_NUMBER() OVER (
-      PARTITION BY d.ID_CTA_ARTICULO, d.ID_SUCURSAL
-      ORDER BY d.FECHA DESC
-    ) AS rn
+    CAST(d.IMPORTE_CON_IMPUESTOS / d.CANTIDAD AS decimal(18,2)) AS pu,
+    CAST(d.IMPORTE_NETO          / d.CANTIDAD AS decimal(18,2)) AS pu_neto,
+    d.FECHA
   FROM dbo.CTA_DETALLE_COMANDA d
-  WHERE d.ESTADO = 'P'                 -- venta válida
+  WHERE d.ESTADO = 'P'
     AND d.CANTIDAD > 0
-    AND d.IMPORTE_CON_IMPUESTOS > 0    -- ignora combos/promos con importe 0
+    AND d.IMPORTE_CON_IMPUESTOS / d.CANTIDAD >= 100                 -- descarta ventas basura ($1, ajustes)
+    AND d.FECHA >= DATEADD(day, -90, CAST(GETDATE() AS date))       -- solo precios recientes
+),
+modo AS (
+  SELECT
+    ID_CTA_ARTICULO, ID_SUCURSAL, pu,
+    MAX(pu_neto) AS pu_neto,
+    MAX(FECHA)   AS ult,
+    ROW_NUMBER() OVER (
+      PARTITION BY ID_CTA_ARTICULO, ID_SUCURSAL
+      ORDER BY COUNT(*) DESC, MAX(FECHA) DESC          -- el más vendido; desempata el más reciente
+    ) AS rn
+  FROM v
+  GROUP BY ID_CTA_ARTICULO, ID_SUCURSAL, pu
 )
 SELECT
-  a.COD_ARTICULO                                              AS sku,
-  a.DESC_CTA_ARTICULO                                         AS nombre,
-  s.DESC_SUCURSAL                                             AS sucursal,
-  CAST(ult.IMPORTE_CON_IMPUESTOS / ult.CANTIDAD AS decimal(18,2)) AS precio,
-  CAST(ult.IMPORTE_NETO / ult.CANTIDAD AS decimal(18,2))         AS precio_neto,
-  CAST(ult.FECHA AS date)                                     AS actualizado
-FROM   ult
-JOIN   dbo.CTA_ARTICULO a ON a.ID_CTA_ARTICULO = ult.ID_CTA_ARTICULO
-JOIN   dbo.SUCURSAL     s ON s.ID_SUCURSAL     = ult.ID_SUCURSAL
-WHERE  ult.rn = 1;
+  a.COD_ARTICULO      AS sku,
+  a.DESC_CTA_ARTICULO AS nombre,
+  s.DESC_SUCURSAL     AS sucursal,
+  m.pu                AS precio,
+  m.pu_neto           AS precio_neto,
+  CAST(m.ult AS date) AS actualizado
+FROM   modo m
+JOIN   dbo.CTA_ARTICULO a ON a.ID_CTA_ARTICULO = m.ID_CTA_ARTICULO
+JOIN   dbo.SUCURSAL     s ON s.ID_SUCURSAL     = m.ID_SUCURSAL
+WHERE  m.rn = 1;
 GO
 
 -- Permiso para el usuario de la app:

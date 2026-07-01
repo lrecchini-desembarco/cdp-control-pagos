@@ -10,10 +10,12 @@ vacías** en `CENTRAL_ESTADISTICA`. Así que el precio vigente se toma del **pre
 efectivo de la última venta** de cada producto en cada sucursal
 (`CTA_DETALLE_COMANDA`): a cuánto se vendió realmente.
 
-- **Con impuestos** = `IMPORTE_CON_IMPUESTOS / CANTIDAD` de la última venta.
-- **Neto** = `IMPORTE_NETO / CANTIDAD`.
-- **General** (uno por SKU) = precio de la sucursal con la venta más reciente, más
-  el **rango min–max** entre sucursales.
+- **Precio vigente** por producto×sucursal = el precio unitario **más frecuente
+  (moda) de los últimos 90 días**. Moda + ventana reciente + piso ($100) descartan
+  outliers (ventas a $1, ajustes) y siguen la inflación.
+- **Con impuestos** = `IMPORTE_CON_IMPUESTOS / CANTIDAD`. **Neto** = `IMPORTE_NETO / CANTIDAD`.
+- **General** (uno por SKU) = precio de la sucursal más reciente + **rango min–max**
+  entre sucursales.
 
 ## Activar Tango real
 1. Crear la vista en Tango (una vez): correr `lib/sources/precios.queries.sql` en
