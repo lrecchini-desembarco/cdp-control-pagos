@@ -28,6 +28,17 @@ efectivo de la última venta** de cada producto en cada sucursal
 
 Sin eso, la pantalla usa **datos de ejemplo** (mock) y lo indica con un badge.
 
+## Comparar contra el menú web (WooCommerce)
+`npm run compare:precios` (con el dev en :3000 y precios live) scrapea el menú web
+(`eldesembarco.com/menu`, `mrtasty.com.ar/menu-amba`), lo matchea por nombre contra
+Tango y marca las diferencias (±% con semáforo ok / ~ / ‼). Valida si el **precio de
+lista de la web** coincide con lo que se **cobra** (Tango).
+
+Notas: web = precio de **lista**; Tango = precio **efectivo** (incluye promos/combos),
+por eso los ‼ suelen ser mis-matches con SKUs de promo/combo. Un patrón "Tango ~+15%
+vs web" = la web quedó **desactualizada** tras un aumento. Es herramienta de validación
+(el scraping depende del HTML del sitio), no un dato productivo.
+
 ## Estructura
 - `lib/sources/precios.queries.sql` — vista `vw_PreciosProducto`.
 - `lib/sources/tango.ts` — `tangoPreciosSource` (SQL directo + bridge).
