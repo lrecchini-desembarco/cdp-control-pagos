@@ -19,6 +19,16 @@ type State =
   | { kind: "error"; msg: string }
   | { kind: "ok"; data: RavenItem };
 
+// Insumos que HOY responden en Raven (provisorio). El resto da 404 porque todavía
+// no están cargados con nuestro código; se actualiza cuando Raven confirme los códigos.
+const RAVEN_OK = [{ code: "050027", name: "Bolas Blend 100g" }];
+const RAVEN_PENDIENTE = [
+  { code: "040022", name: "Medallón Tuki 80g" },
+  { code: "080002", name: "Panceta feteada" },
+  { code: "150001", name: "Milanesa de carne" },
+  { code: "060015", name: "Pan brioche" },
+];
+
 export default function RavenExplorer() {
   const [code, setCode] = useState("050027");
   const [date, setDate] = useState("2026-06-25");
@@ -27,6 +37,12 @@ export default function RavenExplorer() {
   const dateRef = useRef(date);
   codeRef.current = code;
   dateRef.current = date;
+
+  function usar(c: string) {
+    setCode(c);
+    codeRef.current = c;
+    consultar();
+  }
 
   async function consultar() {
     setState({ kind: "loading" });
@@ -75,6 +91,36 @@ export default function RavenExplorer() {
           Pedidos al CDP por producto y fecha de entrega, desglosados por sucursal.
         </p>
       </div>
+
+      {/* Provisorio: solo algunos insumos están cargados en Raven (el resto da 404). */}
+      <Card className="border-l-4 border-l-warn/50 p-4">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-warn/25 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-warn">
+            provisorio
+          </span>
+          <p className="text-sm font-medium text-ink">Datos de Raven en alineación</p>
+        </div>
+        <p className="mt-1.5 text-xs text-muted">
+          La API de Raven es temporal y varios insumos todavía no están cargados con nuestro código (dan 404).
+          Por ahora <b>solo estos responden</b> — tocá para consultarlos:
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {RAVEN_OK.map((p) => (
+            <button
+              key={p.code}
+              onClick={() => usar(p.code)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ok/30 bg-ok/10 px-2.5 py-1 text-xs font-medium text-ok transition-colors hover:bg-ok/20"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-ok" />
+              {p.name}
+              <span className="font-mono text-2xs opacity-70">{p.code}</span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-2xs text-faint">
+          Pendientes (404, esperando el código real de Raven): {RAVEN_PENDIENTE.map((p) => p.name).join(" · ")}.
+        </p>
+      </Card>
 
       <Card className="p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
