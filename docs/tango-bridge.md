@@ -90,9 +90,40 @@ TANGO_BRIDGE_SECRET=<el mismo BRIDGE_SECRET>
 Dejar `DATA_SOURCE=mock` (pedidos/catálogo siguen mock hasta tener Raven token / vista catálogo).
 **Redeploy** para que tome las variables.
 
+## Endpoint `/cobros` (cobros por forma de pago — para contrastar Mercado Pago)
+
+`GET /cobros?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` (header `x-bridge-secret`). Ya está en el
+bridge (mismo patrón que `/ventas`), pero **depende de una vista que crea Sistemas**:
+`dbo.vw_CobrosDiarios`. Hasta que exista, `/cobros` responde **502** (`Invalid object name`)
+— queda "plug-and-play": apenas la vista exista, devuelve datos sin tocar código.
+
+Contrato que debe exponer la vista (para el consumidor de la app de cierres):
+
+```sql
+CREATE VIEW dbo.vw_CobrosDiarios AS
+SELECT
+  <fecha_comercial>  AS fecha,          -- DATE
+  <id_sucursal>      AS id_sucursal,    -- ID de Tango (clave firme, mapear por ID)
+  <desc_sucursal>    AS sucursal,       -- DESC_SUCURSAL (nombre, para etiqueta/fallback)
+  <medio_pago_desc>  AS medio_pago,     -- Efectivo, Visa, Mastercard, Mercado Pago/QR, PedidosYa…
+  SUM(<importe>)     AS importe
+FROM   <tablas CTA_* de cobros>
+WHERE  <estado válido>                   -- equivalente al ESTADO='P' de ventas (excluir anulados)
+GROUP  BY <fecha_comercial>, <id_sucursal>, <desc_sucursal>, <medio_pago_desc>;
+
+GRANT SELECT ON dbo.vw_CobrosDiarios TO cdp_lectura;
+```
+
+> **Incluir `id_sucursal` Y `sucursal`**: la app cruza MP por ID (Tango usa otro namespace
+> de IDs que Raven/CDP), y el nombre sirve de etiqueta. Ideal: **una fila por cobro** (con
+> hora + N° comprobante) para contraste operación-por-operación; si no, el total diario por medio.
+
 ## Notas
-- El bridge solo expone `GET /ventas?desde&hasta` (consulta parametrizada a la vista,
-  sin SQL arbitrario) y exige el header `x-bridge-secret`. No expone el SQL.
+- El bridge expone `GET /ventas?desde&hasta`, `GET /precios` y `GET /cobros?desde&hasta`
+  (consultas parametrizadas a vistas, sin SQL arbitrario) y exige el header `x-bridge-secret`.
+  No expone el SQL. **Es un solo proceso**: los tres endpoints salen del mismo bridge/túnel.
+- El endpoint `/cobros` recién agregado se sirve tras **reiniciar el bridge** (reboot o manual);
+  como igual da 502 hasta que exista `vw_CobrosDiarios`, no urge reiniciar.
 - En la red interna, el dev local usa **SQL directo** (sin bridge): no setees
   `TANGO_BRIDGE_URL` en esa `.env.local`.
 - Mismo patrón sirve a futuro para Catálogo: se agrega un `GET /catalogo` al bridge.

@@ -71,6 +71,20 @@ const PRECIOS_QUERY = `
   ORDER BY nombre, sucursal;
 `;
 
+// Cobros por día · sucursal · medio de pago (para contrastar contra Mercado Pago).
+// Requiere la vista dbo.vw_CobrosDiarios (la crea Sistemas; ver docs/tango-bridge.md).
+// Hasta que exista, este endpoint responde 502 (por eso queda "listo/plug-and-play").
+// La vista debe exponer: fecha DATE, id_sucursal, sucursal (DESC_SUCURSAL),
+// medio_pago, importe. (Ideal: una fila por cobro con hora + comprobante.)
+const COBROS_QUERY = `
+  SELECT
+    CONVERT(varchar(10), fecha, 23) AS fecha,
+    id_sucursal, sucursal, medio_pago, importe
+  FROM dbo.vw_CobrosDiarios
+  WHERE fecha BETWEEN @desde AND @hasta
+  ORDER BY fecha, id_sucursal, medio_pago;
+`;
+
 let poolPromise = null;
 const getPool = () => (poolPromise ??= new sql.ConnectionPool(config).connect());
 
@@ -112,11 +126,26 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (url.pathname === "/cobros") {
+    const desde = url.searchParams.get("desde");
+    const hasta = url.searchParams.get("hasta");
+    if (!isFecha(desde) || !isFecha(hasta)) return json(400, { error: "desde/hasta AAAA-MM-DD requeridos" });
+    try {
+      const pool = await getPool();
+      const r = await pool.request().input("desde", sql.Date, desde).input("hasta", sql.Date, hasta).query(COBROS_QUERY);
+      return json(200, r.recordset);
+    } catch (e) {
+      // Mientras no exista dbo.vw_CobrosDiarios, cae acá (502) con "Invalid object name".
+      console.error("cobros error:", e.message);
+      return json(502, { error: e.message });
+    }
+  }
+
   return json(404, { error: "ruta no encontrada" });
 });
 
 server.listen(PORT, () => {
   console.log(`✓ Tango bridge escuchando en http://localhost:${PORT}`);
-  console.log(`  GET /ventas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  ·  GET /precios   (header x-bridge-secret)`);
+  console.log(`  GET /ventas?desde&hasta  ·  GET /precios  ·  GET /cobros?desde&hasta   (header x-bridge-secret)`);
   console.log(`  Publicalo con:  cloudflared tunnel --url http://localhost:${PORT}`);
 });
