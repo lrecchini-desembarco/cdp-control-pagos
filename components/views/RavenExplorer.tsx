@@ -21,9 +21,12 @@ type State =
 
 // Insumos que HOY responden en Raven (provisorio). El resto da 404 porque todavía
 // no están cargados con nuestro código; se actualiza cuando Raven confirme los códigos.
-const RAVEN_OK = [{ code: "050027", name: "Bolas Blend 100g" }];
+const RAVEN_OK = [
+  { code: "050027", name: "Bolas Blend 100g" },
+  { code: "083009", name: "Medallón Tuki 80g" },
+  { code: "083041", name: "Medallón Tuki 55g" },
+];
 const RAVEN_PENDIENTE = [
-  { code: "040022", name: "Medallón Tuki 80g" },
   { code: "080002", name: "Panceta feteada" },
   { code: "150001", name: "Milanesa de carne" },
   { code: "060015", name: "Pan brioche" },
