@@ -119,6 +119,31 @@ GRANT SELECT ON dbo.vw_CobrosDiarios TO cdp_lectura;
 > MP por ID (Tango usa otro namespace de IDs que Raven/CDP), el nombre es etiqueta. Ideal: **una
 > fila por cobro** (con hora + N° comprobante) para contraste operación-por-operación; si no, total diario.
 
+## Endpoint `/recetas` (receta de menú — para el Cruce)
+
+`GET /recetas` (header `x-bridge-secret`). Ya está en el bridge, pero **depende de una vista
+que crea Sistemas**: `dbo.vw_RecetasVenta`. Hasta que exista responde **502**. Da la receta
+de menú: qué **insumo** (y cuánto) consume cada **artículo de venta**, para traducir ventas → insumo.
+
+```sql
+CREATE VIEW dbo.vw_RecetasVenta AS
+SELECT
+  <cod_articulo_venta>  AS sku_venta,     -- COD_ARTICULO del artículo que se VENDE (mismo que en ventas)
+  <desc_articulo_venta> AS nombre_venta,  -- nombre del producto de venta (etiqueta)
+  <cod_insumo>          AS codigo_insumo, -- COD_ARTICULO del INSUMO que consume (ej. 083009 Tuki 80g)
+  <desc_insumo>         AS nombre_insumo, -- nombre del insumo (etiqueta)
+  <cantidad>            AS cantidad       -- unidades de insumo por 1 unidad vendida (el "factor")
+FROM   <tablas de receta / composición de artículos de Tango Restô>
+WHERE  <receta activa>;
+
+GRANT SELECT ON dbo.vw_RecetasVenta TO cdp_lectura;
+```
+
+> Es la **receta de descuento de stock** de Tango Restô (composición del artículo de venta),
+> pero que **corte en el insumo comprable** (ej. medallón), no que baje a materias primas.
+> `sku_venta` debe ser el mismo código que aparece en `vw_VentasInsumoDiaria.sku`, y `codigo_insumo`
+> el mismo que pide Raven (050027 Bolas, 083009 Tuki 80g, 083041 Tuki 55g…).
+
 ## Notas
 - Endpoints: `GET /` (índice, sin secreto) · `GET /health` · `GET /ventas?desde&hasta` ·
   `GET /precios` · `GET /sucursales` (maestro por nombre, DESC_SUCURSAL) · `GET /cobros?desde&hasta`.

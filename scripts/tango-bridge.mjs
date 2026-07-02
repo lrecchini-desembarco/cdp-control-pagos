@@ -91,6 +91,16 @@ const COBROS_QUERY = `
   ORDER BY FECHA, ID_SUCURSAL, MEDIO_PAGO;
 `;
 
+// Receta de menú: qué INSUMO (y cuánto) consume cada ARTÍCULO DE VENTA. Es lo que
+// el Cruce necesita para traducir ventas -> insumo. Requiere la vista dbo.vw_RecetasVenta
+// (la crea Sistemas; ver docs/tango-bridge.md). Hasta que exista, responde 502.
+// Columnas: sku_venta, nombre_venta, codigo_insumo, nombre_insumo, cantidad.
+const RECETAS_QUERY = `
+  SELECT sku_venta, nombre_venta, codigo_insumo, nombre_insumo, cantidad
+  FROM dbo.vw_RecetasVenta
+  ORDER BY sku_venta, codigo_insumo;
+`;
+
 // Maestro de sucursales tal como las nombra Tango (DESC_SUCURSAL). Sirve para que
 // otras apps reconcilien su propio namespace (ej. store_id de Mercado Pago) por nombre.
 // Nota: la vista NO expone ID_SUCURSAL (solo el nombre); el ID firme sale de vw_CobrosDiarios.
@@ -125,6 +135,7 @@ const server = createServer(async (req, res) => {
       "GET /ventas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD",
       "GET /precios",
       "GET /sucursales",
+      "GET /recetas  (requiere vista vw_RecetasVenta)",
       "GET /cobros?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_CobrosDiarios)",
     ],
     auth: "header x-bridge-secret (salvo /health y /)",
@@ -164,6 +175,18 @@ const server = createServer(async (req, res) => {
       return json(200, r.recordset);
     } catch (e) {
       console.error("sucursales error:", e.message);
+      return json(502, { error: e.message });
+    }
+  }
+
+  if (url.pathname === "/recetas") {
+    try {
+      const pool = await getPool();
+      const r = await pool.request().query(RECETAS_QUERY);
+      return json(200, r.recordset);
+    } catch (e) {
+      // 502 con "Invalid object name" hasta que exista dbo.vw_RecetasVenta.
+      console.error("recetas error:", e.message);
       return json(502, { error: e.message });
     }
   }
