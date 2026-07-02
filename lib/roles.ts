@@ -37,18 +37,21 @@ export interface NavItem {
   href: string;
   label: string;
   icon: string;
+  beta?: boolean; // true = en construcción (chip "beta"); si no, productivo (punto verde)
 }
+// Los `beta: true` dependen de datos externos que aún no están (Raven token / recetas
+// reales / vista de Sistemas). El resto es productivo.
 export const NAV_CATALOG: NavItem[] = [
   { href: "/", label: "Resumen", icon: "◰" },
   { href: "/alertas", label: "Alertas", icon: "!" },
-  { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄" },
+  { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄", beta: true },
   { href: "/ventas", label: "Ventas por turno", icon: "▦" },
   { href: "/precios", label: "Precios", icon: "$" },
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉" },
   { href: "/compras", label: "Compras vs Ventas", icon: "⇲" },
-  { href: "/raven", label: "Consultar Raven", icon: "↧" },
+  { href: "/raven", label: "Consultar Raven", icon: "↧", beta: true },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
-  { href: "/catalogo", label: "Control de catálogo", icon: "▤" },
+  { href: "/catalogo", label: "Control de catálogo", icon: "▤", beta: true },
   { href: "/resenas", label: "Reseñas", icon: "★" },
   { href: "/usuarios", label: "Usuarios", icon: "◑" },
   { href: "/estado", label: "Sistema · Endpoints", icon: "⚙" },

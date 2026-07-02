@@ -105,6 +105,13 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
             >
               <span className="w-4 text-center text-base opacity-80">{n.icon}</span>
               <span className="flex-1 truncate">{n.label}</span>
+              {n.beta ? (
+                <span className="shrink-0 rounded bg-warn/25 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-warn" title="En construcción (beta)">
+                  beta
+                </span>
+              ) : (
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ok/90" title="Productivo" aria-label="Productivo" />
+              )}
               {n.href === "/alertas" && urgentes > 0 && (
                 <span className="grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white">
                   {urgentes}
