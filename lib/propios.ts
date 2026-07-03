@@ -3,26 +3,31 @@
 // normalizado (saca acentos, prefijo "mrt " y símbolos), así entra igual "Morón",
 // "Moron" o "Mrt Pilar".
 //
-// Lista OFICIAL de locales PROPIOS (16), del maestro de locales de operaciones
-// (planilla "Locales", jul-2026). El resto son franquicias.
+// Lista OFICIAL de locales PROPIOS (18), del maestro "Terminales locales propios +
+// franquicias (Interno)" — hojas Desembarco (16) + Tasty (2). El resto = franquicia.
+// Los de Tasty conservan el prefijo "Mrt" (así no se confunden con los de Desembarco).
 
 export const PROPIOS: string[] = [
-  "Villa Crespo",
+  // El Desembarco (16)
   "Boedo",
-  "Villa Urquiza",
-  "Hurlingham",
-  "San Telmo",
-  "Morón",
-  "Pacífico",
-  "Núñez",
-  "Ramos Mejía",
-  "Nordelta",
-  "Olivos",
+  "Caseros",
   "Devoto",
-  "Pacheco",
-  "Quilmes",
-  "Recoleta",
+  "Hurlingham",
   "Microcentro",
+  "Morón",
+  "Nordelta",
+  "Núñez",
+  "Olivos",
+  "Pacheco",
+  "Pacífico",
+  "Quilmes",
+  "Ramos Mejía",
+  "Recoleta",
+  "San Telmo",
+  "Villa Urquiza",
+  // Mr Tasty (2)
+  "Mrt Caballito",
+  "Mrt Florida",
 ];
 
 // OJO: acá NO sacamos el prefijo "mrt " (a diferencia del cruce). Así "Boedo"
