@@ -3,21 +3,26 @@
 // normalizado (saca acentos, prefijo "mrt " y símbolos), así entra igual "Morón",
 // "Moron" o "Mrt Pilar".
 //
-// ⚠️ Lista SEMILLA (a confirmar/completar con operaciones): son los locales que
-// veníamos trackeando. Faltan sumar el resto de los ~18-19 propios.
+// Lista OFICIAL de locales PROPIOS (16), del maestro de locales de operaciones
+// (planilla "Locales", jul-2026). El resto son franquicias.
 
 export const PROPIOS: string[] = [
-  "Flores",
-  "Colegiales",
-  "Morón",
-  "P. Patricios",
+  "Villa Crespo",
+  "Boedo",
   "Villa Urquiza",
-  "Ramos Mejía",
-  "Castelar",
-  "Pilar",
-  "Caballito",
-  "Nordelta",
+  "Hurlingham",
+  "San Telmo",
+  "Morón",
+  "Pacífico",
   "Núñez",
+  "Ramos Mejía",
+  "Nordelta",
+  "Olivos",
+  "Devoto",
+  "Pacheco",
+  "Quilmes",
+  "Recoleta",
+  "Microcentro",
 ];
 
 const norm = (s: string) =>
