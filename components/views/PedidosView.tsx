@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, Field, inputClass, Skeleton } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
+import { fmtCompacto } from "@/lib/brands";
 
 interface Insumo { code: string; nombre: string; }
 interface LocalCmp { sucursal: string; tipo: "propio" | "franquicia"; operativo: boolean; porInsumo: Record<string, number>; pedido: number; venta: number; }
@@ -151,10 +152,10 @@ export default function PedidosView() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Pedido al CDP" value={fmt(kpis.pedido)} sub="unidades insumo" />
-        <Kpi label="Venta (Tango)" value={fmt(kpis.venta)} sub="unidades vendidas" />
-        <Kpi label="Pedido propios / franq." value={`${fmt(kpis.pedidoProp)} / ${fmt(kpis.pedidoFranq)}`} sub="unidades" />
-        <Kpi label="⚠ Pidió sin vender" value={String(kpis.sinVenta)} sub={`${fmt(kpis.pedidoRiesgo)} u en riesgo`} tone={kpis.sinVenta ? "bad" : undefined} />
+        <Kpi label="Pedido al CDP" value={fmtCompacto(kpis.pedido)} sub="unidades insumo" title={`${fmt(kpis.pedido)} u`} />
+        <Kpi label="Venta (Tango)" value={fmtCompacto(kpis.venta)} sub="unidades vendidas" title={`${fmt(kpis.venta)} u`} />
+        <Kpi label="Pedido propios / franq." value={`${fmtCompacto(kpis.pedidoProp)} / ${fmtCompacto(kpis.pedidoFranq)}`} sub="unidades" title={`${fmt(kpis.pedidoProp)} / ${fmt(kpis.pedidoFranq)} u`} />
+        <Kpi label="⚠ Pidió sin vender" value={String(kpis.sinVenta)} sub={`${fmtCompacto(kpis.pedidoRiesgo)} u en riesgo`} tone={kpis.sinVenta ? "bad" : undefined} />
       </div>
 
       <Card className="overflow-hidden">
@@ -245,8 +246,8 @@ function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[];
 
         {/* Pedido vs Venta */}
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <Kpi label="Pedido al CDP" value={fmt(l.pedido)} sub="u insumo" />
-          <Kpi label="Venta (Tango)" value={fmt(l.venta)} sub="u vendidas" />
+          <Kpi label="Pedido al CDP" value={fmtCompacto(l.pedido)} sub="u insumo" title={`${fmt(l.pedido)} u`} />
+          <Kpi label="Venta (Tango)" value={fmtCompacto(l.venta)} sub="u vendidas" title={`${fmt(l.venta)} u`} />
           <Kpi label="Pedido / Venta" value={ratio != null ? `${ratio}%` : "—"} />
         </div>
 
@@ -274,11 +275,11 @@ function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[];
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "bad" }) {
+function Kpi({ label, value, sub, tone, title }: { label: string; value: string; sub?: string; tone?: "bad"; title?: string }) {
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-lg font-semibold ${tone === "bad" ? "text-bad" : "text-ink"}`}>{value}</p>
+      <p title={title} className={`mt-0.5 font-display text-lg font-semibold ${tone === "bad" ? "text-bad" : "text-ink"}`}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );

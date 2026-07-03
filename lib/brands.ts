@@ -11,6 +11,15 @@ export const brandById = (id: BrandId) => BRANDS.find((b) => b.id === id)!;
 export const fmtInt = (n: number) =>
   new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(n);
 
+// Formato compacto y claro (es-AR): 2.088 -> "2,1 mil", 1.234.567 -> "1,2 M".
+// Para que se lea la magnitud de un vistazo (miles / millones).
+export const fmtCompacto = (n: number): string => {
+  const a = Math.abs(n);
+  if (a >= 1_000_000) return `${(n / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M`;
+  if (a >= 1_000) return `${(n / 1_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} mil`;
+  return Math.round(n).toLocaleString("es-AR");
+};
+
 export const fmtNum = (n: number, d = 1) =>
   new Intl.NumberFormat("es-AR", { maximumFractionDigits: d }).format(n);
 
