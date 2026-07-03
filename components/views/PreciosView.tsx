@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, inputClass } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
+import { fmtCompacto } from "@/lib/brands";
 
 interface General {
   sku: string;
@@ -35,6 +36,12 @@ interface Comparacion {
 }
 
 const money = (n: number) => "$" + Math.round(n || 0).toLocaleString("es-AR");
+// Compacto para leer la magnitud (mil / M). El exacto va en el tooltip (title).
+const moneyC = (n: number) => "$" + fmtCompacto(n || 0);
+const Money = ({ n, bold, tone }: { n: number; bold?: boolean; tone?: string }) => {
+  const Tag = bold ? "b" : "span";
+  return <Tag title={money(n)} className={`font-mono tnum ${tone ?? (bold ? "text-ink" : "text-muted")}`}>{moneyC(n)}</Tag>;
+};
 
 // Activo en Tango = con venta en los últimos 30 días (por la fecha de "actualizado").
 const HACE_30D = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -217,10 +224,10 @@ export default function PreciosView() {
             filas={gen.map((p) => [
               <Prod key="p" nombre={p.nombre} sku={p.sku} />,
               <TagTango key="t" actualizado={p.actualizado} />,
-              <b key="pr" className="font-mono tnum text-ink">{money(p.precio)}</b>,
-              <span key="n" className="font-mono tnum text-muted">{money(p.precioNeto)}</span>,
-              <span key="r" className="text-2xs text-faint">
-                {p.min && p.max && p.min !== p.max ? `${money(p.min)} – ${money(p.max)}` : "—"}
+              <Money key="pr" n={p.precio} bold />,
+              <Money key="n" n={p.precioNeto} />,
+              <span key="r" title={p.min && p.max ? `${money(p.min)} – ${money(p.max)}` : ""} className="text-2xs text-faint">
+                {p.min && p.max && p.min !== p.max ? `${moneyC(p.min)} – ${moneyC(p.max)}` : "—"}
               </span>,
               <span key="s" className="text-2xs text-faint">{p.sucursales}</span>,
             ])}
@@ -233,8 +240,8 @@ export default function PreciosView() {
             filas={fil.map((p) => [
               <Prod key="p" nombre={p.nombre} sku={p.sku} />,
               <TagTango key="t" actualizado={p.actualizado} />,
-              <b key="pr" className="font-mono tnum text-ink">{money(p.precio)}</b>,
-              <span key="n" className="font-mono tnum text-muted">{money(p.precioNeto)}</span>,
+              <Money key="pr" n={p.precio} bold />,
+              <Money key="n" n={p.precioNeto} />,
               <span key="a" className="text-2xs text-faint">{p.actualizado ?? "—"}</span>,
             ])}
           />
@@ -250,8 +257,8 @@ export default function PreciosView() {
                 <span key="p" className="text-sm text-ink">{c.nombre}</span>,
                 <span key="ew" className="rounded-full bg-ok/10 px-2 py-0.5 text-2xs font-medium text-ok">En menú</span>,
                 <TagTango key="tg" actualizado={c.tangoActualizado} />,
-                <b key="w" className="font-mono tnum text-ink">{money(c.precioWeb)}</b>,
-                <span key="t" className="font-mono tnum text-muted">{money(c.precioTango!)}</span>,
+                <Money key="w" n={c.precioWeb} bold />,
+                <Money key="t" n={c.precioTango!} />,
                 <Dif key="d" pct={c.diffPct} estado={c.estado} />,
                 <span key="m" className="text-2xs text-faint">{c.tangoNombre}</span>,
               ])}
