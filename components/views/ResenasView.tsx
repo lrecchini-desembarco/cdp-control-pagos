@@ -67,7 +67,7 @@ export default function ResenasView() {
     const o = window.location.origin;
     setOrigin(o);
     // El QR apunta a la URL pública por defecto (configurable), no a localhost.
-    const pub = process.env.NEXT_PUBLIC_PUBLIC_URL ?? "https://cdp-control.vercel.app";
+    const pub = process.env.NEXT_PUBLIC_PUBLIC_URL ?? "https://cdp-control-pagos.vercel.app";
     setBaseUrl(/localhost|127\.0\.0\.1/.test(o) ? pub : o);
     cargarLocales();
     cargarDerivaciones();
@@ -222,6 +222,11 @@ export default function ResenasView() {
             ¿Cómo estuvo tu experiencia?
           </h2>
           <p className="mt-2 text-sm text-muted">Escaneá el código y dejanos tu reseña. ¡Te lleva 20 segundos!</p>
+
+          <div className="mx-auto mt-4 w-fit rounded-lg border-2 border-action px-5 py-2.5">
+            <p className="font-display text-2xl font-bold leading-none text-action">🎁 15% OFF</p>
+            <p className="mt-1 text-xs font-medium text-ink">en tus próximas 3 compras</p>
+          </div>
 
           <div className="my-7 flex justify-center">
             {qr ? (
