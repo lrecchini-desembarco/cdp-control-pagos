@@ -25,8 +25,10 @@ export const PROPIOS: string[] = [
   "Microcentro",
 ];
 
+// OJO: acá NO sacamos el prefijo "mrt " (a diferencia del cruce). Así "Boedo"
+// (Desembarco, propio) NO se confunde con "Mrt Boedo" (Mr Tasty, otra marca).
 const norm = (s: string) =>
-  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/^mrt\s+/, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
 const SET_PROPIOS = new Set(PROPIOS.map(norm));
 
