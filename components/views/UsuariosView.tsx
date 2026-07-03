@@ -15,6 +15,7 @@ const tonoRol: Record<Rol, "action" | "warn" | "neutral"> = {
   admin: "action",
   operaciones: "warn",
   local: "neutral",
+  comparacion: "neutral",
 };
 
 export default function UsuariosView() {
