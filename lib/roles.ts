@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/usuarios", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/usuarios", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -45,6 +45,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/", label: "Resumen", icon: "◰" },
   { href: "/alertas", label: "Alertas", icon: "!" },
   { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄", beta: true },
+  { href: "/pedidos", label: "Pedidos por local", icon: "⇊" },
   { href: "/ventas", label: "Ventas por turno", icon: "▦" },
   { href: "/precios", label: "Precios", icon: "$" },
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉" },

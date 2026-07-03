@@ -32,13 +32,12 @@ export const PRODUCTO_MAP: ProductoMap[] = [
 
 /** Insumos que el CDP entrega. Si un insumo no tiene regla en PRODUCTO_MAP,
  *  sus pedidos no se pueden contrastar contra ventas (genera alerta). */
+// Insumos del CDP con su CÓDIGO REAL de Raven (confirmado con Raven, jul-2026).
+// Panceta / Milanesa / Pan brioche quedan pendientes del código real (dan 404 hoy).
 export const PRODUCTS: { code: string; name: string; unit: string; brand: import("./types").BrandId }[] = [
   { code: "050027", name: "Bolas Blend 100g", unit: "un", brand: "desembarco" },
-  { code: "040022", name: "Medallón Tuki 80g", unit: "un", brand: "tasty" },
-  { code: "080002", name: "Panceta feteada", unit: "g", brand: "tasty" },
-  { code: "150001", name: "Milanesa de carne", unit: "un", brand: "mila" },
-  // Insumo que el CDP despacha pero todavía sin receta cargada -> punto ciego.
-  { code: "060015", name: "Pan brioche", unit: "un", brand: "tasty" },
+  { code: "083009", name: "Medallón Tuki 80g", unit: "un", brand: "tasty" },
+  { code: "083041", name: "Medallón Tuki 55g", unit: "un", brand: "tasty" },
 ];
 
 /** Devuelve las últimas n fechas (incluida hoy) en formato ISO AAAA-MM-DD. */
