@@ -13,6 +13,8 @@ export interface Cupon {
   emitido: string;       // ISO
   usosRestantes: number; // arranca en 3
   usos: string[];        // fechas ISO de cada canje
+  rating?: number;       // 1..5 que dejó en NUESTRA pantalla (para segmentar el CRM)
+  consent?: boolean;     // aceptó recibir promos por WhatsApp (opt-in)
 }
 
 const KEY = "cupones";
@@ -37,11 +39,21 @@ export async function emitirCupon(input: {
   marca?: string;
   nombre: string;
   telefono: string;
+  rating?: number;
+  consent?: boolean;
 }): Promise<Cupon> {
   const telefono = soloDigitos(input.telefono);
   const cupones = await todos();
   const existente = cupones.find((c) => c.telefono === telefono && c.local === input.local);
-  if (existente) return existente;
+  if (existente) {
+    // Ya tenía cupón en este local: no creamos otro, pero actualizamos sus datos
+    // (la última reseña gana: nombre, rating, consentimiento).
+    if (input.nombre?.trim()) existente.nombre = input.nombre.trim();
+    if (typeof input.rating === "number") existente.rating = input.rating;
+    if (typeof input.consent === "boolean") existente.consent = input.consent;
+    await writeStore(KEY, cupones);
+    return existente;
+  }
 
   let codigo = nuevoCodigo();
   while (cupones.some((c) => c.codigo === codigo)) codigo = nuevoCodigo();
@@ -55,6 +67,8 @@ export async function emitirCupon(input: {
     emitido: new Date().toISOString(),
     usosRestantes: USOS_INICIALES,
     usos: [],
+    rating: input.rating,
+    consent: input.consent,
   };
   cupones.push(cupon);
   await writeStore(KEY, cupones);

@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/cupones", "/usuarios", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/usuarios", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/cupones", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -53,6 +53,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
   { href: "/catalogo", label: "Control de catálogo", icon: "▤", beta: true },
   { href: "/resenas", label: "Reseñas", icon: "★" },
+  { href: "/clientes", label: "Clientes", icon: "☺" },
   { href: "/cupones", label: "Validar cupón", icon: "◈" },
   { href: "/usuarios", label: "Usuarios", icon: "◑" },
   { href: "/estado", label: "Sistema · Endpoints", icon: "⚙" },

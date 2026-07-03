@@ -25,6 +25,8 @@ export default function ReviewPublic() {
 
   const [nombre, setNombre] = useState("");
   const [tel, setTel] = useState(""); // solo dígitos, sin el 54 9
+  const [rating, setRating] = useState(0);
+  const [consent, setConsent] = useState(true);
   const [fase, setFase] = useState<"form" | "listo">("form");
   const [cupon, setCupon] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -63,7 +65,7 @@ export default function ReviewPublic() {
   const color = brand.color;
 
   const telDigits = tel.replace(/\D/g, "");
-  const puedeEnviar = Boolean(local && localObj && nombre.trim().length >= 2 && telDigits.length >= 8);
+  const puedeEnviar = Boolean(local && localObj && nombre.trim().length >= 2 && telDigits.length >= 8 && rating > 0);
 
   async function calificar() {
     if (!puedeEnviar) return;
@@ -72,7 +74,7 @@ export default function ReviewPublic() {
       const r = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ local, marca: marcaActiva, nombre: nombre.trim(), telefono: `549${telDigits}` }),
+        body: JSON.stringify({ local, marca: marcaActiva, nombre: nombre.trim(), telefono: `549${telDigits}`, rating, consent }),
       });
       const j = await r.json();
       if (!j.ok) { setError(j.error || "No se pudo procesar."); return; }
@@ -179,6 +181,23 @@ export default function ReviewPublic() {
             </div>
           )}
 
+          {/* Estrellas */}
+          <label className="mb-1.5 mt-4 block text-2xs font-medium uppercase tracking-wide text-faint">¿Cómo estuvo tu experiencia?</label>
+          <div className="flex justify-center gap-2">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setRating(n)}
+                aria-label={`${n} estrellas`}
+                className="text-4xl leading-none transition-transform hover:scale-110"
+                style={{ color: n <= rating ? color : "#D9D4CC" }}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+
           {/* Nombre */}
           <label className="mb-1 mt-4 block text-2xs font-medium uppercase tracking-wide text-faint">Tu nombre</label>
           <input
@@ -204,6 +223,12 @@ export default function ReviewPublic() {
           </div>
           <p className="mt-1 text-2xs text-faint">Código de área + número, sin el 0 ni el 15.</p>
 
+          {/* Consentimiento WhatsApp */}
+          <label className="mt-4 flex items-start gap-2 text-sm text-ink">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4" />
+            <span>Quiero recibir promos y novedades por WhatsApp.</span>
+          </label>
+
           {error && <p className="mt-3 rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
 
           {/* Botón calificar */}
@@ -215,7 +240,11 @@ export default function ReviewPublic() {
           >
             {enviando ? "Procesando…" : local ? `⭐ Calificar ${local}` : "⭐ Calificar local"}
           </button>
-          {!local && <p className="mt-2 text-center text-2xs text-faint">Elegí tu local para continuar.</p>}
+          {!puedeEnviar && (
+            <p className="mt-2 text-center text-2xs text-faint">
+              {!local ? "Elegí tu local para continuar." : rating === 0 ? "Tocá las estrellas para calificar." : "Completá tu nombre y WhatsApp."}
+            </p>
+          )}
         </div>
 
         <p className="mt-4 text-center text-2xs text-faint">DS Group · Gracias por tu visita</p>
