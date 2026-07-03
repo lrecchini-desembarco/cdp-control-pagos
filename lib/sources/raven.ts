@@ -32,7 +32,9 @@ async function traer(code: string, date: string): Promise<RavenResp | null> {
   const r = await fetch(url, { cache: "no-store", headers });
   if (r.status === 404) return null; // ese insumo no tiene pedidos ese día
   if (!r.ok) throw new Error(`Raven respondió ${r.status} para ${code}/${date}`);
-  return (await r.json()) as RavenResp;
+  const j = await r.json();
+  // Raven envuelve la respuesta en { data: { ..., branches } }; desenvolver.
+  return (j?.data ?? j) as RavenResp;
 }
 
 export const ravenPedidosSource: PedidosSource = {
