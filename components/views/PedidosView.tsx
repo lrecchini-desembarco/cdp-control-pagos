@@ -21,6 +21,7 @@ export default function PedidosView() {
   const [verNoOp, setVerNoOp] = useState(false);
   const [puedeEditar, setPuedeEditar] = useState(false);
   const [locales, setLocales] = useState<LocalCmp[]>([]);
+  const [detalle, setDetalle] = useState<LocalCmp | null>(null);
 
   async function cargar(d = desde, h = hasta) {
     setEstado("loading"); setErr("");
@@ -144,9 +145,10 @@ export default function PedidosView() {
                 {filtrados.length === 0 ? (
                   <tr><td colSpan={(data?.insumos.length ?? 0) + 6} className="px-4 py-6 text-center text-faint">Sin locales en el filtro.</td></tr>
                 ) : filtrados.slice(0, 600).map((l) => (
-                  <tr key={l.sucursal} className={`border-b border-line last:border-0 hover:bg-ink/5 ${!l.operativo ? "opacity-45" : ""}`}>
+                  <tr key={l.sucursal} onClick={() => setDetalle(l)}
+                    className={`cursor-pointer border-b border-line last:border-0 hover:bg-ink/5 ${!l.operativo ? "opacity-45" : ""}`}>
                     <td className="px-4 py-2 text-ink">{l.sucursal}{!l.operativo && <span className="ml-1 text-2xs text-bad">· no op.</span>}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                       {puedeEditar ? (
                         <select value={l.tipo} onChange={(e) => guardar(l.sucursal, { tipo: e.target.value as any })}
                           className={`rounded border border-line bg-surface px-1.5 py-0.5 text-2xs ${l.tipo === "propio" ? "text-action" : "text-muted"}`}>
@@ -157,7 +159,7 @@ export default function PedidosView() {
                         <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${l.tipo === "propio" ? "bg-action/10 text-action" : "bg-ink/5 text-muted"}`}>{l.tipo === "propio" ? "Propio" : "Franquicia"}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={l.operativo} disabled={!puedeEditar}
                         onChange={(e) => guardar(l.sucursal, { operativo: e.target.checked })} title="Operativo" />
                     </td>
@@ -178,6 +180,56 @@ export default function PedidosView() {
         "Ped/Vta" es un indicador relativo (el detalle unidad-a-unidad por insumo necesita la receta de menú).
         Clasificación propio/franquicia del maestro oficial; {puedeEditar ? "editable acá" : "solo lectura para tu rol"}.
       </p>
+
+      {detalle && data && <DetalleLocal l={detalle} insumos={data.insumos} onClose={() => setDetalle(null)} />}
+    </div>
+  );
+}
+
+function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[]; onClose: () => void }) {
+  const maxPed = Math.max(1, ...insumos.map((i) => l.porInsumo[i.code] ?? 0));
+  const ratio = l.venta ? Math.round((l.pedido / l.venta) * 100) : null;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-card border border-line bg-surface p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-ink">{l.sucursal}</h2>
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${l.tipo === "propio" ? "bg-action/10 text-action" : "bg-ink/5 text-muted"}`}>{l.tipo === "propio" ? "Propio" : "Franquicia"}</span>
+              <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${l.operativo ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad"}`}>{l.operativo ? "Operativo" : "No operativo"}</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-lg px-2 text-lg text-muted hover:text-ink">✕</button>
+        </div>
+
+        {/* Pedido vs Venta */}
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <Kpi label="Pedido al CDP" value={fmt(l.pedido)} sub="u insumo" />
+          <Kpi label="Venta (Tango)" value={fmt(l.venta)} sub="u vendidas" />
+          <Kpi label="Pedido / Venta" value={ratio != null ? `${ratio}%` : "—"} />
+        </div>
+
+        {/* Desglose por insumo */}
+        <p className="mt-4 mb-2 text-2xs font-medium uppercase tracking-wide text-faint">Pedido por insumo</p>
+        <div className="space-y-2">
+          {insumos.map((i) => {
+            const v = l.porInsumo[i.code] ?? 0;
+            return (
+              <div key={i.code} className="flex items-center gap-3">
+                <span className="w-40 shrink-0 truncate text-sm text-ink">{i.nombre}</span>
+                <div className="relative h-2.5 flex-1 rounded bg-ink/[0.04]">
+                  <div className="h-full rounded bg-action" style={{ width: `${(v / maxPed) * 100}%` }} />
+                </div>
+                <span className="w-16 shrink-0 text-right font-mono tnum text-sm text-ink">{fmt(v)}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-4 text-2xs text-faint">
+          El detalle unidad-a-unidad (venta traducida a insumo por receta) se habilita cuando esté la receta de menú.
+        </p>
+      </div>
     </div>
   );
 }

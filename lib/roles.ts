@@ -27,8 +27,9 @@ export const ROLES: Record<Rol, RolInfo> = {
   },
   comparacion: {
     label: "Comparación",
-    // Solo la parte de comparación CDP vs ventas (y lo nuevo). Home = Cruce.
-    nav: ["/cruce", "/pedidos", "/remitos", "/compras", "/guia"],
+    // Home = "CDP vs Ventas (local)" (el comparativo REAL); el /cruce insumo-nivel
+    // queda como beta (pendiente de la receta).
+    nav: ["/pedidos", "/cruce", "/remitos", "/compras", "/guia"],
     gestionaUsuarios: false,
   },
 };
