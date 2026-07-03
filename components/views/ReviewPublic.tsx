@@ -29,6 +29,7 @@ export default function ReviewPublic() {
   const [consent, setConsent] = useState(true);
   const [fase, setFase] = useState<"form" | "listo">("form");
   const [cupon, setCupon] = useState("");
+  const [vence, setVence] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
 
@@ -79,6 +80,7 @@ export default function ReviewPublic() {
       const j = await r.json();
       if (!j.ok) { setError(j.error || "No se pudo procesar."); return; }
       setCupon(j.codigo);
+      setVence(j.vence || "");
       setFase("listo");
       window.scrollTo(0, 0);
     } catch { setError("Fallo de red. Reintentá."); } finally { setEnviando(false); }
@@ -118,6 +120,11 @@ export default function ReviewPublic() {
                 <b>15% OFF</b> en tus <b>próximas 3 compras</b> en {local}.
               </p>
               <p className="mt-1 text-2xs text-faint">Mostrá este código en la caja al pagar.</p>
+              {vence && (
+                <p className="mt-2 text-2xs font-medium text-ink">
+                  Válido hasta el {new Date(vence).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                </p>
+              )}
             </div>
           </div>
 

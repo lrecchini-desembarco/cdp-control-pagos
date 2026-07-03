@@ -2,6 +2,7 @@ import { readStore, writeStore } from "./store";
 
 // Cupones de descuento por reseña. Persistido (KV en prod). Reglas:
 //  - 3 usos por cupón (3 compras con 15% OFF).
+//  - Vence a los 60 días de emitido (no se puede canjear después).
 //  - Anti-abuso: 1 cupón por teléfono + local (si ya tiene, se le devuelve el mismo).
 
 export interface Cupon {
@@ -11,6 +12,7 @@ export interface Cupon {
   nombre: string;
   telefono: string;      // solo dígitos (normalizado)
   emitido: string;       // ISO
+  vence?: string;        // ISO (emitido + VIGENCIA_DIAS). Opcional: los viejos se calculan al vuelo.
   usosRestantes: number; // arranca en 3
   usos: string[];        // fechas ISO de cada canje
   rating?: number;       // 1..5 que dejó en NUESTRA pantalla (para segmentar el CRM)
@@ -19,7 +21,23 @@ export interface Cupon {
 
 const KEY = "cupones";
 const USOS_INICIALES = 3;
+export const VIGENCIA_DIAS = 60;
 const soloDigitos = (t: string) => String(t ?? "").replace(/\D/g, "");
+
+/** Fecha de vencimiento a partir de la de emisión (emitido + VIGENCIA_DIAS). */
+function calcVence(emitidoISO: string): string {
+  const d = new Date(emitidoISO);
+  d.setDate(d.getDate() + VIGENCIA_DIAS);
+  return d.toISOString();
+}
+/** Vencimiento efectivo (usa el guardado; si es un cupón viejo, lo calcula). */
+export function venceDe(c: Cupon): string {
+  return c.vence ?? calcVence(c.emitido);
+}
+/** ¿El cupón sigue vigente hoy? (comparación ISO en UTC). */
+export function estaVigente(c: Cupon): boolean {
+  return new Date().toISOString() <= venceDe(c);
+}
 // Alfabeto sin caracteres ambiguos (0/O, 1/I) para leerlo en voz alta en la caja.
 const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -58,13 +76,15 @@ export async function emitirCupon(input: {
   let codigo = nuevoCodigo();
   while (cupones.some((c) => c.codigo === codigo)) codigo = nuevoCodigo();
 
+  const emitido = new Date().toISOString();
   const cupon: Cupon = {
     codigo,
     local: input.local,
     marca: input.marca,
     nombre: input.nombre.trim(),
     telefono,
-    emitido: new Date().toISOString(),
+    emitido,
+    vence: calcVence(emitido),
     usosRestantes: USOS_INICIALES,
     usos: [],
     rating: input.rating,
@@ -91,6 +111,7 @@ export async function usarCupon(codigo: string): Promise<{ ok: boolean; cupon?: 
   const cupones = await todos();
   const c = cupones.find((x) => x.codigo.toUpperCase() === codigo.trim().toUpperCase());
   if (!c) return { ok: false, error: "Cupón no encontrado." };
+  if (!estaVigente(c)) return { ok: false, error: `Cupón vencido (venció el ${venceDe(c).slice(0, 10)}).`, cupon: c };
   if (c.usosRestantes <= 0) return { ok: false, error: "Cupón agotado (ya usó las 3 compras).", cupon: c };
   c.usosRestantes -= 1;
   c.usos.push(new Date().toISOString());
