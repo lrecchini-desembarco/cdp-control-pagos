@@ -9,12 +9,13 @@ const CATALOGO = new Set(NAV_CATALOG.map((i) => i.href));
 const defaults = (): NavByRol =>
   Object.fromEntries(ROLES_LIST.map((r) => [r, [...ROLES[r].nav]])) as NavByRol;
 
-// Garantías anti-autobloqueo: /guia siempre; admin siempre con /usuarios y /guia.
+// Garantías anti-autobloqueo: /guia siempre. El ADMIN es superusuario y SIEMPRE ve
+// todo el catálogo (así las rutas nuevas aparecen solas, sin habilitarlas a mano).
 function blindar(rol: Rol, nav: string[]): string[] {
+  if (rol === "admin") return NAV_CATALOG.map((i) => i.href);
   const limpio = nav.filter((h) => CATALOGO.has(h));
   const set = new Set(limpio);
   set.add("/guia");
-  if (rol === "admin") set.add("/usuarios");
   // preserva el orden del catálogo
   return NAV_CATALOG.map((i) => i.href).filter((h) => set.has(h));
 }
