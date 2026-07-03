@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Field, inputClass, Skeleton } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { fmtCompacto } from "@/lib/brands";
+import { costoInsumo, tieneCosto, COSTOS_VIGENCIA } from "@/lib/costos";
+
+// $ en riesgo de un local = lo que pidió al CDP (por insumo) valorizado al costo
+// de elaboración, contando SOLO los locales que pidieron y no vendieron nada.
+const dineroDeLocal = (l: { porInsumo: Record<string, number> }) =>
+  Object.entries(l.porInsumo).reduce((a, [code, q]) => a + q * costoInsumo(code), 0);
 
 interface Insumo { code: string; nombre: string; }
 interface LocalCmp { sucursal: string; tipo: "propio" | "franquicia"; operativo: boolean; porInsumo: Record<string, number>; pedido: number; venta: number; }
@@ -115,6 +121,7 @@ export default function PedidosView() {
       pedidoFranq: ped - prop.reduce((s, l) => s + l.pedido, 0),
       sinVenta: filtrados.filter((l) => riesgoDe(l).k === "sin-venta").length,
       pedidoRiesgo: filtrados.filter((l) => riesgoDe(l).k === "sin-venta").reduce((s, l) => s + l.pedido, 0),
+      dineroRiesgo: filtrados.filter((l) => riesgoDe(l).k === "sin-venta").reduce((s, l) => s + dineroDeLocal(l), 0),
     };
   }, [filtrados]);
 
@@ -206,6 +213,17 @@ export default function PedidosView() {
         <Kpi label="⚠ Pidió sin vender" value={String(kpis.sinVenta)} sub={`${fmtCompacto(kpis.pedidoRiesgo)} u en riesgo`} tone={kpis.sinVenta ? "bad" : undefined} />
       </div>
 
+      {prefs.dinero_riesgo && (
+        <Card className="border-bad/30 p-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-2xs font-medium uppercase tracking-wide text-faint">$ en riesgo — pedido sin venta, valorizado al costo de elaboración del CDP</p>
+            <span className="shrink-0 text-2xs text-faint">costos {COSTOS_VIGENCIA}</span>
+          </div>
+          <p className="mt-1 font-display text-2xl font-semibold text-bad" title={`$ ${fmt(kpis.dineroRiesgo)}`}>$ {fmtCompacto(kpis.dineroRiesgo)}</p>
+          <p className="text-2xs text-faint">{kpis.sinVenta} {kpis.sinVenta === 1 ? "local pidió" : "locales pidieron"} y no vendió · {fmtCompacto(kpis.pedidoRiesgo)} u de insumo comprometidas</p>
+        </Card>
+      )}
+
       {prefs.cobertura && (
         <Card className="p-4">
           <p className="text-2xs font-medium uppercase tracking-wide text-faint">Cobertura — % que pidió al CDP</p>
@@ -295,7 +313,7 @@ export default function PedidosView() {
         Clasificación propio/franquicia del maestro oficial; {puedeEditar ? "editable acá" : "solo lectura para tu rol"}.
       </p>
 
-      {detalle && data && <DetalleLocal l={detalle} insumos={data.insumos} onClose={() => setDetalle(null)} />}
+      {detalle && data && <DetalleLocal l={detalle} insumos={data.insumos} verCostos={!!prefs.dinero_riesgo} onClose={() => setDetalle(null)} />}
       {verFunc && <Funcionalidades features={features} prefs={prefs} onToggle={toggleFeature} onClose={() => setVerFunc(false)} />}
     </div>
   );
@@ -344,9 +362,10 @@ function Funcionalidades({ features, prefs, onToggle, onClose }: {
   );
 }
 
-function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[]; onClose: () => void }) {
+function DetalleLocal({ l, insumos, verCostos, onClose }: { l: LocalCmp; insumos: Insumo[]; verCostos: boolean; onClose: () => void }) {
   const maxPed = Math.max(1, ...insumos.map((i) => l.porInsumo[i.code] ?? 0));
   const ratio = l.venta ? Math.round((l.pedido / l.venta) * 100) : null;
+  const valorPedido = insumos.reduce((s, i) => s + (l.porInsumo[i.code] ?? 0) * costoInsumo(i.code), 0);
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4" onClick={onClose}>
       <div className="w-full max-w-lg rounded-card border border-line bg-surface p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
@@ -370,10 +389,14 @@ function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[];
         </div>
 
         {/* Desglose por insumo */}
-        <p className="mt-4 mb-2 text-2xs font-medium uppercase tracking-wide text-faint">Pedido por insumo</p>
+        <div className="mt-4 mb-2 flex items-baseline justify-between">
+          <p className="text-2xs font-medium uppercase tracking-wide text-faint">Pedido por insumo</p>
+          {verCostos && <p className="text-2xs text-faint">valorizado ${fmtCompacto(valorPedido)} <span title={`$ ${fmt(valorPedido)}`}>· costo CDP {COSTOS_VIGENCIA}</span></p>}
+        </div>
         <div className="space-y-2">
           {insumos.map((i) => {
             const v = l.porInsumo[i.code] ?? 0;
+            const monto = v * costoInsumo(i.code);
             return (
               <div key={i.code} className="flex items-center gap-3">
                 <span className="w-40 shrink-0 truncate text-sm text-ink">{i.nombre}</span>
@@ -381,6 +404,11 @@ function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[];
                   <div className="h-full rounded bg-action" style={{ width: `${(v / maxPed) * 100}%` }} />
                 </div>
                 <span className="w-16 shrink-0 text-right font-mono tnum text-sm text-ink">{fmt(v)}</span>
+                {verCostos && (
+                  <span className="w-20 shrink-0 text-right font-mono tnum text-2xs text-muted" title={tieneCosto(i.code) ? `$ ${fmt(monto)}` : "sin costo cargado"}>
+                    {tieneCosto(i.code) ? `$${fmtCompacto(monto)}` : "—"}
+                  </span>
+                )}
               </div>
             );
           })}
