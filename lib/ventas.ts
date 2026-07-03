@@ -1,8 +1,16 @@
 import { getSources } from "./sources";
 import { rangoPorDefecto } from "./cruce";
-import { getMapeos } from "./mapeos-store";
-import { brandDeInsumo } from "./catalogo";
 import type { RangoQuery } from "./sources/types";
+
+// Marca de una sucursal por su nombre (confiable, sin depender de Mapeos):
+// "Mrt ..." = Mr Tasty; "Mila ..." = Mila & Go; el resto = El Desembarco.
+const normSuc = (s: string) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+export function brandDeSucursal(nombre: string): string {
+  const n = normSuc(nombre);
+  if (n.startsWith("mrt")) return "tasty";
+  if (n.includes("mila")) return "mila";
+  return "desembarco";
+}
 
 export interface ArticuloVentas {
   sku: string;
@@ -29,11 +37,12 @@ export async function getVentasPorTurno(
   filtros?: { sucursal?: string; marca?: string }
 ): Promise<VentasPorTurno> {
   const { ventas } = getSources();
-  const [data, mapeos] = await Promise.all([ventas.getVentas(q), getMapeos()]);
-  const reglaPorSku = new Map(mapeos.productoMap.map((m) => [m.skuVenta, m]));
-  const sucursales = mapeos.sucursales
-    .filter((s) => s.activa && s.canonico)
-    .map((s) => ({ canonico: s.canonico, nombre: s.nombre }));
+  const data = await ventas.getVentas(q);
+  // Sucursales REALES presentes en las ventas (nombre tal cual Tango). Antes salían
+  // de Mapeos (escasos) y con el código canónico -> el filtro nunca matcheaba.
+  const sucursales = Array.from(new Set(data.map((v) => v.sucursalCanonico).filter(Boolean)))
+    .sort()
+    .map((n) => ({ canonico: n, nombre: n }));
 
   const map = new Map<string, ArticuloVentas>();
   const totalPorTurno: Record<string, number> = {};
@@ -41,14 +50,13 @@ export async function getVentasPorTurno(
 
   for (const v of data) {
     if (filtros?.sucursal && v.sucursalCanonico !== filtros.sucursal) continue;
-    const regla = reglaPorSku.get(v.sku);
-    const marca = regla ? brandDeInsumo(regla.codigoCdp) : "otros";
+    const marca = brandDeSucursal(v.sucursalCanonico);
     if (filtros?.marca && marca !== filtros.marca) continue;
 
     const turno = v.turno ?? "noche";
     let a = map.get(v.sku);
     if (!a) {
-      a = { sku: v.sku, nombre: regla?.skuNombre ?? v.nombre ?? v.sku, marca, porTurno: {}, total: 0 };
+      a = { sku: v.sku, nombre: v.nombre ?? v.sku, marca, porTurno: {}, total: 0 };
       map.set(v.sku, a);
     }
     a.porTurno[turno] = (a.porTurno[turno] ?? 0) + v.unidades;

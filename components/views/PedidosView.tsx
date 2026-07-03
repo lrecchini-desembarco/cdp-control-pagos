@@ -11,6 +11,15 @@ interface Resumen { insumos: Insumo[]; locales: LocalCmp[]; }
 
 const fmt = (n: number) => Math.round(n).toLocaleString("es-AR");
 const isoMinus = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+const normK = (s: string) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+// Período anterior de la misma longitud, justo antes de "desde".
+function periodoAnterior(desde: string, hasta: string) {
+  const d1 = new Date(desde + "T00:00:00"), d2 = new Date(hasta + "T00:00:00");
+  const len = Math.round((d2.getTime() - d1.getTime()) / 86_400_000);
+  const bH = new Date(d1); bH.setDate(bH.getDate() - 1);
+  const bD = new Date(bH); bD.setDate(bD.getDate() - len);
+  return { desde: bD.toISOString().slice(0, 10), hasta: bH.toISOString().slice(0, 10) };
+}
 
 // Indicador de riesgo (plata en riesgo) sin necesitar costos:
 //  - pidió al CDP y NO vendió  -> mercadería enviada sin venta (posible pérdida/robo/merma)
@@ -39,6 +48,7 @@ export default function PedidosView() {
   const [features, setFeatures] = useState<{ key: string; nombre: string; desc: string; estado: string }[]>([]);
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
   const [verFunc, setVerFunc] = useState(false);
+  const [periodoB, setPeriodoB] = useState<Record<string, number>>({}); // normLocal -> pedido período anterior
 
   async function cargar(d = desde, h = hasta) {
     setEstado("loading"); setErr("");
@@ -61,6 +71,20 @@ export default function PedidosView() {
     setPrefs((p) => ({ ...p, [key]: on }));
     try { await fetch("/api/features", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feature: key, on }) }); } catch {}
   }
+
+  // Comparar 2 períodos (feature): trae el período anterior para el Δ de pedido.
+  useEffect(() => {
+    if (!prefs.comparar_periodos) { setPeriodoB({}); return; }
+    const b = periodoAnterior(desde, hasta);
+    let vivo = true;
+    fetch(`/api/pedidos?desde=${b.desde}&hasta=${b.hasta}`).then((r) => r.json()).then((j) => {
+      if (!vivo || !j.ok) return;
+      const m: Record<string, number> = {};
+      for (const l of j.locales) m[normK(l.sucursal)] = l.pedido;
+      setPeriodoB(m);
+    }).catch(() => {});
+    return () => { vivo = false; };
+  }, [prefs.comparar_periodos, desde, hasta]);
 
   // Guardar override (tipo u operativo) de un local.
   async function guardar(nombre: string, patch: { tipo?: "propio" | "franquicia"; operativo?: boolean }) {
@@ -215,6 +239,7 @@ export default function PedidosView() {
                   <th className="px-3 py-2 text-center font-medium">Oper.</th>
                   {data?.insumos.map((i) => <th key={i.code} className="px-3 py-2 text-right font-medium">{i.nombre}</th>)}
                   <th className="px-4 py-2 text-right font-medium">Pedido</th>
+                  {prefs.comparar_periodos && <th className="px-4 py-2 text-right font-medium" title="Cambio del pedido vs el período anterior de igual duración">Δ vs ant.</th>}
                   <th className="px-4 py-2 text-right font-medium">Venta</th>
                   <th className="px-4 py-2 text-right font-medium">Ped/Vta</th>
                   <th className="px-4 py-2 font-medium">Estado</th>
@@ -244,6 +269,13 @@ export default function PedidosView() {
                     </td>
                     {data?.insumos.map((i) => <td key={i.code} className="px-3 py-2 text-right font-mono tnum text-muted">{fmt(l.porInsumo[i.code] ?? 0)}</td>)}
                     <td className="px-4 py-2 text-right font-mono tnum font-semibold text-ink">{fmt(l.pedido)}</td>
+                    {prefs.comparar_periodos && (() => {
+                      const pb = periodoB[normK(l.sucursal)];
+                      if (pb == null) return <td key="d" className="px-4 py-2 text-right text-2xs text-faint">—</td>;
+                      const d = pb > 0 ? Math.round(((l.pedido - pb) / pb) * 100) : (l.pedido > 0 ? 100 : 0);
+                      const tone = d > 0 ? "text-ok" : d < 0 ? "text-bad" : "text-faint";
+                      return <td key="d" className={`px-4 py-2 text-right font-mono tnum ${tone}`}>{d > 0 ? "↑" : d < 0 ? "↓" : ""}{Math.abs(d)}%</td>;
+                    })()}
                     <td className="px-4 py-2 text-right font-mono tnum text-muted">{fmt(l.venta)}</td>
                     <td className="px-4 py-2 text-right font-mono tnum text-faint">{l.venta ? `${Math.round((l.pedido / l.venta) * 100)}%` : "—"}</td>
                     <td className="px-4 py-2">
