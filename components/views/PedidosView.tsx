@@ -11,6 +11,17 @@ interface Resumen { insumos: Insumo[]; locales: LocalCmp[]; }
 const fmt = (n: number) => Math.round(n).toLocaleString("es-AR");
 const isoMinus = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
 
+// Indicador de riesgo (plata en riesgo) sin necesitar costos:
+//  - pidió al CDP y NO vendió  -> mercadería enviada sin venta (posible pérdida/robo/merma)
+//  - vendió y NO pidió al CDP   -> se abastece por otra vía (posible fuga)
+type Riesgo = "sin-venta" | "sin-pedido" | "ok";
+function riesgoDe(l: { pedido: number; venta: number }): { k: Riesgo; label: string; tone: "bad" | "warn" | "ok" } {
+  if (l.pedido > 0 && l.venta <= 0) return { k: "sin-venta", label: "Pidió sin vender", tone: "bad" };
+  if (l.venta > 0 && l.pedido <= 0) return { k: "sin-pedido", label: "Vende sin pedir", tone: "warn" };
+  return { k: "ok", label: "OK", tone: "ok" };
+}
+const toneCls = (t: "bad" | "warn" | "ok") => (t === "bad" ? "bg-bad/10 text-bad" : t === "warn" ? "bg-warn/10 text-warn" : "bg-ok/10 text-ok");
+
 export default function PedidosView() {
   const [desde, setDesde] = useState(isoMinus(6));
   const [hasta, setHasta] = useState(isoMinus(0));
@@ -19,6 +30,8 @@ export default function PedidosView() {
   const [err, setErr] = useState("");
   const [tipo, setTipo] = useState<"todos" | "propio" | "franquicia">("todos");
   const [verNoOp, setVerNoOp] = useState(false);
+  const [riesgo, setRiesgo] = useState<"todos" | "sin-venta" | "sin-pedido">("todos");
+  const [orden, setOrden] = useState<"pedido" | "venta" | "ratio">("pedido");
   const [puedeEditar, setPuedeEditar] = useState(false);
   const [locales, setLocales] = useState<LocalCmp[]>([]);
   const [detalle, setDetalle] = useState<LocalCmp | null>(null);
@@ -51,8 +64,10 @@ export default function PedidosView() {
     let ls = locales;
     if (!verNoOp) ls = ls.filter((l) => l.operativo);
     if (tipo !== "todos") ls = ls.filter((l) => l.tipo === tipo);
-    return ls;
-  }, [locales, tipo, verNoOp]);
+    if (riesgo !== "todos") ls = ls.filter((l) => riesgoDe(l).k === riesgo);
+    const val = (l: LocalCmp) => (orden === "venta" ? l.venta : orden === "ratio" ? (l.venta ? l.pedido / l.venta : 999) : l.pedido);
+    return [...ls].sort((a, b) => val(b) - val(a));
+  }, [locales, tipo, verNoOp, riesgo, orden]);
 
   const kpis = useMemo(() => {
     const ped = filtrados.reduce((s, l) => s + l.pedido, 0);
@@ -63,17 +78,20 @@ export default function PedidosView() {
       nLocales: filtrados.length,
       pedidoProp: prop.reduce((s, l) => s + l.pedido, 0),
       pedidoFranq: ped - prop.reduce((s, l) => s + l.pedido, 0),
+      sinVenta: filtrados.filter((l) => riesgoDe(l).k === "sin-venta").length,
+      pedidoRiesgo: filtrados.filter((l) => riesgoDe(l).k === "sin-venta").reduce((s, l) => s + l.pedido, 0),
     };
   }, [filtrados]);
 
   function exportar() {
     if (!data) return;
-    const cols = ["Local", "Tipo", "Operativo", ...data.insumos.map((i) => i.nombre), "Pedido CDP", "Venta (u)", "Pedido/Venta %"];
+    const cols = ["Local", "Tipo", "Operativo", ...data.insumos.map((i) => i.nombre), "Pedido CDP", "Venta (u)", "Pedido/Venta %", "Estado"];
     const filas = filtrados.map((l) => [
       l.sucursal, l.tipo, l.operativo ? "sí" : "no",
       ...data.insumos.map((i) => Math.round(l.porInsumo[i.code] ?? 0)),
       Math.round(l.pedido), Math.round(l.venta),
       l.venta ? Math.round((l.pedido / l.venta) * 100) : "",
+      riesgoDe(l).label,
     ]);
     descargarCSV("cdp_vs_ventas_por_local", cols, filas);
   }
@@ -108,7 +126,24 @@ export default function PedidosView() {
               <option value="franquicia">Solo franquicias</option>
             </select>
           </Field>
-          <label className="flex items-end gap-2 pb-2 text-sm text-ink">
+          <Field label="Riesgo">
+            <select className={inputClass} value={riesgo} onChange={(e) => setRiesgo(e.target.value as any)}>
+              <option value="todos">Todos</option>
+              <option value="sin-venta">Pidió sin vender</option>
+              <option value="sin-pedido">Vende sin pedir</option>
+            </select>
+          </Field>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <span className="text-2xs uppercase tracking-wide text-faint">Ordenar por</span>
+            <select className={`${inputClass} w-auto py-1`} value={orden} onChange={(e) => setOrden(e.target.value as any)}>
+              <option value="pedido">Mayor pedido</option>
+              <option value="venta">Mayor venta</option>
+              <option value="ratio">Mayor Ped/Vta</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={verNoOp} onChange={(e) => setVerNoOp(e.target.checked)} />
             Ver no operativos
           </label>
@@ -118,8 +153,8 @@ export default function PedidosView() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Pedido al CDP" value={fmt(kpis.pedido)} sub="unidades insumo" />
         <Kpi label="Venta (Tango)" value={fmt(kpis.venta)} sub="unidades vendidas" />
-        <Kpi label="Locales" value={String(kpis.nLocales)} />
         <Kpi label="Pedido propios / franq." value={`${fmt(kpis.pedidoProp)} / ${fmt(kpis.pedidoFranq)}`} sub="unidades" />
+        <Kpi label="⚠ Pidió sin vender" value={String(kpis.sinVenta)} sub={`${fmt(kpis.pedidoRiesgo)} u en riesgo`} tone={kpis.sinVenta ? "bad" : undefined} />
       </div>
 
       <Card className="overflow-hidden">
@@ -139,6 +174,7 @@ export default function PedidosView() {
                   <th className="px-4 py-2 text-right font-medium">Pedido</th>
                   <th className="px-4 py-2 text-right font-medium">Venta</th>
                   <th className="px-4 py-2 text-right font-medium">Ped/Vta</th>
+                  <th className="px-4 py-2 font-medium">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,6 +203,9 @@ export default function PedidosView() {
                     <td className="px-4 py-2 text-right font-mono tnum font-semibold text-ink">{fmt(l.pedido)}</td>
                     <td className="px-4 py-2 text-right font-mono tnum text-muted">{fmt(l.venta)}</td>
                     <td className="px-4 py-2 text-right font-mono tnum text-faint">{l.venta ? `${Math.round((l.pedido / l.venta) * 100)}%` : "—"}</td>
+                    <td className="px-4 py-2">
+                      {(() => { const r = riesgoDe(l); return r.k === "ok" ? <span className="text-2xs text-faint">—</span> : <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${toneCls(r.tone)}`}>{r.label}</span>; })()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -198,6 +237,7 @@ function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[];
             <div className="mt-1 flex items-center gap-2">
               <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${l.tipo === "propio" ? "bg-action/10 text-action" : "bg-ink/5 text-muted"}`}>{l.tipo === "propio" ? "Propio" : "Franquicia"}</span>
               <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${l.operativo ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad"}`}>{l.operativo ? "Operativo" : "No operativo"}</span>
+              {(() => { const r = riesgoDe(l); return r.k !== "ok" ? <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${toneCls(r.tone)}`}>{r.label}</span> : null; })()}
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg px-2 text-lg text-muted hover:text-ink">✕</button>
@@ -234,11 +274,11 @@ function DetalleLocal({ l, insumos, onClose }: { l: LocalCmp; insumos: Insumo[];
   );
 }
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "bad" }) {
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className="mt-0.5 font-display text-lg font-semibold text-ink">{value}</p>
+      <p className={`mt-0.5 font-display text-lg font-semibold ${tone === "bad" ? "text-bad" : "text-ink"}`}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );
