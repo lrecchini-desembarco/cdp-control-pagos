@@ -15,7 +15,7 @@ export const FEATURES: Feature[] = [
   { key: "cobertura", nombre: "Cobertura %", desc: "Qué % de los propios y de las franquicias pidió al CDP en el período.", estado: "disponible" },
   { key: "dinero_riesgo", nombre: "$ en riesgo", desc: "Valoriza en $ lo que un local pidió al CDP y no vendió, al costo de elaboración (Junio 2026).", estado: "disponible" },
   { key: "comparar_periodos", nombre: "Comparar 2 períodos", desc: "Ver si subió o bajó el pedido de cada local vs el período anterior (tendencia).", estado: "disponible" },
-  { key: "alertas", nombre: "Alertas automáticas", desc: "Avisar cuando un local venía pidiendo y deja de vender (o al revés).", estado: "proximamente" },
+  { key: "alertas", nombre: "Alertas automáticas", desc: "Detecta en vivo locales que dejaron de pedir, piden sin vender o les cayó la venta. (Envío por WhatsApp/mail: cuando definamos el canal.)", estado: "disponible" },
 ];
 
 type Prefs = Record<string, Record<string, boolean>>; // email -> { featureKey: true }

@@ -54,7 +54,7 @@ export default function PedidosView() {
   const [features, setFeatures] = useState<{ key: string; nombre: string; desc: string; estado: string }[]>([]);
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
   const [verFunc, setVerFunc] = useState(false);
-  const [periodoB, setPeriodoB] = useState<Record<string, number>>({}); // normLocal -> pedido período anterior
+  const [periodoB, setPeriodoB] = useState<Record<string, { pedido: number; venta: number }>>({}); // normLocal -> período anterior
 
   async function cargar(d = desde, h = hasta) {
     setEstado("loading"); setErr("");
@@ -78,19 +78,20 @@ export default function PedidosView() {
     try { await fetch("/api/features", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feature: key, on }) }); } catch {}
   }
 
-  // Comparar 2 períodos (feature): trae el período anterior para el Δ de pedido.
+  // Trae el período anterior (para el Δ de "Comparar 2 períodos" y para las Alertas
+  // de tendencia). Una sola llamada sirve a ambas features.
   useEffect(() => {
-    if (!prefs.comparar_periodos) { setPeriodoB({}); return; }
+    if (!prefs.comparar_periodos && !prefs.alertas) { setPeriodoB({}); return; }
     const b = periodoAnterior(desde, hasta);
     let vivo = true;
     fetch(`/api/pedidos?desde=${b.desde}&hasta=${b.hasta}`).then((r) => r.json()).then((j) => {
       if (!vivo || !j.ok) return;
-      const m: Record<string, number> = {};
-      for (const l of j.locales) m[normK(l.sucursal)] = l.pedido;
+      const m: Record<string, { pedido: number; venta: number }> = {};
+      for (const l of j.locales) m[normK(l.sucursal)] = { pedido: l.pedido, venta: l.venta };
       setPeriodoB(m);
     }).catch(() => {});
     return () => { vivo = false; };
-  }, [prefs.comparar_periodos, desde, hasta]);
+  }, [prefs.comparar_periodos, prefs.alertas, desde, hasta]);
 
   // Guardar override (tipo u operativo) de un local.
   async function guardar(nombre: string, patch: { tipo?: "propio" | "franquicia"; operativo?: boolean }) {
@@ -132,6 +133,27 @@ export default function PedidosView() {
     const pct = (arr: LocalCmp[]) => (arr.length ? Math.round((arr.filter((l) => l.pedido > 0).length / arr.length) * 100) : 0);
     return { propios: pct(prop), franquicias: pct(franq), nProp: prop.length, nFranq: franq.length };
   }, [filtrados]);
+
+  // Alertas automáticas (feature): cambios accionables sobre datos reales por local.
+  // Las de tendencia usan el período anterior (se trae cuando la feature está activa).
+  const alertas = useMemo(() => {
+    const UMBRAL = 30; // venía pidiendo al menos esto para que "dejó de pedir" sea señal, no ruido
+    const out: { sucursal: string; tipo: string; sev: "bad" | "warn"; detalle: string }[] = [];
+    for (const l of filtrados) {
+      const prev = periodoB[normK(l.sucursal)];
+      if (prev && prev.pedido >= UMBRAL && l.pedido === 0) {
+        out.push({ sucursal: l.sucursal, tipo: "Dejó de pedir", sev: "bad", detalle: `Venía pidiendo ${fmtCompacto(prev.pedido)} u al CDP y este período no pidió nada.` });
+      } else if (l.pedido > 0 && l.venta <= 0) {
+        out.push({ sucursal: l.sucursal, tipo: "Pidió sin vender", sev: "bad", detalle: `Pidió ${fmtCompacto(l.pedido)} u al CDP pero no registró ventas.` });
+      } else if (prev && prev.venta > 0 && l.venta < prev.venta * 0.5) {
+        const caida = Math.round((1 - l.venta / prev.venta) * 100);
+        out.push({ sucursal: l.sucursal, tipo: "Cayó la venta", sev: "warn", detalle: `La venta bajó ${caida}% vs el período anterior (${fmtCompacto(prev.venta)} → ${fmtCompacto(l.venta)} u).` });
+      } else if (l.venta > 0 && l.pedido <= 0) {
+        out.push({ sucursal: l.sucursal, tipo: "Vende sin pedir", sev: "warn", detalle: `Vendió ${fmtCompacto(l.venta)} u pero no pidió insumo al CDP (¿se abastece por otra vía?).` });
+      }
+    }
+    return out.sort((a, b) => (a.sev === b.sev ? 0 : a.sev === "bad" ? -1 : 1));
+  }, [filtrados, periodoB]);
 
   function exportar() {
     if (!data) return;
@@ -213,6 +235,32 @@ export default function PedidosView() {
         <Kpi label="⚠ Pidió sin vender" value={String(kpis.sinVenta)} sub={`${fmtCompacto(kpis.pedidoRiesgo)} u en riesgo`} tone={kpis.sinVenta ? "bad" : undefined} />
       </div>
 
+      {prefs.alertas && (
+        <Card className="p-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-2xs font-medium uppercase tracking-wide text-faint">Alertas automáticas — cambios que merecen atención</p>
+            <span className="shrink-0 text-2xs text-faint">{alertas.length ? `${alertas.length} ${alertas.length === 1 ? "alerta" : "alertas"}` : "sin alertas"}</span>
+          </div>
+          {alertas.length === 0 ? (
+            <p className="mt-2 text-sm text-muted">Sin cambios que reportar en este período con los filtros actuales. ✓</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-line">
+              {alertas.slice(0, 12).map((a, i) => (
+                <li key={i} className="flex items-start gap-3 py-2">
+                  <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium ${a.sev === "bad" ? "bg-bad/10 text-bad" : "bg-warn/10 text-warn"}`}>{a.tipo}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">{a.sucursal}</p>
+                    <p className="text-2xs text-muted">{a.detalle}</p>
+                  </div>
+                </li>
+              ))}
+              {alertas.length > 12 && <li className="py-2 text-2xs text-faint">+{alertas.length - 12} más…</li>}
+            </ul>
+          )}
+          <p className="mt-2 text-2xs text-faint">Detección en vivo sobre CDP vs Ventas por local. El envío por WhatsApp/mail se habilita cuando definamos el canal.</p>
+        </Card>
+      )}
+
       {prefs.dinero_riesgo && (
         <Card className="border-bad/30 p-4">
           <div className="flex items-baseline justify-between gap-2">
@@ -288,7 +336,7 @@ export default function PedidosView() {
                     {data?.insumos.map((i) => <td key={i.code} className="px-3 py-2 text-right font-mono tnum text-muted">{fmt(l.porInsumo[i.code] ?? 0)}</td>)}
                     <td className="px-4 py-2 text-right font-mono tnum font-semibold text-ink">{fmt(l.pedido)}</td>
                     {prefs.comparar_periodos && (() => {
-                      const pb = periodoB[normK(l.sucursal)];
+                      const pb = periodoB[normK(l.sucursal)]?.pedido;
                       if (pb == null) return <td key="d" className="px-4 py-2 text-right text-2xs text-faint">—</td>;
                       const d = pb > 0 ? Math.round(((l.pedido - pb) / pb) * 100) : (l.pedido > 0 ? 100 : 0);
                       const tone = d > 0 ? "text-ok" : d < 0 ? "text-bad" : "text-faint";
