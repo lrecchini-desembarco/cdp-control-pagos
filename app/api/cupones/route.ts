@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
-import { buscarCupon, usarCupon, listarCupones } from "@/lib/cupones-store";
+import { buscarCupon, usarCupon, listarCupones, eliminarCupon } from "@/lib/cupones-store";
 
 export const dynamic = "force-dynamic";
 
@@ -26,4 +26,13 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ ok: false, error: "Solicitud inválida." }, { status: 400 });
   }
+}
+
+// DELETE ?codigo= -> elimina un cupón (solo admin; para sacar test/abuso).
+export async function DELETE(req: NextRequest) {
+  const s = await getSesion();
+  if (s?.rol !== "admin") return NextResponse.json({ ok: false, error: "Solo admin." }, { status: 403 });
+  const codigo = req.nextUrl.searchParams.get("codigo");
+  if (!codigo) return NextResponse.json({ ok: false, error: "Falta el código." }, { status: 400 });
+  return NextResponse.json({ ok: await eliminarCupon(codigo) });
 }

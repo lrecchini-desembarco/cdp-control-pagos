@@ -87,3 +87,12 @@ export async function usarCupon(codigo: string): Promise<{ ok: boolean; cupon?: 
 export async function listarCupones(): Promise<Cupon[]> {
   return (await todos()).sort((a, b) => b.emitido.localeCompare(a.emitido));
 }
+
+/** Elimina un cupón por código (para sacar cupones de prueba o abuso). */
+export async function eliminarCupon(codigo: string): Promise<boolean> {
+  const cupones = await todos();
+  const rest = cupones.filter((c) => c.codigo.toUpperCase() !== codigo.trim().toUpperCase());
+  if (rest.length === cupones.length) return false;
+  await writeStore(KEY, rest);
+  return true;
+}
