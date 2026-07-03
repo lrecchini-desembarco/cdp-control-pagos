@@ -1,46 +1,62 @@
 import { ravenPedidosSource } from "./sources/raven";
 import { PRODUCTS, nombreInsumo } from "./catalogo";
-import { esPropio } from "./propios";
+import { getVentasPorSucursal } from "./ventas";
+import { getOverrides, tipoEfectivo, operativoEfectivo, normLocal } from "./locales-config";
 import type { RangoQuery } from "./sources/types";
 
-// Pedidos REALES al CDP por local (Raven público, sin token). Independiente del
-// flag PEDIDOS_SOURCE: siempre pega a Raven real. Agrega por sucursal + insumo, con
-// la clasificación propio/franquicia. No necesita la receta (es solo el lado pedido).
+// Comparativo CDP vs ventas POR LOCAL (datos reales, sin depender de la receta):
+//   - Pedido al CDP: Raven público (Bolas + Tuki), por insumo.
+//   - Venta del local: unidades vendidas en Tango.
+//   - Clasificación propio/franquicia + operativo (con overrides manuales).
 
-export interface PedidoLocal {
+export interface LocalComparativo {
   sucursal: string;
-  propio: boolean;
-  porInsumo: Record<string, number>; // code -> unidades pedidas
-  total: number;
+  tipo: "propio" | "franquicia";
+  operativo: boolean;
+  porInsumo: Record<string, number>;
+  pedido: number; // total unidades de insumo pedidas (Raven)
+  venta: number;  // total unidades vendidas (Tango)
 }
 
-export interface PedidosResumen {
+export interface ComparativoResumen {
   insumos: { code: string; nombre: string }[];
-  locales: PedidoLocal[];
-  totalPropios: number;
-  totalNoPropios: number;
-  total: number;
+  locales: LocalComparativo[];
 }
 
-export async function getPedidosPorLocal(q: RangoQuery): Promise<PedidosResumen> {
-  const pedidos = await ravenPedidosSource.getPedidos(q); // [{fecha, codigoCdp, sucursalCanonico(nombre), unidades}]
+export async function getComparativoPorLocal(q: RangoQuery): Promise<ComparativoResumen> {
+  const [pedidos, ventasSuc, ov] = await Promise.all([
+    ravenPedidosSource.getPedidos(q),
+    getVentasPorSucursal(q),
+    getOverrides(),
+  ]);
   const insumos = PRODUCTS.map((p) => ({ code: p.code, nombre: p.name || nombreInsumo(p.code) }));
 
-  const map = new Map<string, PedidoLocal>();
-  for (const p of pedidos) {
-    const suc = p.sucursalCanonico;
-    if (!suc) continue;
-    let e = map.get(suc);
+  // key = nombre normalizado (sin sacar "mrt"); guardamos un nombre "lindo" para mostrar.
+  const map = new Map<string, LocalComparativo & { _k: string }>();
+  const get = (nombre: string) => {
+    const k = normLocal(nombre);
+    let e = map.get(k);
     if (!e) {
-      e = { sucursal: suc, propio: esPropio(suc), porInsumo: {}, total: 0 };
-      map.set(suc, e);
+      e = { _k: k, sucursal: nombre, tipo: tipoEfectivo(nombre, ov), operativo: operativoEfectivo(nombre, ov), porInsumo: {}, pedido: 0, venta: 0 };
+      map.set(k, e);
     }
+    return e;
+  };
+
+  for (const p of pedidos) {
+    if (!p.sucursalCanonico) continue;
+    const e = get(p.sucursalCanonico);
     e.porInsumo[p.codigoCdp] = (e.porInsumo[p.codigoCdp] ?? 0) + p.unidades;
-    e.total += p.unidades;
+    e.pedido += p.unidades;
+  }
+  for (const v of ventasSuc) {
+    if (!v.sucursal) continue;
+    const e = get(v.sucursal);
+    e.venta += v.unidades;
   }
 
-  const locales = Array.from(map.values()).sort((a, b) => b.total - a.total);
-  const totalPropios = locales.filter((l) => l.propio).reduce((s, l) => s + l.total, 0);
-  const totalNoPropios = locales.filter((l) => !l.propio).reduce((s, l) => s + l.total, 0);
-  return { insumos, locales, totalPropios, totalNoPropios, total: totalPropios + totalNoPropios };
+  const locales = Array.from(map.values())
+    .map(({ _k, ...rest }) => rest)
+    .sort((a, b) => b.pedido - a.pedido || b.venta - a.venta);
+  return { insumos, locales };
 }

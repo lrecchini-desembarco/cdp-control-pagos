@@ -52,7 +52,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/", label: "Resumen", icon: "◰" },
   { href: "/alertas", label: "Alertas", icon: "!" },
   { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄", beta: true },
-  { href: "/pedidos", label: "Pedidos por local", icon: "⇊" },
+  { href: "/pedidos", label: "CDP vs Ventas (local)", icon: "⇊" },
   { href: "/ventas", label: "Ventas por turno", icon: "▦" },
   { href: "/precios", label: "Precios", icon: "$" },
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉" },
