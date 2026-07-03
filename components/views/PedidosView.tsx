@@ -36,6 +36,9 @@ export default function PedidosView() {
   const [puedeEditar, setPuedeEditar] = useState(false);
   const [locales, setLocales] = useState<LocalCmp[]>([]);
   const [detalle, setDetalle] = useState<LocalCmp | null>(null);
+  const [features, setFeatures] = useState<{ key: string; nombre: string; desc: string; estado: string }[]>([]);
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({});
+  const [verFunc, setVerFunc] = useState(false);
 
   async function cargar(d = desde, h = hasta) {
     setEstado("loading"); setErr("");
@@ -49,8 +52,15 @@ export default function PedidosView() {
     cargar();
     // ¿puede editar? (admin/operaciones): el GET de config responde 200; comparacion -> 403.
     fetch("/api/locales-config").then((r) => setPuedeEditar(r.ok)).catch(() => {});
+    // funcionalidades del usuario
+    fetch("/api/features").then((r) => r.json()).then((j) => { if (j.ok) { setFeatures(j.features); setPrefs(j.prefs); } }).catch(() => {});
     // eslint-disable-next-line
   }, []);
+
+  async function toggleFeature(key: string, on: boolean) {
+    setPrefs((p) => ({ ...p, [key]: on }));
+    try { await fetch("/api/features", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feature: key, on }) }); } catch {}
+  }
 
   // Guardar override (tipo u operativo) de un local.
   async function guardar(nombre: string, patch: { tipo?: "propio" | "franquicia"; operativo?: boolean }) {
@@ -84,6 +94,14 @@ export default function PedidosView() {
     };
   }, [filtrados]);
 
+  // Cobertura % (feature activable): qué % de propios/franquicias pidió al CDP.
+  const cobertura = useMemo(() => {
+    const prop = filtrados.filter((l) => l.tipo === "propio");
+    const franq = filtrados.filter((l) => l.tipo === "franquicia");
+    const pct = (arr: LocalCmp[]) => (arr.length ? Math.round((arr.filter((l) => l.pedido > 0).length / arr.length) * 100) : 0);
+    return { propios: pct(prop), franquicias: pct(franq), nProp: prop.length, nFranq: franq.length };
+  }, [filtrados]);
+
   function exportar() {
     if (!data) return;
     const cols = ["Local", "Tipo", "Operativo", ...data.insumos.map((i) => i.nombre), "Pedido CDP", "Venta (u)", "Pedido/Venta %", "Estado"];
@@ -107,10 +125,16 @@ export default function PedidosView() {
             separado por <b>propios vs franquicias</b>. {puedeEditar && "Podés reclasificar y marcar locales no operativos."}
           </p>
         </div>
-        <button onClick={exportar} disabled={!filtrados.length}
-          className="shrink-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action disabled:opacity-40">
-          ⬇ Exportar
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button onClick={() => setVerFunc(true)}
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">
+            ⚙ Funcionalidades
+          </button>
+          <button onClick={exportar} disabled={!filtrados.length}
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action disabled:opacity-40">
+            ⬇ Exportar
+          </button>
+        </div>
       </div>
 
       <Card className="p-4">
@@ -157,6 +181,24 @@ export default function PedidosView() {
         <Kpi label="Pedido propios / franq." value={`${fmtCompacto(kpis.pedidoProp)} / ${fmtCompacto(kpis.pedidoFranq)}`} sub="unidades" title={`${fmt(kpis.pedidoProp)} / ${fmt(kpis.pedidoFranq)} u`} />
         <Kpi label="⚠ Pidió sin vender" value={String(kpis.sinVenta)} sub={`${fmtCompacto(kpis.pedidoRiesgo)} u en riesgo`} tone={kpis.sinVenta ? "bad" : undefined} />
       </div>
+
+      {prefs.cobertura && (
+        <Card className="p-4">
+          <p className="text-2xs font-medium uppercase tracking-wide text-faint">Cobertura — % que pidió al CDP</p>
+          <div className="mt-2 grid grid-cols-2 gap-4">
+            {([["Propios", cobertura.propios, cobertura.nProp], ["Franquicias", cobertura.franquicias, cobertura.nFranq]] as const).map(([lbl, pct, n]) => (
+              <div key={lbl}>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm text-ink">{lbl}</span>
+                  <span className="font-display text-lg font-semibold text-ink">{pct}%</span>
+                </div>
+                <div className="mt-1 h-2 rounded bg-ink/[0.06]"><div className="h-full rounded bg-action" style={{ width: `${pct}%` }} /></div>
+                <p className="mt-1 text-2xs text-faint">de {n} locales</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         {estado === "loading" ? (
@@ -222,6 +264,50 @@ export default function PedidosView() {
       </p>
 
       {detalle && data && <DetalleLocal l={detalle} insumos={data.insumos} onClose={() => setDetalle(null)} />}
+      {verFunc && <Funcionalidades features={features} prefs={prefs} onToggle={toggleFeature} onClose={() => setVerFunc(false)} />}
+    </div>
+  );
+}
+
+function Funcionalidades({ features, prefs, onToggle, onClose }: {
+  features: { key: string; nombre: string; desc: string; estado: string }[];
+  prefs: Record<string, boolean>;
+  onToggle: (key: string, on: boolean) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-card border border-line bg-surface p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-ink">⚙ Funcionalidades</h2>
+            <p className="mt-0.5 text-xs text-muted">Activá las que quieras. Las "disponibles" se prenden al toque; las otras quedan como pedido y las armamos.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg px-2 text-lg text-muted hover:text-ink">✕</button>
+        </div>
+        <div className="mt-4 space-y-2">
+          {features.map((f) => {
+            const on = !!prefs[f.key];
+            const disp = f.estado === "disponible";
+            return (
+              <label key={f.key} className="flex cursor-pointer items-start gap-3 rounded-lg border border-line p-3 hover:bg-ink/[0.02]">
+                <input type="checkbox" checked={on} onChange={(e) => onToggle(f.key, e.target.checked)} className="mt-0.5 h-4 w-4" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-ink">{f.nombre}</span>
+                    <span className={`rounded-full px-1.5 py-px text-[10px] font-semibold uppercase ${disp ? "bg-ok/15 text-ok" : "bg-warn/20 text-warn"}`}>
+                      {disp ? "disponible" : "próximamente"}
+                    </span>
+                    {on && !disp && <span className="text-2xs text-action">· pedida ✓</span>}
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted">{f.desc}</p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-2xs text-faint">Podés prender/apagar cuando quieras. Lo que marques como pedido nos llega para construirlo.</p>
+      </div>
     </div>
   );
 }
