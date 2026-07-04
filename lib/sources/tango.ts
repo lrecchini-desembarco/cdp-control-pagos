@@ -55,7 +55,7 @@ async function ventasViaBridge(q: RangoQuery): Promise<VentaSku[]> {
   u.searchParams.set("desde", q.desde);
   u.searchParams.set("hasta", q.hasta);
   const res = await fetch(u.toString(), {
-    headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "" },
+    headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "", "ngrok-skip-browser-warning": "true" },
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Bridge Tango respondió ${res.status} ${res.statusText}`);
@@ -117,7 +117,7 @@ function filaAPrecio(r: any): PrecioProducto {
 async function preciosViaBridge(): Promise<PrecioProducto[]> {
   const base = process.env.TANGO_BRIDGE_URL!.replace(/\/$/, "");
   const res = await fetch(`${base}/precios`, {
-    headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "" },
+    headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "", "ngrok-skip-browser-warning": "true" },
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Bridge Tango respondió ${res.status} ${res.statusText}`);
