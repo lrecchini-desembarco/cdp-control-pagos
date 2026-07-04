@@ -72,20 +72,18 @@ const PRECIOS_QUERY = `
 `;
 
 // Cobros por día · sucursal · medio de pago (para contrastar contra Mercado Pago).
-// Requiere la vista dbo.vw_CobrosDiarios (la crea Sistemas; ver docs/tango-bridge.md).
-// Hasta que exista, este endpoint responde 502 (por eso queda "listo/plug-and-play").
-// La vista debe exponer: fecha DATE, id_sucursal, sucursal (DESC_SUCURSAL),
-// medio_pago, importe. (Ideal: una fila por cobro con hora + comprobante.)
-// Nombres de columna alineados al contrato final de la vista (Pablo/cierres):
-// FECHA, ID_SUCURSAL, DESC_SUCURSAL, MEDIO_PAGO, IMPORTE. Se re-aliasan a claves
-// JSON estables (fecha, id_sucursal, sucursal, medio_pago, importe) para el consumidor.
+// Contrato de la vista dbo.vw_CobrosDiarios (la crea Sistemas para los cierres/Pablo):
+//   FECHA, ID_SUCURSAL, MEDIO_PAGO, IMPORTE  -> se re-aliasan a claves JSON estables.
+// IMPORTANTE (jul-2026): la vista ya EXISTE, pero el usuario read-only del bridge
+// (cdp_lectura) todavía NO tiene permiso de lectura. Falta que Sistemas corra:
+//   GRANT SELECT ON dbo.vw_CobrosDiarios TO cdp_lectura;
+// Hasta eso, el endpoint responde 502 ("SELECT permission was denied").
 const COBROS_QUERY = `
   SELECT
     CONVERT(varchar(10), FECHA, 23) AS fecha,
-    ID_SUCURSAL   AS id_sucursal,
-    DESC_SUCURSAL AS sucursal,
-    MEDIO_PAGO    AS medio_pago,
-    IMPORTE       AS importe
+    ID_SUCURSAL AS id_sucursal,
+    MEDIO_PAGO  AS medio_pago,
+    IMPORTE     AS importe
   FROM dbo.vw_CobrosDiarios
   WHERE FECHA BETWEEN @desde AND @hasta
   ORDER BY FECHA, ID_SUCURSAL, MEDIO_PAGO;
