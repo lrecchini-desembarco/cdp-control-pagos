@@ -1,7 +1,7 @@
 // Roles y qué ve cada uno. Es config pura (sin fs), así la puede usar el
 // middleware (edge) y también el server.
 
-export type Rol = "admin" | "operaciones" | "local" | "comparacion";
+export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas";
 
 export interface RolInfo {
   label: string;
@@ -32,12 +32,19 @@ export const ROLES: Record<Rol, RolInfo> = {
     nav: ["/pedidos", "/remitos", "/compras", "/guia"],
     gestionaUsuarios: false,
   },
+  resenas: {
+    label: "Reseñas",
+    // Solo ve Reseñas + Usuarios (este último en modo lectura: mira quién entra,
+    // pero no crea/borra usuarios ni edita permisos — eso queda para admin).
+    nav: ["/resenas", "/usuarios", "/guia"],
+    gestionaUsuarios: false,
+  },
 };
 
-export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion"];
+export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion", "resenas"];
 
 export const esRol = (v: unknown): v is Rol =>
-  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion";
+  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion" || v === "resenas";
 
 // Catálogo maestro de items del menú (href + label + ícono). El QUÉ VE cada rol
 // se define eligiendo de acá (editable desde /usuarios, persistido en el store).
