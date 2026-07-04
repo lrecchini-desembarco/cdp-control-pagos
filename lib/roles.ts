@@ -34,9 +34,8 @@ export const ROLES: Record<Rol, RolInfo> = {
   },
   resenas: {
     label: "Reseñas",
-    // Solo ve Reseñas + Usuarios (este último en modo lectura: mira quién entra,
-    // pero no crea/borra usuarios ni edita permisos — eso queda para admin).
-    nav: ["/resenas", "/usuarios", "/guia"],
+    // Solo ve Reseñas + Clientes (el CRM que se arma con las reseñas/cupones).
+    nav: ["/resenas", "/clientes", "/guia"],
     gestionaUsuarios: false,
   },
 };

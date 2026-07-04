@@ -33,7 +33,6 @@ export default function UsuariosView() {
   const [rolesMeta, setRolesMeta] = useState<{ id: Rol; label: string }[]>([]);
   const [fijas, setFijas] = useState<string[]>([]);
   const [guardandoRol, setGuardandoRol] = useState("");
-  const [esAdmin, setEsAdmin] = useState(false); // solo admin gestiona; el resto ve en lectura
 
   async function cargar() {
     setStatus("loading");
@@ -59,13 +58,7 @@ export default function UsuariosView() {
   }
   useEffect(() => {
     cargar();
-    // Solo el admin ve el editor de permisos y las acciones de alta/baja.
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.ok && j.rol === "admin") { setEsAdmin(true); cargarRoles(); }
-      })
-      .catch(() => {});
+    cargarRoles();
   }, []);
 
   async function toggle(rol: Rol, href: string) {
@@ -126,14 +119,7 @@ export default function UsuariosView() {
         </p>
       </div>
 
-      {!esAdmin && (
-        <Card className="p-3">
-          <p className="text-2xs text-muted">Vista de solo lectura: podés ver quién entra y qué ve cada rol. La gestión (crear/quitar usuarios y cambiar permisos) es del Administrador.</p>
-        </Card>
-      )}
-
-      {/* Alta (solo admin) */}
-      {esAdmin && (
+      {/* Alta */}
       <Card className="p-4">
         <form onSubmit={agregar} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_160px_160px_auto] sm:items-end">
           <Field label="Email">
@@ -173,7 +159,6 @@ export default function UsuariosView() {
           <b>Local</b> ve solo Reseñas.
         </p>
       </Card>
-      )}
 
       {/* Permisos del menú por rol */}
       {rolesMeta.length > 0 && (
@@ -254,16 +239,12 @@ export default function UsuariosView() {
                     {(navByRol[u.rol] ?? ROLES[u.rol].nav).filter((h) => h !== "/guia").length} pantallas
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    {esAdmin ? (
-                      <button
-                        onClick={() => quitar(u.email)}
-                        className="text-2xs font-medium text-bad hover:underline"
-                      >
-                        Quitar
-                      </button>
-                    ) : (
-                      <span className="text-2xs text-faint">—</span>
-                    )}
+                    <button
+                      onClick={() => quitar(u.email)}
+                      className="text-2xs font-medium text-bad hover:underline"
+                    >
+                      Quitar
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const s = await getSesion();
   if (!s) redirect("/login");
-  // admin gestiona; "resenas" entra solo a mirar (la vista se muestra en modo lectura).
-  if (s.rol !== "admin" && s.rol !== "resenas") redirect(homeDe(s.rol));
+  if (s.rol !== "admin") redirect(homeDe(s.rol));
   return <UsuariosView />;
 }

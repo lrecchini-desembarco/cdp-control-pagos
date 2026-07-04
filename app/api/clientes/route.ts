@@ -4,8 +4,8 @@ import { getClientes } from "@/lib/clientes";
 
 export const dynamic = "force-dynamic";
 
-// Lista de clientes (CRM). Auth: admin, operaciones o comparación (datos personales).
-const PUEDEN_VER = new Set(["admin", "operaciones", "comparacion"]);
+// Lista de clientes (CRM). Auth: admin, operaciones, comparación o reseñas (datos personales).
+const PUEDEN_VER = new Set(["admin", "operaciones", "comparacion", "resenas"]);
 export async function GET() {
   const s = await getSesion();
   if (!s || !PUEDEN_VER.has(s.rol)) {

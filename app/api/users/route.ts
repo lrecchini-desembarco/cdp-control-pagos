@@ -10,18 +10,12 @@ async function soloAdmin() {
   return s?.rol === "admin" ? s : null;
 }
 
-// Lectura de la lista: admin (gestiona) o "resenas" (solo mira quién entra).
-async function puedeLeer() {
-  const s = await getSesion();
-  return s?.rol === "admin" || s?.rol === "resenas" ? s : null;
-}
-
 // Nunca exponer el hash de la clave al cliente.
 const limpiar = (us: Usuario[]) =>
   us.map((u) => ({ email: u.email, rol: u.rol, tieneClave: Boolean(u.pass) }));
 
 export async function GET() {
-  if (!(await puedeLeer())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
+  if (!(await soloAdmin())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
   return NextResponse.json({ ok: true, usuarios: limpiar(await getUsuarios()) });
 }
 
