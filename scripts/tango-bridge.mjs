@@ -89,6 +89,28 @@ const COBROS_QUERY = `
   ORDER BY FECHA, ID_SUCURSAL, MEDIO_PAGO;
 `;
 
+// Ventas por hora y por artículo (para la app de Pablo/cierres). Requieren las vistas
+// dbo.vw_VentasPorHora y dbo.vw_VentasPorArticulo + permiso de lectura para cdp_lectura:
+//   GRANT SELECT ON dbo.vw_VentasPorHora    TO cdp_lectura;
+//   GRANT SELECT ON dbo.vw_VentasPorArticulo TO cdp_lectura;
+// Hasta que existan + tengan permiso, estos endpoints responden 502.
+const VENTAS_HORAS_QUERY = `
+  SELECT CONVERT(varchar(10), FECHA, 23) AS fecha, ID_SUCURSAL AS id_sucursal,
+         HORA AS hora, IMPORTE AS importe, TICKETS AS tickets
+  FROM dbo.vw_VentasPorHora
+  WHERE FECHA BETWEEN @desde AND @hasta
+  ORDER BY FECHA, ID_SUCURSAL, HORA;
+`;
+
+const VENTAS_ARTICULOS_QUERY = `
+  SELECT CONVERT(varchar(10), FECHA, 23) AS fecha, ID_SUCURSAL AS id_sucursal,
+         COD_ARTICULO AS cod_articulo, DESCRIPCION AS descripcion, RUBRO AS rubro,
+         CANTIDAD AS cantidad, IMPORTE AS importe
+  FROM dbo.vw_VentasPorArticulo
+  WHERE FECHA BETWEEN @desde AND @hasta
+  ORDER BY FECHA, ID_SUCURSAL, COD_ARTICULO;
+`;
+
 // Receta de menú: qué INSUMO (y cuánto) consume cada ARTÍCULO DE VENTA. Es lo que
 // el Cruce necesita para traducir ventas -> insumo. Requiere la vista dbo.vw_RecetasVenta
 // (la crea Sistemas; ver docs/tango-bridge.md). Hasta que exista, responde 502.
@@ -135,6 +157,8 @@ const server = createServer(async (req, res) => {
       "GET /sucursales",
       "GET /recetas  (requiere vista vw_RecetasVenta)",
       "GET /cobros?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_CobrosDiarios)",
+      "GET /ventas-horas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_VentasPorHora)",
+      "GET /ventas-articulos?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_VentasPorArticulo)",
     ],
     auth: "header x-bridge-secret (salvo /health y /)",
   });
@@ -200,6 +224,34 @@ const server = createServer(async (req, res) => {
     } catch (e) {
       // Mientras no exista dbo.vw_CobrosDiarios, cae acá (502) con "Invalid object name".
       console.error("cobros error:", e.message);
+      return json(502, { error: e.message });
+    }
+  }
+
+  if (url.pathname === "/ventas-horas") {
+    const desde = url.searchParams.get("desde");
+    const hasta = url.searchParams.get("hasta");
+    if (!isFecha(desde) || !isFecha(hasta)) return json(400, { error: "desde/hasta AAAA-MM-DD requeridos" });
+    try {
+      const pool = await getPool();
+      const r = await pool.request().input("desde", sql.Date, desde).input("hasta", sql.Date, hasta).query(VENTAS_HORAS_QUERY);
+      return json(200, r.recordset);
+    } catch (e) {
+      console.error("ventas-horas error:", e.message);
+      return json(502, { error: e.message });
+    }
+  }
+
+  if (url.pathname === "/ventas-articulos") {
+    const desde = url.searchParams.get("desde");
+    const hasta = url.searchParams.get("hasta");
+    if (!isFecha(desde) || !isFecha(hasta)) return json(400, { error: "desde/hasta AAAA-MM-DD requeridos" });
+    try {
+      const pool = await getPool();
+      const r = await pool.request().input("desde", sql.Date, desde).input("hasta", sql.Date, hasta).query(VENTAS_ARTICULOS_QUERY);
+      return json(200, r.recordset);
+    } catch (e) {
+      console.error("ventas-articulos error:", e.message);
       return json(502, { error: e.message });
     }
   }
