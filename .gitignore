@@ -4,3 +4,7 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 .data/
+
+# documentos internos sueltos
+Instructivo_Cierres_Grupo_Desembarco.pdf
+*.pdf
