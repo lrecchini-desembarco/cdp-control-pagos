@@ -26,6 +26,9 @@ export default function ResenasView() {
   const [origin, setOrigin] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [nuevo, setNuevo] = useState({ nombre: "", googleUrl: "", marca: "desembarco" });
+  const [cuponActivo, setCuponActivo] = useState(false);   // perilla del sistema de cupones
+  const [guardandoCupon, setGuardandoCupon] = useState(false);
+  const [puedeConfig, setPuedeConfig] = useState(false);   // solo admin/operaciones prenden el switch
 
   const MARCA_LABEL: Record<string, string> = {
     desembarco: "El Desembarco",
@@ -62,6 +65,35 @@ export default function ResenasView() {
       .then((r) => r.json())
       .then((j) => j.ok && setDeriv(j.resumen));
   }
+  function cargarConfig() {
+    fetch("/api/resenas-config")
+      .then((r) => r.json())
+      .then((j) => j.ok && setCuponActivo(Boolean(j.cuponActivo)));
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((j) => setPuedeConfig(j.ok && (j.rol === "admin" || j.rol === "operaciones")))
+      .catch(() => {});
+  }
+  async function toggleCupon() {
+    const on = !cuponActivo;
+    setCuponActivo(on); // optimista
+    setGuardandoCupon(true);
+    try {
+      const j = await (
+        await fetch("/api/resenas-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cuponActivo: on }),
+        })
+      ).json();
+      if (!j.ok) setCuponActivo(!on); // revertir (ej. sin permiso)
+      else setCuponActivo(Boolean(j.cuponActivo));
+    } catch {
+      setCuponActivo(!on);
+    } finally {
+      setGuardandoCupon(false);
+    }
+  }
 
   useEffect(() => {
     const o = window.location.origin;
@@ -71,6 +103,7 @@ export default function ResenasView() {
     setBaseUrl(/localhost|127\.0\.0\.1/.test(o) ? pub : o);
     cargarLocales();
     cargarDerivaciones();
+    cargarConfig();
   }, []);
   useEffect(() => {
     if (reviewUrl) QRCode.toDataURL(reviewUrl, { width: 320, margin: 1 }).then(setQr).catch(() => {});
@@ -140,6 +173,34 @@ export default function ResenasView() {
           Generá el QR para los locales, cargá el link de Google de cada uno y mirá lo que dejan los clientes.
         </p>
       </div>
+
+      {/* Perilla del sistema de cupones */}
+      <Card className="no-print flex flex-wrap items-center justify-between gap-3 p-4">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">
+            Sistema de cupones
+            <span className={`ml-2 rounded-full px-2 py-0.5 text-2xs font-medium ${cuponActivo ? "bg-ok/10 text-ok" : "bg-ink/5 text-muted"}`}>
+              {cuponActivo ? "ACTIVO" : "OCULTO"}
+            </span>
+          </p>
+          <p className="mt-1 max-w-xl text-2xs text-muted">
+            {cuponActivo
+              ? "Los clientes reciben el cupón 15% OFF al calificar y el póster muestra la promo."
+              : "Los clientes solo dejan la reseña en Google (sin cupón) y el póster no muestra la promo. Prendé esto cuando el cupón esté validado."}
+          </p>
+          {!puedeConfig && <p className="mt-1 text-2xs text-faint">Solo un Administrador u Operaciones puede cambiarlo.</p>}
+        </div>
+        <button
+          onClick={toggleCupon}
+          disabled={!puedeConfig || guardandoCupon}
+          role="switch"
+          aria-checked={cuponActivo}
+          title={puedeConfig ? (cuponActivo ? "Apagar cupones" : "Activar cupones") : "Sin permiso"}
+          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${cuponActivo ? "bg-ok" : "bg-ink/20"} ${!puedeConfig || guardandoCupon ? "cursor-not-allowed opacity-60" : ""}`}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${cuponActivo ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
+      </Card>
 
       {/* Generador de QR: general, por marca y por local */}
       <Card className="no-print p-4">
@@ -223,10 +284,12 @@ export default function ResenasView() {
           </h2>
           <p className="mt-2 text-sm text-muted">Escaneá el código y dejanos tu reseña. ¡Te lleva 20 segundos!</p>
 
-          <div className="mx-auto mt-4 w-fit rounded-lg border-2 border-action px-5 py-2.5">
-            <p className="font-display text-2xl font-bold leading-none text-action">🎁 15% OFF</p>
-            <p className="mt-1 text-xs font-medium text-ink">en tus próximas 3 compras</p>
-          </div>
+          {cuponActivo && (
+            <div className="mx-auto mt-4 w-fit rounded-lg border-2 border-action px-5 py-2.5">
+              <p className="font-display text-2xl font-bold leading-none text-action">🎁 15% OFF</p>
+              <p className="mt-1 text-xs font-medium text-ink">en tus próximas 3 compras</p>
+            </div>
+          )}
 
           <div className="my-7 flex justify-center">
             {qr ? (

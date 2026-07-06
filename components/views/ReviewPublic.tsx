@@ -29,10 +29,9 @@ const MARCA_LABEL: Record<string, string> = {
 const FALLBACK_MS = 7000; // si no detectamos el regreso de Google, habilitamos igual
 const SS_KEY = "review-en-google";
 
-// Cupón OCULTO por ahora (no está validado 100%). Con false: entrar -> datos ->
-// calificar en Google -> pantalla "¡Gracias por calificar!" (sin cupón). Poné true
-// para reactivar el recorrido completo del cupón (Google -> volver -> 15% OFF).
-const MOSTRAR_CUPON: boolean = false;
+// El cupón (15% OFF) se prende/apaga desde la pantalla Reseñas (admin), leído de
+// /api/resenas-config. Default OFF: entrar -> datos -> calificar en Google ->
+// "¡Gracias por calificar!" (sin cupón). ON: vuelve el recorrido completo del cupón.
 
 export default function ReviewPublic() {
   const [locales, setLocales] = useState<Local[]>([]);
@@ -50,6 +49,8 @@ export default function ReviewPublic() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const googleAbierto = useRef(false);
+  const [cuponActivo, setCuponActivo] = useState(false);   // se lee de /api/resenas-config
+  const cuponActivoRef = useRef(false);                    // "fresco" para los listeners del montaje
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -61,9 +62,10 @@ export default function ReviewPublic() {
     // (recarga completa) y también en pageshow/visibilitychange: en el celu, al tocar
     // "atrás" en Chrome, la página se restaura del bfcache y estos eventos disparan
     // -> el cupón queda listo al instante, sin espera.
+    // Solo con el cupón ACTIVO retomamos el paso "volvió de Google" (bfcache guarda
+    // el ref, así que en el celu esto sigue siendo instantáneo).
     const retomar = () => {
-      // Con el cupón oculto no hay "vuelta que retomar": limpiamos cualquier estado viejo.
-      if (!MOSTRAR_CUPON) { try { sessionStorage.removeItem(SS_KEY); } catch {} return; }
+      if (!cuponActivoRef.current) return;
       try {
         const guardado = sessionStorage.getItem(SS_KEY);
         if (!guardado) return;
@@ -83,6 +85,18 @@ export default function ReviewPublic() {
     const onVis = () => { if (document.visibilityState === "visible") retomar(); };
     window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVis);
+
+    // Perilla del cupón (admin). Default OFF hasta que responda.
+    fetch("/api/resenas-config")
+      .then((r) => r.json())
+      .then((j) => {
+        const on = Boolean(j?.cuponActivo);
+        cuponActivoRef.current = on;
+        setCuponActivo(on);
+        if (on) retomar();                                   // por si ya volvió de Google (recarga)
+        else { try { sessionStorage.removeItem(SS_KEY); } catch {} } // limpia estado viejo
+      })
+      .catch(() => {});
 
     fetch("/api/locales")
       .then((r) => r.json())
@@ -161,7 +175,7 @@ export default function ReviewPublic() {
       });
     } catch {}
 
-    if (!MOSTRAR_CUPON) {
+    if (!cuponActivo) {
       // Cupón oculto: guardamos el cliente, abrimos Google (pestaña nueva, no hace
       // falta que vuelva) y mostramos "¡Gracias por calificar!".
       capturarCliente();
@@ -376,7 +390,7 @@ export default function ReviewPublic() {
         {/* Banner promocional */}
         <div className="mb-4 overflow-hidden rounded-card text-white shadow-sm" style={{ backgroundColor: color }}>
           <div className="px-5 py-5 text-center">
-            {MOSTRAR_CUPON ? (
+            {cuponActivo ? (
               <>
                 <p className="font-display text-xl font-bold leading-tight">📣 Tu reseña en Google vale 15% OFF</p>
                 <p className="mt-1.5 text-sm text-white/90">
