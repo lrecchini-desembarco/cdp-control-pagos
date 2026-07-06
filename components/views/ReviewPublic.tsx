@@ -26,7 +26,7 @@ const MARCA_LABEL: Record<string, string> = {
   mila: "Mila & Go",
 };
 
-const ESPERA_SEGUNDOS = 12; // tiempo mínimo antes de poder canjear
+const FALLBACK_MS = 7000; // si no detectamos el regreso de Google, habilitamos igual
 const SS_KEY = "review-en-google";
 
 export default function ReviewPublic() {
@@ -39,7 +39,7 @@ export default function ReviewPublic() {
   const [tel, setTel] = useState(""); // solo dígitos, sin el 54 9
   const [consent, setConsent] = useState(true);
   const [fase, setFase] = useState<"form" | "google" | "listo">("form");
-  const [espera, setEspera] = useState(ESPERA_SEGUNDOS);
+  const [volvio, setVolvio] = useState(false); // true cuando el cliente vuelve de Google
   const [cupon, setCupon] = useState("");
   const [vence, setVence] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -63,7 +63,7 @@ export default function ReviewPublic() {
         setTel(s.tel ?? "");
         setConsent(s.consent ?? true);
         setFase("google");
-        setEspera(0); // ya pasó por Google: puede canjear
+        setVolvio(true); // ya pasó por Google y volvió: puede canjear
       }
     } catch {}
 
@@ -82,12 +82,23 @@ export default function ReviewPublic() {
       .catch(() => {});
   }, []);
 
-  // countdown de la fase google
+  // Detectar el REGRESO de Google: cuando el cliente vuelve a esta pantalla
+  // (cambia de pestaña/app o toca "atrás"), habilitamos el descuento al instante.
+  // Fallback por si el navegador no dispara el evento (algunos in-app browsers).
   useEffect(() => {
-    if (fase !== "google" || espera <= 0) return;
-    const t = setInterval(() => setEspera((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [fase, espera]);
+    if (fase !== "google" || volvio) return;
+    const marcarVuelta = () => { if (document.visibilityState === "visible") setVolvio(true); };
+    document.addEventListener("visibilitychange", marcarVuelta);
+    window.addEventListener("focus", marcarVuelta);
+    window.addEventListener("pageshow", marcarVuelta);
+    const t = setTimeout(() => setVolvio(true), FALLBACK_MS);
+    return () => {
+      document.removeEventListener("visibilitychange", marcarVuelta);
+      window.removeEventListener("focus", marcarVuelta);
+      window.removeEventListener("pageshow", marcarVuelta);
+      clearTimeout(t);
+    };
+  }, [fase, volvio]);
 
   const localObj = useMemo(() => locales.find((l) => l.nombre === local), [locales, local]);
   const filtrados = useMemo(() => {
@@ -118,7 +129,7 @@ export default function ReviewPublic() {
       });
     } catch {}
     setFase("google");
-    setEspera(ESPERA_SEGUNDOS);
+    setVolvio(false);
     window.scrollTo(0, 0);
     if (localObj?.googleUrl) {
       // pestaña nueva para no perder esta pantalla; si el navegador la
@@ -135,7 +146,7 @@ export default function ReviewPublic() {
 
   // Paso 3: canjear el descuento (después de Google)
   async function canjear() {
-    if (!datosCompletos || espera > 0) return;
+    if (!datosCompletos) return;
     setEnviando(true);
     setError("");
     try {
@@ -212,23 +223,27 @@ export default function ReviewPublic() {
           <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full text-3xl" style={{ backgroundColor: "#fff", border: `3px solid ${color}` }}>
             ⭐
           </div>
-          <h1 className="font-display text-2xl font-semibold text-ink">Dejá tu reseña en Google</h1>
+          <h1 className="font-display text-2xl font-semibold text-ink">
+            {volvio ? "¡Listo tu descuento! 🎟️" : "Dejá tu reseña en Google"}
+          </h1>
           <p className="mt-2 text-sm text-muted">
-            {googleAbierto.current
-              ? "Te abrimos Google en otra pestaña. Contá tu experiencia ahí y volvé para llevarte tu descuento."
-              : "Abrí la reseña de Google, contá tu experiencia y volvé para llevarte tu descuento."}
+            {volvio
+              ? "Tocá el botón para ver tu 15% OFF."
+              : "Se abrió Google en otra pestaña para que dejes tu reseña de " + local + ". Cuando termines, volvé a esta pantalla y tu descuento se activa solo."}
           </p>
 
-          <div className="mt-5 rounded-card border border-line bg-surface p-5 text-left text-sm text-ink shadow-sm">
-            <p className="font-semibold">Así de simple:</p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
-              <li>Poné las estrellas en Google ({local}).</li>
-              <li>Si querés, sumá un comentario o foto.</li>
-              <li>Volvé a esta pantalla y canjeá tu 15% OFF.</li>
-            </ol>
-          </div>
+          {!volvio && (
+            <div className="mt-5 rounded-card border border-line bg-surface p-5 text-left text-sm text-ink shadow-sm">
+              <p className="font-semibold">Así de simple:</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
+                <li>Poné las estrellas en Google ({local}).</li>
+                <li>Si querés, sumá un comentario o foto.</li>
+                <li>Volvé a esta pantalla: tu 15% OFF te espera.</li>
+              </ol>
+            </div>
+          )}
 
-          {localObj?.googleUrl && (
+          {localObj?.googleUrl && !volvio && (
             <button
               onClick={reabrirGoogle}
               className="mt-4 w-full rounded-lg border-2 px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
@@ -242,18 +257,20 @@ export default function ReviewPublic() {
 
           <button
             onClick={canjear}
-            disabled={espera > 0 || enviando}
-            className="mt-3 w-full rounded-lg px-4 py-4 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!volvio || enviando}
+            className={`mt-3 w-full rounded-lg px-4 py-4 text-base font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 ${volvio && !enviando ? "animate-pulse shadow-lg" : ""}`}
             style={{ backgroundColor: color }}
           >
             {enviando
               ? "Generando tu cupón…"
-              : espera > 0
-                ? `🎟️ Ver mi descuento (${espera}s)`
-                : "🎟️ Ya califiqué — Ver mi descuento"}
+              : volvio
+                ? "🎟️ Ver mi 15% OFF"
+                : "Esperando que vuelvas de Google…"}
           </button>
           <p className="mt-2 text-2xs text-faint">
-            El botón se habilita en unos segundos, el tiempo de dejar las estrellas.
+            {volvio
+              ? "Se activó solo al volver 🎉"
+              : "En cuanto vuelvas de Google, el botón se enciende automáticamente."}
           </p>
         </div>
       </div>
