@@ -20,6 +20,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // /review (QR) y /cartelera (TV de aperturas) son públicas, sin login.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login|review|cartelera).*)"],
+  // /review (QR) y /cartelera + /tv (TV de aperturas) son públicas, sin login.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login|review|cartelera|tv).*)"],
 };

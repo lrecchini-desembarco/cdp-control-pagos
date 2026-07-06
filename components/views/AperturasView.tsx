@@ -36,7 +36,7 @@ export default function AperturasView() {
     cargar();
     const o = window.location.origin;
     const pub = /localhost|127\.0\.0\.1/.test(o) ? (process.env.NEXT_PUBLIC_PUBLIC_URL ?? "https://cdp-control-pagos.vercel.app") : o;
-    setUrlTv(`${pub}/cartelera`);
+    setUrlTv(`${pub}/tv`);
   }, []);
 
   async function guardar(patch: Record<string, unknown>) {
@@ -84,7 +84,7 @@ export default function AperturasView() {
             Editá acá el estado de cada local (L = Local, F = Firmado). La <b>cartelera de la TV se actualiza sola</b>.
           </p>
         </div>
-        <a href="/cartelera" target="_blank" rel="noreferrer">
+        <a href="/tv" target="_blank" rel="noreferrer">
           <Button>📺 Abrir cartelera (TV)</Button>
         </a>
       </div>
