@@ -3,6 +3,8 @@ import { readStore, writeStore } from "./store";
 // Inventario de IT / Infraestructura: recursos que tenemos, su estado y lo que
 // falta comprar. CRUD simple persistido (KV en prod). Solo lo maneja el admin.
 
+export type Aprobacion = "pendiente" | "aprobado" | "rechazado";
+
 export interface ItemInventario {
   id: string;
   nombre: string;       // "Notebook Lenovo", "Mouse", "Monitor 24\"", "TV"…
@@ -10,6 +12,8 @@ export interface ItemInventario {
   cantidad: number;
   estado: string;       // ver ESTADOS_INV en lib/inventario.ts
   nota?: string;
+  aprobacion: Aprobacion; // aprobación de compra del Dueño (para lo que hay que comprar)
+  aprobadoPor?: string;   // email de quien aprobó/rechazó
   actualizado: string;  // ISO
 }
 
@@ -19,7 +23,9 @@ const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice
 
 export async function getInventario(): Promise<ItemInventario[]> {
   const items = (await readStore<ItemInventario[] | null>(KEY, null)) ?? [];
-  return [...items].sort((a, b) => (b.actualizado || "").localeCompare(a.actualizado || ""));
+  return items
+    .map((it) => ({ ...it, aprobacion: it.aprobacion ?? "pendiente" }))
+    .sort((a, b) => (b.actualizado || "").localeCompare(a.actualizado || ""));
 }
 
 /** Alta (sin id) o edición (con id) de un ítem. */
@@ -52,10 +58,22 @@ export async function upsertItem(
       cantidad: Math.max(0, Math.round(Number(input.cantidad ?? 1) || 0)),
       estado: input.estado || "por-comprar",
       nota: input.nota || "",
+      aprobacion: "pendiente",
       actualizado: ahora,
     });
   }
   await writeStore(KEY, items);
+  return getInventario();
+}
+
+/** Aprobación de compra (la maneja el Dueño o el admin). */
+export async function setAprobacion(id: string, aprobacion: Aprobacion, email: string): Promise<ItemInventario[]> {
+  const items = (await readStore<ItemInventario[] | null>(KEY, null)) ?? [];
+  const i = items.findIndex((x) => x.id === id);
+  if (i >= 0) {
+    items[i] = { ...items[i], aprobacion, aprobadoPor: email, actualizado: new Date().toISOString() };
+    await writeStore(KEY, items);
+  }
   return getInventario();
 }
 

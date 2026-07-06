@@ -5,10 +5,10 @@ import InventarioView from "@/components/views/InventarioView";
 
 export const dynamic = "force-dynamic";
 
-// Solo admin ve el inventario de IT.
+// Inventario de IT: lo gestiona el admin; el Dueño entra a aprobar compras.
 export default async function Page() {
   const s = await getSesion();
   if (!s) redirect("/login");
-  if (s.rol !== "admin") redirect(homeDe(s.rol));
+  if (s.rol !== "admin" && s.rol !== "dueno") redirect(homeDe(s.rol));
   return <InventarioView />;
 }

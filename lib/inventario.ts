@@ -23,6 +23,17 @@ export const ESTADOS_INV: EstadoInv[] = [
 export const estadoInv = (id: string): EstadoInv =>
   ESTADOS_INV.find((e) => e.id === id) ?? { id, label: id, grupo: "otros", tone: "neutral" };
 
+// Aprobación de compra (la decide el Dueño). Solo aplica a lo que hay que comprar.
+export const APROBACIONES: { id: string; label: string; tone: EstadoInv["tone"] }[] = [
+  { id: "pendiente", label: "Pendiente", tone: "warn" },
+  { id: "aprobado", label: "Aprobado", tone: "ok" },
+  { id: "rechazado", label: "Rechazado", tone: "bad" },
+];
+export const aprobacionInv = (id: string) => APROBACIONES.find((a) => a.id === id) ?? APROBACIONES[0];
+
+/** ¿Este estado corresponde a una compra (necesita aprobación del Dueño)? */
+export const necesitaAprobacion = (estado: string) => estadoInv(estado).grupo === "comprar";
+
 export const CATEGORIAS_INV = [
   "Notebooks",
   "Monitores",
