@@ -17,6 +17,26 @@ const REFRESCO_MS = 15000; // se actualiza sola cada 15s
 export default function CarteleraApertura() {
   const [items, setItems] = useState<Item[]>([]);
   const [hora, setHora] = useState("");
+  const [fs, setFs] = useState(false);
+
+  function toggleFullscreen() {
+    const d = document as any;
+    if (!document.fullscreenElement) {
+      const el = document.documentElement as any;
+      (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen)?.call(el);
+    } else {
+      (document.exitFullscreen || d.webkitExitFullscreen || d.msExitFullscreen)?.call(document);
+    }
+  }
+  useEffect(() => {
+    const onFs = () => setFs(Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    document.addEventListener("fullscreenchange", onFs);
+    document.addEventListener("webkitfullscreenchange", onFs);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFs);
+      document.removeEventListener("webkitfullscreenchange", onFs);
+    };
+  }, []);
 
   async function cargar() {
     try {
@@ -57,6 +77,16 @@ export default function CarteleraApertura() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#181818]">
+      {/* Botón pantalla completa (para la TV) */}
+      <button
+        onClick={toggleFullscreen}
+        title={fs ? "Salir de pantalla completa" : "Pantalla completa"}
+        className="fixed right-3 top-3 z-50 rounded-lg border border-black/10 bg-white/80 px-3 py-1.5 text-xs font-semibold text-[#181818] shadow-sm backdrop-blur transition-opacity hover:opacity-100 print:hidden"
+        style={{ opacity: fs ? 0.25 : 0.9 }}
+      >
+        {fs ? "🡼 Salir" : "⛶ Pantalla completa"}
+      </button>
+
       {/* Banda superior */}
       <div className="h-2.5 w-full" style={{ background: "linear-gradient(90deg,#B5472E,#E0A024)" }} />
 
