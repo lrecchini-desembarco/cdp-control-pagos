@@ -12,7 +12,7 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/usuarios", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
@@ -71,6 +71,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/clientes", label: "Clientes", icon: "☺" },
   { href: "/cupones", label: "Validar cupón", icon: "◈" },
   { href: "/usuarios", label: "Usuarios", icon: "◑" },
+  { href: "/inventario", label: "Inventario", icon: "▧" },
   { href: "/estado", label: "Sistema · Endpoints", icon: "⚙" },
   { href: "/firmas", label: "Firmas", icon: "✎" },
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?" },
