@@ -52,10 +52,14 @@ export default function ReviewPublic() {
     const preLocal = sp.get("l");
     setMarca(m);
 
-    // si volvió de Google (misma pestaña + atrás), retomamos donde estaba
-    try {
-      const guardado = sessionStorage.getItem(SS_KEY);
-      if (guardado) {
+    // Retoma el paso "volvió de Google" desde sessionStorage. Se llama en el montaje
+    // (recarga completa) y también en pageshow/visibilitychange: en el celu, al tocar
+    // "atrás" en Chrome, la página se restaura del bfcache y estos eventos disparan
+    // -> el cupón queda listo al instante, sin espera.
+    const retomar = () => {
+      try {
+        const guardado = sessionStorage.getItem(SS_KEY);
+        if (!guardado) return;
         const s = JSON.parse(guardado);
         setLocal(s.local ?? "");
         setQ(s.local ?? "");
@@ -64,8 +68,14 @@ export default function ReviewPublic() {
         setConsent(s.consent ?? true);
         setFase("google");
         setVolvio(true); // ya pasó por Google y volvió: puede canjear
-      }
-    } catch {}
+      } catch {}
+    };
+    retomar();
+
+    const onPageShow = () => retomar();
+    const onVis = () => { if (document.visibilityState === "visible") retomar(); };
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVis);
 
     fetch("/api/locales")
       .then((r) => r.json())
@@ -80,6 +90,11 @@ export default function ReviewPublic() {
         }
       })
       .catch(() => {});
+
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   // Detectar el REGRESO de Google: cuando el cliente vuelve a esta pantalla
@@ -131,17 +146,27 @@ export default function ReviewPublic() {
     setFase("google");
     setVolvio(false);
     window.scrollTo(0, 0);
-    if (localObj?.googleUrl) {
-      // pestaña nueva para no perder esta pantalla; si el navegador la
-      // bloquea (in-app), navegamos en la misma (sessionStorage nos trae de vuelta)
-      const w = window.open(localObj.googleUrl, "_blank", "noopener");
-      googleAbierto.current = Boolean(w);
-      if (!w) window.location.href = localObj.googleUrl;
+    if (localObj?.googleUrl) abrirGoogle();
+  }
+
+  // En celular abrimos Google en la MISMA pestaña: volver es un solo "atrás" de
+  // Chrome (natural y rápido), y sessionStorage nos retoma en el paso del cupón.
+  // En compu usamos pestaña nueva para no perder esta pantalla.
+  function abrirGoogle() {
+    if (!localObj?.googleUrl) return;
+    const esMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    if (esMobile) {
+      googleAbierto.current = false;
+      window.location.href = localObj.googleUrl;
+      return;
     }
+    const w = window.open(localObj.googleUrl, "_blank", "noopener");
+    googleAbierto.current = Boolean(w);
+    if (!w) window.location.href = localObj.googleUrl;
   }
 
   function reabrirGoogle() {
-    if (localObj?.googleUrl) window.open(localObj.googleUrl, "_blank", "noopener");
+    abrirGoogle();
   }
 
   // Paso 3: canjear el descuento (después de Google)
@@ -229,7 +254,7 @@ export default function ReviewPublic() {
           <p className="mt-2 text-sm text-muted">
             {volvio
               ? "Tocá el botón para ver tu 15% OFF."
-              : "Se abrió Google en otra pestaña para que dejes tu reseña de " + local + ". Cuando termines, volvé a esta pantalla y tu descuento se activa solo."}
+              : "Dejá tu reseña de " + local + " en Google. Cuando termines, tocá \"atrás\" para volver acá y tu descuento se activa solo."}
           </p>
 
           {!volvio && (
