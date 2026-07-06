@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+// Circuito de reseñas (v2): la ÚNICA reseña es la de Google.
+// 1) El cliente deja local + nombre + WhatsApp.
+// 2) Lo mandamos a Google a dejar la reseña (paso obligatorio; ya no
+//    existe la calificación interna: si el cupón llegaba antes, nadie
+//    calificaba en Google).
+// 3) Al volver, canjea: recién ahí se emite el cupón 15% OFF.
+// El estado se persiste en sessionStorage por si Google se abre en la
+// misma pestaña (in-app browsers) y el cliente vuelve con "atrás".
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BRANDS } from "@/lib/brands";
 
 interface Local {
@@ -17,6 +26,9 @@ const MARCA_LABEL: Record<string, string> = {
   mila: "Mila & Go",
 };
 
+const ESPERA_SEGUNDOS = 12; // tiempo mínimo antes de poder canjear
+const SS_KEY = "review-en-google";
+
 export default function ReviewPublic() {
   const [locales, setLocales] = useState<Local[]>([]);
   const [local, setLocal] = useState("");
@@ -25,19 +37,36 @@ export default function ReviewPublic() {
 
   const [nombre, setNombre] = useState("");
   const [tel, setTel] = useState(""); // solo dígitos, sin el 54 9
-  const [rating, setRating] = useState(0);
   const [consent, setConsent] = useState(true);
-  const [fase, setFase] = useState<"form" | "listo">("form");
+  const [fase, setFase] = useState<"form" | "google" | "listo">("form");
+  const [espera, setEspera] = useState(ESPERA_SEGUNDOS);
   const [cupon, setCupon] = useState("");
   const [vence, setVence] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
+  const googleAbierto = useRef(false);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     const m = sp.get("m");
     const preLocal = sp.get("l");
     setMarca(m);
+
+    // si volvió de Google (misma pestaña + atrás), retomamos donde estaba
+    try {
+      const guardado = sessionStorage.getItem(SS_KEY);
+      if (guardado) {
+        const s = JSON.parse(guardado);
+        setLocal(s.local ?? "");
+        setQ(s.local ?? "");
+        setNombre(s.nombre ?? "");
+        setTel(s.tel ?? "");
+        setConsent(s.consent ?? true);
+        setFase("google");
+        setEspera(0); // ya pasó por Google: puede canjear
+      }
+    } catch {}
+
     fetch("/api/locales")
       .then((r) => r.json())
       .then((j) => {
@@ -53,6 +82,13 @@ export default function ReviewPublic() {
       .catch(() => {});
   }, []);
 
+  // countdown de la fase google
+  useEffect(() => {
+    if (fase !== "google" || espera <= 0) return;
+    const t = setInterval(() => setEspera((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [fase, espera]);
+
   const localObj = useMemo(() => locales.find((l) => l.nombre === local), [locales, local]);
   const filtrados = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -60,34 +96,19 @@ export default function ReviewPublic() {
   }, [locales, q]);
   const mostrarLista = q.trim().length > 0 && q !== local;
 
-  // Tema por marca (color de acento). Cae al bordó Desembarco si no hay marca.
   const marcaActiva = marca ?? localObj?.marca ?? "desembarco";
   const brand = BRANDS.find((b) => b.id === marcaActiva) ?? BRANDS[0];
   const color = brand.color;
 
   const telDigits = tel.replace(/\D/g, "");
-  const puedeEnviar = Boolean(local && localObj && nombre.trim().length >= 2 && telDigits.length >= 8 && rating > 0);
+  const datosCompletos = Boolean(local && localObj && nombre.trim().length >= 2 && telDigits.length >= 8);
 
-  async function calificar() {
-    if (!puedeEnviar) return;
-    setEnviando(true); setError("");
-    try {
-      const r = await fetch("/api/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ local, marca: marcaActiva, nombre: nombre.trim(), telefono: `549${telDigits}`, rating, consent }),
-      });
-      const j = await r.json();
-      if (!j.ok) { setError(j.error || "No se pudo procesar."); return; }
-      setCupon(j.codigo);
-      setVence(j.vence || "");
-      setFase("listo");
-      window.scrollTo(0, 0);
-    } catch { setError("Fallo de red. Reintentá."); } finally { setEnviando(false); }
-  }
-
+  // Paso 2: derivar a Google (la reseña es ahí, no acá)
   function irAGoogle() {
-    if (!localObj?.googleUrl) return;
+    if (!datosCompletos) return;
+    try {
+      sessionStorage.setItem(SS_KEY, JSON.stringify({ local, nombre, tel, consent }));
+    } catch {}
     try {
       fetch("/api/derivaciones", {
         method: "POST",
@@ -96,10 +117,59 @@ export default function ReviewPublic() {
         keepalive: true,
       });
     } catch {}
-    window.location.href = localObj.googleUrl;
+    setFase("google");
+    setEspera(ESPERA_SEGUNDOS);
+    window.scrollTo(0, 0);
+    if (localObj?.googleUrl) {
+      // pestaña nueva para no perder esta pantalla; si el navegador la
+      // bloquea (in-app), navegamos en la misma (sessionStorage nos trae de vuelta)
+      const w = window.open(localObj.googleUrl, "_blank", "noopener");
+      googleAbierto.current = Boolean(w);
+      if (!w) window.location.href = localObj.googleUrl;
+    }
   }
 
-  // ---------- Pantalla de agradecimiento + cupón ----------
+  function reabrirGoogle() {
+    if (localObj?.googleUrl) window.open(localObj.googleUrl, "_blank", "noopener");
+  }
+
+  // Paso 3: canjear el descuento (después de Google)
+  async function canjear() {
+    if (!datosCompletos || espera > 0) return;
+    setEnviando(true);
+    setError("");
+    try {
+      const r = await fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          local,
+          marca: marcaActiva,
+          nombre: nombre.trim(),
+          telefono: `549${telDigits}`,
+          consent,
+        }),
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        setError(j.error || "No se pudo procesar.");
+        return;
+      }
+      try {
+        sessionStorage.removeItem(SS_KEY);
+      } catch {}
+      setCupon(j.codigo);
+      setVence(j.vence || "");
+      setFase("listo");
+      window.scrollTo(0, 0);
+    } catch {
+      setError("Fallo de red. Reintentá.");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  // ---------- Pantalla final: cupón ----------
   if (fase === "listo") {
     return (
       <div className="grid min-h-screen place-items-center bg-paper px-4 py-8">
@@ -107,8 +177,8 @@ export default function ReviewPublic() {
           <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full text-3xl text-white" style={{ backgroundColor: color }}>
             ✓
           </div>
-          <h1 className="font-display text-2xl font-semibold text-ink">¡Gracias por tu reseña! 🎉</h1>
-          <p className="mt-1 text-sm text-muted">Tu opinión nos ayuda muchísimo a mejorar.</p>
+          <h1 className="font-display text-2xl font-semibold text-ink">¡Gracias por tu reseña en Google! 🎉</h1>
+          <p className="mt-1 text-sm text-muted">Tu opinión ayuda a que más gente nos conozca.</p>
 
           <div className="mt-6 overflow-hidden rounded-card border-2 border-dashed shadow-sm" style={{ borderColor: color }}>
             <div className="px-5 py-3 text-sm font-semibold text-white" style={{ backgroundColor: color }}>
@@ -128,22 +198,69 @@ export default function ReviewPublic() {
             </div>
           </div>
 
-          {localObj?.googleUrl && (
-            <button
-              onClick={irAGoogle}
-              className="mt-6 w-full rounded-lg px-4 py-4 text-base font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: color }}
-            >
-              ⭐ Dejá tu reseña en Google
-            </button>
-          )}
           <p className="mt-3 text-2xs text-faint">Sacale una captura al cupón así no lo perdés.</p>
         </div>
       </div>
     );
   }
 
-  // ---------- Formulario ----------
+  // ---------- Fase Google: la reseña se deja allá ----------
+  if (fase === "google") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-paper px-4 py-8">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full text-3xl" style={{ backgroundColor: "#fff", border: `3px solid ${color}` }}>
+            ⭐
+          </div>
+          <h1 className="font-display text-2xl font-semibold text-ink">Dejá tu reseña en Google</h1>
+          <p className="mt-2 text-sm text-muted">
+            {googleAbierto.current
+              ? "Te abrimos Google en otra pestaña. Contá tu experiencia ahí y volvé para llevarte tu descuento."
+              : "Abrí la reseña de Google, contá tu experiencia y volvé para llevarte tu descuento."}
+          </p>
+
+          <div className="mt-5 rounded-card border border-line bg-surface p-5 text-left text-sm text-ink shadow-sm">
+            <p className="font-semibold">Así de simple:</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
+              <li>Poné las estrellas en Google ({local}).</li>
+              <li>Si querés, sumá un comentario o foto.</li>
+              <li>Volvé a esta pantalla y canjeá tu 15% OFF.</li>
+            </ol>
+          </div>
+
+          {localObj?.googleUrl && (
+            <button
+              onClick={reabrirGoogle}
+              className="mt-4 w-full rounded-lg border-2 px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+              style={{ borderColor: color, color }}
+            >
+              ⭐ Abrir Google de nuevo
+            </button>
+          )}
+
+          {error && <p className="mt-3 rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+
+          <button
+            onClick={canjear}
+            disabled={espera > 0 || enviando}
+            className="mt-3 w-full rounded-lg px-4 py-4 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ backgroundColor: color }}
+          >
+            {enviando
+              ? "Generando tu cupón…"
+              : espera > 0
+                ? `🎟️ Ver mi descuento (${espera}s)`
+                : "🎟️ Ya califiqué — Ver mi descuento"}
+          </button>
+          <p className="mt-2 text-2xs text-faint">
+            El botón se habilita en unos segundos, el tiempo de dejar las estrellas.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Formulario (sin estrellas internas) ----------
   return (
     <div className="grid min-h-screen place-items-center bg-paper px-4 py-8">
       <div className="w-full max-w-md">
@@ -158,9 +275,9 @@ export default function ReviewPublic() {
         {/* Banner promocional */}
         <div className="mb-4 overflow-hidden rounded-card text-white shadow-sm" style={{ backgroundColor: color }}>
           <div className="px-5 py-5 text-center">
-            <p className="font-display text-xl font-bold leading-tight">📣 ¡Calificá y ganá 15% OFF!</p>
+            <p className="font-display text-xl font-bold leading-tight">📣 Tu reseña en Google vale 15% OFF</p>
             <p className="mt-1.5 text-sm text-white/90">
-              Con tu calificación te llevás un <b>15% de descuento</b> en tus <b>próximas 3 compras</b> en este local.
+              Dejá tu reseña en <b>Google</b> y llevate un <b>15% de descuento</b> en tus <b>próximas 3 compras</b> en este local.
             </p>
           </div>
         </div>
@@ -187,23 +304,6 @@ export default function ReviewPublic() {
               ))}
             </div>
           )}
-
-          {/* Estrellas */}
-          <label className="mb-1.5 mt-4 block text-2xs font-medium uppercase tracking-wide text-faint">¿Cómo estuvo tu experiencia?</label>
-          <div className="flex justify-center gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setRating(n)}
-                aria-label={`${n} estrellas`}
-                className="text-4xl leading-none transition-transform hover:scale-110"
-                style={{ color: n <= rating ? color : "#D9D4CC" }}
-              >
-                ★
-              </button>
-            ))}
-          </div>
 
           {/* Nombre */}
           <label className="mb-1 mt-4 block text-2xs font-medium uppercase tracking-wide text-faint">Tu nombre</label>
@@ -238,18 +338,23 @@ export default function ReviewPublic() {
 
           {error && <p className="mt-3 rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
 
-          {/* Botón calificar */}
+          {/* Botón: derecho a Google */}
           <button
-            onClick={calificar}
-            disabled={!puedeEnviar || enviando}
+            onClick={irAGoogle}
+            disabled={!datosCompletos}
             className="mt-5 w-full rounded-lg px-4 py-4 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ backgroundColor: color }}
           >
-            {enviando ? "Procesando…" : local ? `⭐ Calificar ${local}` : "⭐ Calificar local"}
+            {local ? `⭐ Calificar ${local} en Google` : "⭐ Calificar en Google"}
           </button>
-          {!puedeEnviar && (
+          {!datosCompletos && (
             <p className="mt-2 text-center text-2xs text-faint">
-              {!local ? "Elegí tu local para continuar." : rating === 0 ? "Tocá las estrellas para calificar." : "Completá tu nombre y WhatsApp."}
+              {!local ? "Elegí tu local para continuar." : "Completá tu nombre y WhatsApp."}
+            </p>
+          )}
+          {datosCompletos && !localObj?.googleUrl && (
+            <p className="mt-2 text-center text-2xs text-faint">
+              Este local todavía no tiene link de Google: igual podés seguir y llevarte tu descuento.
             </p>
           )}
         </div>
