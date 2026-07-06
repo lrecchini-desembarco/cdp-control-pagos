@@ -29,6 +29,11 @@ const MARCA_LABEL: Record<string, string> = {
 const FALLBACK_MS = 7000; // si no detectamos el regreso de Google, habilitamos igual
 const SS_KEY = "review-en-google";
 
+// Cupón OCULTO por ahora (no está validado 100%). Con false: entrar -> datos ->
+// calificar en Google -> pantalla "¡Gracias por calificar!" (sin cupón). Poné true
+// para reactivar el recorrido completo del cupón (Google -> volver -> 15% OFF).
+const MOSTRAR_CUPON: boolean = false;
+
 export default function ReviewPublic() {
   const [locales, setLocales] = useState<Local[]>([]);
   const [local, setLocal] = useState("");
@@ -38,7 +43,7 @@ export default function ReviewPublic() {
   const [nombre, setNombre] = useState("");
   const [tel, setTel] = useState(""); // solo dígitos, sin el 54 9
   const [consent, setConsent] = useState(true);
-  const [fase, setFase] = useState<"form" | "google" | "listo">("form");
+  const [fase, setFase] = useState<"form" | "google" | "listo" | "gracias">("form");
   const [volvio, setVolvio] = useState(false); // true cuando el cliente vuelve de Google
   const [cupon, setCupon] = useState("");
   const [vence, setVence] = useState("");
@@ -57,6 +62,8 @@ export default function ReviewPublic() {
     // "atrás" en Chrome, la página se restaura del bfcache y estos eventos disparan
     // -> el cupón queda listo al instante, sin espera.
     const retomar = () => {
+      // Con el cupón oculto no hay "vuelta que retomar": limpiamos cualquier estado viejo.
+      if (!MOSTRAR_CUPON) { try { sessionStorage.removeItem(SS_KEY); } catch {} return; }
       try {
         const guardado = sessionStorage.getItem(SS_KEY);
         if (!guardado) return;
@@ -129,12 +136,22 @@ export default function ReviewPublic() {
   const telDigits = tel.replace(/\D/g, "");
   const datosCompletos = Boolean(local && localObj && nombre.trim().length >= 2 && telDigits.length >= 8);
 
+  // Registra al cliente en el CRM (mismo endpoint que emite el cupón; con el cupón
+  // oculto simplemente no mostramos el código). keepalive: sobrevive a la navegación.
+  function capturarCliente() {
+    try {
+      fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ local, marca: marcaActiva, nombre: nombre.trim(), telefono: `549${telDigits}`, consent }),
+        keepalive: true,
+      });
+    } catch {}
+  }
+
   // Paso 2: derivar a Google (la reseña es ahí, no acá)
   function irAGoogle() {
     if (!datosCompletos) return;
-    try {
-      sessionStorage.setItem(SS_KEY, JSON.stringify({ local, nombre, tel, consent }));
-    } catch {}
     try {
       fetch("/api/derivaciones", {
         method: "POST",
@@ -142,6 +159,21 @@ export default function ReviewPublic() {
         body: JSON.stringify({ local }),
         keepalive: true,
       });
+    } catch {}
+
+    if (!MOSTRAR_CUPON) {
+      // Cupón oculto: guardamos el cliente, abrimos Google (pestaña nueva, no hace
+      // falta que vuelva) y mostramos "¡Gracias por calificar!".
+      capturarCliente();
+      setFase("gracias");
+      window.scrollTo(0, 0);
+      if (localObj?.googleUrl) window.open(localObj.googleUrl, "_blank", "noopener");
+      return;
+    }
+
+    // Flujo con cupón (para cuando esté validado).
+    try {
+      sessionStorage.setItem(SS_KEY, JSON.stringify({ local, nombre, tel, consent }));
     } catch {}
     setFase("google");
     setVolvio(false);
@@ -203,6 +235,33 @@ export default function ReviewPublic() {
     } finally {
       setEnviando(false);
     }
+  }
+
+  // ---------- Pantalla "¡Gracias por calificar!" (cupón oculto) ----------
+  if (fase === "gracias") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-paper px-4 py-8">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full text-3xl text-white" style={{ backgroundColor: color }}>
+            ✓
+          </div>
+          <h1 className="font-display text-2xl font-semibold text-ink">¡Gracias por calificar! 🎉</h1>
+          <p className="mt-2 text-sm text-muted">
+            Tu reseña en Google nos ayuda muchísimo a que más gente nos conozca. ¡Gracias por tu tiempo!
+          </p>
+          {localObj?.googleUrl && (
+            <button
+              onClick={() => window.open(localObj!.googleUrl!, "_blank", "noopener")}
+              className="mt-6 w-full rounded-lg px-4 py-4 text-base font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: color }}
+            >
+              ⭐ Dejar mi reseña en Google
+            </button>
+          )}
+          <p className="mt-4 text-2xs text-faint">DS Group · Gracias por tu visita</p>
+        </div>
+      </div>
+    );
   }
 
   // ---------- Pantalla final: cupón ----------
@@ -317,10 +376,21 @@ export default function ReviewPublic() {
         {/* Banner promocional */}
         <div className="mb-4 overflow-hidden rounded-card text-white shadow-sm" style={{ backgroundColor: color }}>
           <div className="px-5 py-5 text-center">
-            <p className="font-display text-xl font-bold leading-tight">📣 Tu reseña en Google vale 15% OFF</p>
-            <p className="mt-1.5 text-sm text-white/90">
-              Dejá tu reseña en <b>Google</b> y llevate un <b>15% de descuento</b> en tus <b>próximas 3 compras</b> en este local.
-            </p>
+            {MOSTRAR_CUPON ? (
+              <>
+                <p className="font-display text-xl font-bold leading-tight">📣 Tu reseña en Google vale 15% OFF</p>
+                <p className="mt-1.5 text-sm text-white/90">
+                  Dejá tu reseña en <b>Google</b> y llevate un <b>15% de descuento</b> en tus <b>próximas 3 compras</b> en este local.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-display text-xl font-bold leading-tight">💬 Tu opinión nos importa</p>
+                <p className="mt-1.5 text-sm text-white/90">
+                  Contanos cómo la pasaste con una <b>reseña en Google</b>. ¡Nos ayuda un montón a mejorar y a que más gente nos conozca!
+                </p>
+              </>
+            )}
           </div>
         </div>
 
@@ -396,7 +466,7 @@ export default function ReviewPublic() {
           )}
           {datosCompletos && !localObj?.googleUrl && (
             <p className="mt-2 text-center text-2xs text-faint">
-              Este local todavía no tiene link de Google: igual podés seguir y llevarte tu descuento.
+              Este local todavía no tiene link de Google: igual podés continuar.
             </p>
           )}
         </div>
