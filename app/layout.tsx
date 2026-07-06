@@ -28,11 +28,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const pathname = headers().get("x-pathname") ?? "";
   const ruta = pathname === "/" ? "/" : "/" + (pathname.split("/").filter(Boolean)[0] ?? "");
 
+  // Pantallas de TV: tablero puro, SIN menú lateral ni barra superior (aunque haya sesión).
+  const esPantallaTv = ruta === "/tv" || ruta === "/cartelera";
+
   // Nav por rol: editable desde /usuarios, persistido en el store.
   const navByRol = sesion ? await getRolesNav() : null;
   const miNav = navByRol && sesion ? navByRol[sesion.rol] ?? [] : [];
-  // Gating por rol: si el rol no puede ver esta ruta, lo mandamos a su home.
-  if (sesion && pathname && !puedeVerNav(miNav, ruta)) {
+  // Gating por rol: si el rol no puede ver esta ruta, lo mandamos a su home (las TV se saltan).
+  if (sesion && pathname && !esPantallaTv && !puedeVerNav(miNav, ruta)) {
     redirect(homeDeNav(miNav));
   }
   // Items del menú que ve este rol (con su ícono/label del catálogo).
@@ -41,7 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const body = (
     <html lang="es" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body className="font-sans">
-        {sesion ? (
+        {sesion && !esPantallaTv ? (
           <div className="flex h-screen overflow-hidden">
             <Sidebar rol={sesion.rol} items={itemsNav} />
             <div className="flex flex-1 flex-col overflow-hidden">
