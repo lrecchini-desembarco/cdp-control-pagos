@@ -24,8 +24,8 @@ export const SUCURSALES: Sucursal[] = [
 
 export const PRODUCTO_MAP: ProductoMap[] = [
   { codigoCdp: "050027", insumoNombre: "Bolas Blend 100g", skuVenta: "210010", skuNombre: "Empanada de carne", factor: 1, modo: "directo" },
-  { codigoCdp: "040022", insumoNombre: "Medallón Tuki 80g", skuVenta: "138002", skuNombre: "Burger clásica de carne", factor: 1, modo: "bom" },
-  { codigoCdp: "040022", insumoNombre: "Medallón Tuki 80g", skuVenta: "138005", skuNombre: "Burger doble cuarto c/ queso", factor: 2, modo: "bom" },
+  { codigoCdp: "083009", insumoNombre: "Medallón Tuki 80g", skuVenta: "138002", skuNombre: "Burger clásica de carne", factor: 1, modo: "bom" },
+  { codigoCdp: "083009", insumoNombre: "Medallón Tuki 80g", skuVenta: "138005", skuNombre: "Burger doble cuarto c/ queso", factor: 2, modo: "bom" },
   { codigoCdp: "080002", insumoNombre: "Panceta feteada", skuVenta: "138003", skuNombre: "Burger bacon de carne", factor: 2, modo: "bom" },
   { codigoCdp: "150001", insumoNombre: "Milanesa de carne", skuVenta: "150001", skuNombre: "Milanesa clásica de carne", factor: 1, modo: "directo" },
 ];
