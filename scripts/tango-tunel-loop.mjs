@@ -14,11 +14,17 @@
 import { spawn } from "node:child_process";
 import { readFileSync, existsSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import os from "node:os";
 import path from "node:path";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const LOG = path.join(ROOT, "tunnel-bridge.log");
 const PUERTO = 8787;
+
+// Ruta completa de cloudflared (para que ande también sin sesión iniciada, donde
+// el PATH del usuario puede no estar). Cae a "cloudflared" (PATH) si no la encuentra.
+const CF_FULL = path.join(os.homedir(), "AppData", "Local", "Microsoft", "WinGet", "Links", "cloudflared.exe");
+const CLOUDFLARED = existsSync(CF_FULL) ? CF_FULL : "cloudflared";
 
 const env = {};
 try {
@@ -72,7 +78,7 @@ while (true) {
   try { rmSync(LOG, { force: true }); } catch { /* en uso */ }
   console.log(`${ts()} levantando túnel hacia http://localhost:${PUERTO}…`);
   const p = spawn(
-    "cloudflared",
+    CLOUDFLARED,
     ["tunnel", "--protocol", "http2", "--url", `http://localhost:${PUERTO}`, "--logfile", LOG],
     { stdio: "ignore", shell: false }
   );
