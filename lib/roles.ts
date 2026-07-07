@@ -1,7 +1,7 @@
 // Roles y qué ve cada uno. Es config pura (sin fs), así la puede usar el
 // middleware (edge) y también el server.
 
-export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "dueno";
+export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia";
 
 export interface RolInfo {
   label: string;
@@ -38,19 +38,19 @@ export const ROLES: Record<Rol, RolInfo> = {
     nav: ["/resenas", "/clientes", "/guia"],
     gestionaUsuarios: false,
   },
-  dueno: {
-    label: "Dueño",
-    // Líder/dueño: aprueba las compras del inventario de IT. (El admin puede
-    // sumarle más pantallas desde Usuarios si hace falta.)
-    nav: ["/inventario", "/guia"],
+  gerencia: {
+    label: "Gerencia",
+    // Gerencia: solo el cuadro de Nuevos locales (Apertura de locales). El admin
+    // puede sumarle más pantallas desde Usuarios si hace falta.
+    nav: ["/apertura", "/guia"],
     gestionaUsuarios: false,
   },
 };
 
-export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion", "resenas", "dueno"];
+export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion", "resenas", "gerencia"];
 
 export const esRol = (v: unknown): v is Rol =>
-  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion" || v === "resenas" || v === "dueno";
+  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion" || v === "resenas" || v === "gerencia";
 
 // Catálogo maestro de items del menú (href + label + ícono). El QUÉ VE cada rol
 // se define eligiendo de acá (editable desde /usuarios, persistido en el store).

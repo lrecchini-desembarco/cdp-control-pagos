@@ -11,7 +11,7 @@ export async function GET() {
 
 async function puedeEditar() {
   const s = await getSesion();
-  return s && (s.rol === "admin" || s.rol === "operaciones") ? s : null;
+  return s && (s.rol === "admin" || s.rol === "operaciones" || s.rol === "gerencia") ? s : null;
 }
 
 export async function POST(req: NextRequest) {

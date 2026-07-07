@@ -41,7 +41,7 @@ export default function InventarioView() {
   const [msg, setMsg] = useState("");
 
   const esAdmin = rol === "admin";
-  const puedeAprobar = rol === "admin" || rol === "dueno";
+  const puedeAprobar = rol === "admin";
 
   async function cargar() {
     setEstado("loading");
@@ -58,11 +58,7 @@ export default function InventarioView() {
     cargar();
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((j) => {
-        if (!j.ok) return;
-        setRol(j.rol);
-        if (j.rol === "dueno") setFGrupo("pendientes"); // el Dueño arranca en lo que hay que aprobar
-      })
+      .then((j) => { if (j.ok) setRol(j.rol); })
       .catch(() => {});
   }, []);
 
@@ -144,9 +140,7 @@ export default function InventarioView() {
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">Inventario · IT / Infraestructura</h1>
           <p className="mt-0.5 max-w-2xl text-sm text-muted">
-            {esAdmin
-              ? "Qué recursos tenemos, en qué estado están y qué falta comprar. Editá cantidad y estado directo en la tabla; el Dueño aprueba las compras."
-              : "Aprobá o rechazá las compras que pide IT. Podés ver todo el inventario, pero la gestión la hace IT."}
+            Qué recursos tenemos, en qué estado están y qué falta comprar. Editá cantidad, estado y aprobación de las compras directo en la tabla.
           </p>
         </div>
         <Button variant="outline" onClick={exportar} disabled={!filtrados.length}>⬇ Exportar</Button>
