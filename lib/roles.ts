@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/raven", "/mapeos", "/catalogo", "/resenas", "/clientes", "/cupones", "/apertura", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -77,9 +77,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/precios", label: "Precios", icon: "$" },
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉" },
   { href: "/compras", label: "Compras vs Ventas", icon: "⇲" },
-  { href: "/raven", label: "Consultar Raven", icon: "↧", beta: true },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
-  { href: "/catalogo", label: "Control de catálogo", icon: "▤", beta: true },
   { href: "/resenas", label: "Reseñas", icon: "★" },
   { href: "/clientes", label: "Clientes", icon: "☺" },
   { href: "/cupones", label: "Validar cupón", icon: "◈" },
