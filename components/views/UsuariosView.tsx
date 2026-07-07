@@ -18,6 +18,7 @@ const tonoRol: Record<Rol, "action" | "warn" | "neutral"> = {
   comparacion: "neutral",
   resenas: "neutral",
   gerencia: "action",
+  "apps-gerencia": "warn",
 };
 
 export default function UsuariosView() {
