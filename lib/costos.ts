@@ -8,6 +8,14 @@
 // costo de producirlo. Al sumar más códigos de Raven, agregar acá su costo.
 
 export const COSTOS_VIGENCIA = "Junio 2026";
+// Vigencia estructurada, para avisar en pantalla cuando los costos quedaron viejos.
+const VIGENCIA_ANIO = 2026;
+const VIGENCIA_MES = 6; // junio
+/** Meses transcurridos desde la vigencia de los costos (0 = al día, >0 = vencidos). */
+export const mesesDesactualizado = (): number => {
+  const h = new Date();
+  return Math.max(0, (h.getFullYear() - VIGENCIA_ANIO) * 12 + (h.getMonth() + 1 - VIGENCIA_MES));
+};
 
 // code (Raven / CDP) -> costo de elaborar 1 unidad, sin IVA.
 export const COSTO_CDP: Record<string, number> = {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Field, inputClass, Skeleton } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { fmtCompacto } from "@/lib/brands";
-import { costoInsumo, tieneCosto, COSTOS_VIGENCIA } from "@/lib/costos";
+import { costoInsumo, tieneCosto, COSTOS_VIGENCIA, mesesDesactualizado } from "@/lib/costos";
 
 // $ en riesgo de un local = lo que pidió al CDP (por insumo) valorizado al costo
 // de elaboración, contando SOLO los locales que pidieron y no vendieron nada.
@@ -265,7 +265,14 @@ export default function PedidosView() {
         <Card className="border-bad/30 p-4">
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-2xs font-medium uppercase tracking-wide text-faint">$ en riesgo — pedido sin venta, valorizado al costo de elaboración del CDP</p>
-            <span className="shrink-0 text-2xs text-faint">costos {COSTOS_VIGENCIA}</span>
+            <span className="shrink-0 text-2xs text-faint">
+              costos {COSTOS_VIGENCIA}
+              {mesesDesactualizado() > 0 && (
+                <span className="ml-1 text-warn" title="Los costos de elaboración no se actualizan desde esa vigencia; el $ en riesgo puede estar desfasado. Actualizar en lib/costos.ts.">
+                  ⚠ vencidos {mesesDesactualizado() === 1 ? "hace 1 mes" : `hace ${mesesDesactualizado()} meses`}
+                </span>
+              )}
+            </span>
           </div>
           <p className="mt-1 font-display text-2xl font-semibold text-bad" title={`$ ${fmt(kpis.dineroRiesgo)}`}>$ {fmtCompacto(kpis.dineroRiesgo)}</p>
           <p className="text-2xs text-faint">{kpis.sinVenta} {kpis.sinVenta === 1 ? "local pidió" : "locales pidieron"} y no vendió · {fmtCompacto(kpis.pedidoRiesgo)} u de insumo comprometidas</p>

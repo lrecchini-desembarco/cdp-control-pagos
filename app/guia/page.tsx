@@ -13,13 +13,25 @@ type Capacidad = {
 
 const CAPACIDADES: Capacidad[] = [
   {
-    titulo: "Ver el cruce de un período",
-    paraQue: "Detectar dónde una sucursal pidió de más o de menos al CDP frente a lo que vendió.",
+    titulo: "CDP vs Ventas por local",
+    paraQue: "Ver, local por local, lo que pidió al CDP contra lo que vendió. Detecta quién pidió sin vender ($ en riesgo) o vende sin pedir. Es la comparación más confiable (unidades reales, sin depender de la receta).",
+    pasos: [
+      "Entrá a CDP vs Ventas (local).",
+      "Elegí el rango con Desde/Hasta.",
+      "Filtrá por Tipo (propio/franquicia) o Riesgo, u ordená por mayor pedido/venta.",
+      "Tocá una fila para el detalle por insumo de ese local.",
+    ],
+    href: "/pedidos",
+    cta: "Ir a CDP vs Ventas",
+  },
+  {
+    titulo: "Cruce CDP vs ventas (por insumo)",
+    paraQue: "El cruce fino: traduce la venta a insumo por receta y la compara con el pedido, por sucursal y día. Cubre lo que tenga receta cargada en Mapeos.",
     pasos: [
       "Entrá a Cruce CDP vs ventas.",
-      "Elegí el rango con Desde/Hasta, o un atajo: Hoy · 7 · 14 · 30 días.",
+      "Elegí el rango con Desde/Hasta.",
       'Ordená por "Mayor desvío" para ver primero lo que más se desvía.',
-      "Tocá una fila para ver el desglose (qué productos lo explican) y saltar a Raven o a la receta.",
+      "Tocá una fila para ver el desglose (qué productos lo explican).",
     ],
     href: "/cruce",
     cta: "Ir al cruce",
@@ -29,54 +41,86 @@ const CAPACIDADES: Capacidad[] = [
     paraQue: "Que el sistema te diga qué mirar primero: quiebres, sobre-pedidos y puntos ciegos.",
     pasos: [
       "Entrá a Alertas. Mirá las críticas (rojo) primero.",
-      'Usá "Ver en el cruce" o "Revisar la regla" para ir directo a resolverlo.',
-      'Si algo no aplica ahora, tocá "Silenciar 7d": deja de molestar y vuelve solo al vencer.',
-      'Lo silenciado queda en la sección "Silenciadas", con "Reactivar".',
+      'Usá "Ver en el cruce" para ir directo a resolverlo.',
+      'Si algo no aplica ahora, "Silenciar 7d": deja de molestar y vuelve solo al vencer.',
+      'Lo silenciado queda en "Silenciadas", con "Reactivar".',
     ],
     href: "/alertas",
     cta: "Ir a alertas",
   },
   {
-    titulo: "Avisar al equipo (resumen)",
-    paraQue: "Que lo urgente llegue solo, sin que nadie tenga que entrar a mirar.",
+    titulo: "Ventas por turno",
+    paraQue: "Ver qué se vendió por artículo y turno (mediodía/tarde/noche), filtrando por sucursal o marca.",
     pasos: [
-      'En Alertas, tocá "Enviar resumen ahora" para mandarlo en el momento.',
-      "Junta las alertas urgentes + los problemas críticos de catálogo.",
-      "Para que salga automático (Slack, todas las mañanas): lo configura sistemas (ver docs/notificaciones).",
+      "Entrá a Ventas por turno.",
+      "Elegí el rango y, si querés, una sucursal o marca.",
+      "Mirá el ranking de artículos y el total por turno.",
     ],
-    href: "/alertas",
-    cta: "Probar el resumen",
+    href: "/ventas",
+    cta: "Ir a ventas",
   },
   {
-    titulo: "Controlar el catálogo",
-    paraQue: "Encontrar artículos en $0, con marca cruzada, sin clasificar o que conviene dar de baja.",
+    titulo: "Precios (y web vs Tango)",
+    paraQue: "Ver el precio vigente por producto y sucursal, y comparar el menú de la web contra Tango.",
     pasos: [
-      "Entrá a Control de catálogo.",
-      "Filtrá por tipo de problema (precio $0, cross-brand, sin marca, sin venta).",
-      'Tocá "Exportar a corregir (CSV)" y pasásela al equipo de sistemas.',
-      'Cómo se arregla cada uno está al pie, en "¿Cómo se corrige en Tango?".',
+      "Entrá a Precios.",
+      "Buscá el producto o filtrá por sucursal.",
+      'Pestaña "Web vs Tango" para ver diferencias contra el sitio.',
     ],
-    href: "/catalogo",
-    cta: "Ir al catálogo",
+    href: "/precios",
+    cta: "Ir a precios",
+  },
+  {
+    titulo: "Remitos / Compras vs Ventas",
+    paraQue: "Subir un CSV de remitos o compras y cruzarlo contra las ventas de Tango, para ver cobertura por local (quién recibió sin vender, o al revés).",
+    pasos: [
+      "Entrá a Remitos vs Ventas o Compras vs Ventas.",
+      "Subí el CSV (Compras auto-detecta las columnas).",
+      "Mirá la pestaña Cobertura.",
+    ],
+    href: "/compras",
+    cta: "Ir a compras",
+  },
+  {
+    titulo: "Reseñas, cupones y clientes",
+    paraQue: "Seguir la reputación de Google, el sistema de cupones por reseña, y el CRM de clientes que se arma con eso.",
+    pasos: [
+      "Reseñas: reputación y on/off del cupón.",
+      "Validar cupón: canjear uno en el local.",
+      "Clientes: el CRM (teléfono, visitas, cupones) que se arma solo.",
+    ],
+    href: "/resenas",
+    cta: "Ir a reseñas",
+  },
+  {
+    titulo: "Apertura de locales",
+    paraQue: "El cuadro en vivo del estado de apertura de cada local (para gerencia y la TV del local).",
+    pasos: [
+      "Entrá a Apertura de locales.",
+      "Actualizá el estado de cada local.",
+      'Botón "Pantalla completa" para la TV, o abrí la URL /tv.',
+    ],
+    href: "/apertura",
+    cta: "Ir a apertura",
+  },
+  {
+    titulo: "Inventario de IT",
+    paraQue: "Registrar y aprobar los recursos de infraestructura (notebooks, monitores, etc.).",
+    pasos: ["Entrá a Inventario.", "Agregá o editá un ítem.", "El admin aprueba las altas."],
+    href: "/inventario",
+    cta: "Ir a inventario",
   },
   {
     titulo: "Editar los mapeos",
-    paraQue: "Enseñarle al sistema qué insumo consume cada producto (la receta) y qué sucursal es cuál.",
+    paraQue: "Enseñarle al sistema qué insumo consume cada producto (la receta / factor) y qué sucursal es cuál. Es lo que hace posible el cruce: cuantas más recetas, menos puntos ciegos.",
     pasos: [
       "Entrá a Mapeos.",
       'Pestaña "Productos · BOM" para los factores; "Sucursales" para los códigos.',
       "Editá el valor que haga falta.",
-      '"Guardar cambios" — queda guardado y cambia el cruce y las alertas al instante.',
+      '"Guardar cambios" — cambia el cruce y las alertas al instante.',
     ],
     href: "/mapeos",
     cta: "Ir a mapeos",
-  },
-  {
-    titulo: "Consultar Raven",
-    paraQue: "Ver el pedido de un insumo para una fecha, desglosado por sucursal.",
-    pasos: ["Entrá a Consultar Raven.", "Escribí el código del insumo y la fecha de entrega.", "Tocá Consultar."],
-    href: "/raven",
-    cta: "Consultar Raven",
   },
 ];
 
@@ -126,8 +170,8 @@ export default function Page() {
         <p className="mt-1 text-xs text-muted">
           El tablero <span className="font-medium">lee</span> Tango y Raven, no los modifica. Cargar o cambiar
           precios, dar de baja un artículo, clasificar su marca o asignarle sucursales se hace en el maestro de
-          Tango. Acá los <span className="font-medium">detectás y exportás</span> (Control de catálogo) para que
-          el equipo de sistemas los corrija, y controlás que queden limpios.
+          Tango. Acá lo <span className="font-medium">detectás y controlás</span> para que el equipo de sistemas
+          lo corrija, y verificás que quede limpio.
         </p>
       </Card>
     </div>
