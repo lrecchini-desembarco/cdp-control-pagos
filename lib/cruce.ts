@@ -1,6 +1,7 @@
 import { recentDates, unidadDe, nombreInsumo, brandDeInsumo } from "./catalogo";
 import { getMapeos } from "./mapeos-store";
 import { getSources } from "./sources";
+import { armarClaveSuc } from "./sucursal-key";
 import type { MapeosData } from "./mapeos-store";
 import type { PedidoCdp, VentaSku, RangoQuery } from "./sources/types";
 import type { CruceComponente, CruceRow } from "./types";
@@ -10,33 +11,9 @@ import type { CruceComponente, CruceRow } from "./types";
  * misma entrada, misma salida. La venta equivalente se arma sumando, por insumo,
  * cada SKU vendido x su factor (el desglose que después explica el detalle).
  * Usa los mapeos efectivos (defaults + lo guardado en la pantalla Mapeos).
+ * La reconciliación de nombres de sucursal vive en lib/sucursal-key (compartida
+ * con Remitos y Compras para no divergir).
  */
-// Base del nombre de sucursal: saca acentos, símbolos y espacios repetidos, en
-// minúsculas. NO saca el prefijo "mrt" (eso lo decide la clave, abajo).
-const baseSuc = (s: string) =>
-  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-
-// Construye la clave para reconciliar Raven ↔ Tango. Por defecto saca el prefijo
-// "mrt " (Raven nombra varias sucursales sin él: pedido "Caballito" ↔ venta
-// "Mrt Caballito"). PERO si en los datos existe además un local El Desembarco con
-// el MISMO nombre base (ej. "San Miguel" y "Mrt San Miguel"), NO lo saca: así dos
-// locales de marcas distintas nunca terminan fusionados en la misma fila del cruce.
-function armarClaveSuc(nombres: string[]): (s: string) => string {
-  const bases = new Set(nombres.map(baseSuc));
-  const ambiguas = new Set<string>(); // bases con gemelo El Desembarco
-  Array.from(bases).forEach((b) => {
-    if (b.startsWith("mrt ") && bases.has(b.slice(4))) ambiguas.add(b.slice(4));
-  });
-  return (s: string) => {
-    const b = baseSuc(s);
-    if (b.startsWith("mrt ")) {
-      const sinMrt = b.slice(4);
-      return ambiguas.has(sinMrt) ? b : sinMrt; // ambigua -> conserva "mrt X" aparte
-    }
-    return b;
-  };
-}
-
 export function construirCruce(pedidos: PedidoCdp[], ventas: VentaSku[], mapeos: MapeosData): CruceRow[] {
   const reglasPorSku = new Map(mapeos.productoMap.map((m) => [m.skuVenta, m]));
   // Nombre "lindo" por sucursal normalizada (para mostrar). Gana el de ventas (Tango).

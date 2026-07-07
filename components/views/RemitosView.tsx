@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Card, inputClass } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { parseNumero } from "@/lib/num";
+import { armarClaveSuc } from "@/lib/sucursal-key";
 
 // Formato esperado del CSV (lo genera scripts/parsear-remitos.py):
 // fecha,marca,sucursal,codigo,descripcion,cantidad,remito
@@ -123,15 +124,17 @@ export default function RemitosView() {
 
   // Auditoría de cobertura: sucursal con remito ↔ con ventas
   const cobertura = useMemo(() => {
+    // Misma reconciliación que el Cruce: no fusiona "Mrt X" con el "X" de El Desembarco.
+    const clave = armarClaveSuc([...remitos.map((r) => r.sucursal), ...ventasSuc.map((v) => v.sucursal)]);
     const remBy = new Map<string, { disp: string; cant: number }>();
     for (const r of remitos) {
-      const n = norm(r.sucursal);
+      const n = clave(r.sucursal);
       const a = remBy.get(n) ?? { disp: r.sucursal, cant: 0 };
       a.cant += r.cantidad; remBy.set(n, a);
     }
     const venBy = new Map<string, { disp: string; u: number }>();
     for (const v of ventasSuc) {
-      const n = norm(v.sucursal);
+      const n = clave(v.sucursal);
       const a = venBy.get(n) ?? { disp: v.sucursal, u: 0 };
       a.u += v.unidades; venBy.set(n, a);
     }

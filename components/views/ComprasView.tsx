@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { parseNumero } from "@/lib/num";
+import { armarClaveSuc } from "@/lib/sucursal-key";
 
 // Cruce de COMPRAS (lo que cada local compró/recibió) contra las VENTAS de Tango del
 // mismo período. Ingesta flexible: auto-detecta las columnas del CSV que subas, así
@@ -34,10 +35,6 @@ const SINONIMOS: Record<keyof Omit<Compra, never>, string[]> = {
 
 const normH = (s: string) =>
   (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-
-// Normaliza nombres de sucursal para cruzar (saca prefijo "mrt ", acentos, símbolos).
-const normSuc = (s: string) =>
-  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/^mrt\s+/, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
 const money = (n: number) => Math.round(n).toLocaleString("es-AR");
 
@@ -209,16 +206,18 @@ export default function ComprasView() {
 
   // Auditoría de cobertura: local con compra ↔ con ventas (Tango).
   const cobertura = useMemo(() => {
+    // Misma reconciliación que el Cruce: no fusiona "Mrt X" con el "X" de El Desembarco.
+    const clave = armarClaveSuc([...compras.map((c) => c.sucursal).filter(Boolean), ...ventasSuc.map((v) => v.sucursal)]);
     const compBy = new Map<string, { disp: string; cant: number; imp: number }>();
     for (const c of compras) {
       if (!c.sucursal) continue;
-      const n = normSuc(c.sucursal);
+      const n = clave(c.sucursal);
       const a = compBy.get(n) ?? { disp: c.sucursal, cant: 0, imp: 0 };
       a.cant += c.cantidad; a.imp += c.importe; compBy.set(n, a);
     }
     const venBy = new Map<string, { disp: string; u: number }>();
     for (const v of ventasSuc) {
-      const n = normSuc(v.sucursal);
+      const n = clave(v.sucursal);
       const a = venBy.get(n) ?? { disp: v.sucursal, u: 0 };
       a.u += v.unidades; venBy.set(n, a);
     }
