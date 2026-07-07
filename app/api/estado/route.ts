@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
 import { ventasSourceName, preciosSourceName } from "@/lib/sources";
+import { getBridgeUrl } from "@/lib/bridge-url";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +13,8 @@ const resolver = (esp: string): "live" | "mock" => {
   return v === "mock" ? "mock" : "live";
 };
 
-async function pingBridge(path: string, timeoutMs = 6000): Promise<{ ok: boolean; ms: number; detail: string }> {
-  const base = process.env.TANGO_BRIDGE_URL?.replace(/\/$/, "");
-  if (!base) return { ok: false, ms: 0, detail: "sin TANGO_BRIDGE_URL (dev usa SQL directo)" };
+async function pingBridge(base: string | null, path: string, timeoutMs = 6000): Promise<{ ok: boolean; ms: number; detail: string }> {
+  if (!base) return { ok: false, ms: 0, detail: "sin bridge configurado (dev usa SQL directo)" };
   const t0 = Date.now();
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -40,7 +40,8 @@ export async function GET() {
   const s = await getSesion();
   if (s?.rol !== "admin") return NextResponse.json({ ok: false, error: "Solo admin." }, { status: 403 });
 
-  const [health, sucursales] = await Promise.all([pingBridge("/health"), pingBridge("/sucursales")]);
+  const bridgeBase = await getBridgeUrl();
+  const [health, sucursales] = await Promise.all([pingBridge(bridgeBase, "/health"), pingBridge(bridgeBase, "/sucursales")]);
 
   const endpoints = [
     { metodo: "GET", ruta: "/health", desc: "Salud del bridge (sin secreto)", estado: health },
@@ -59,7 +60,7 @@ export async function GET() {
   ];
 
   const config = [
-    { nombre: "Bridge Tango", ok: Boolean(process.env.TANGO_BRIDGE_URL), detalle: process.env.TANGO_BRIDGE_URL ? new URL(process.env.TANGO_BRIDGE_URL).host : "no seteado (SQL directo)" },
+    { nombre: "Bridge Tango", ok: Boolean(bridgeBase), detalle: bridgeBase ? new URL(bridgeBase).host : "no seteado (SQL directo)" },
     { nombre: "Secreto bridge", ok: Boolean(process.env.TANGO_BRIDGE_SECRET), detalle: process.env.TANGO_BRIDGE_SECRET ? "configurado" : "falta" },
     { nombre: "Persistencia KV", ok: Boolean(process.env.KV_REST_API_URL), detalle: process.env.KV_REST_API_URL ? "Upstash/KV conectado" : "archivos (efímero en Vercel)" },
     { nombre: "Token Raven", ok: Boolean(process.env.RAVEN_TOKEN), detalle: process.env.RAVEN_TOKEN ? "configurado" : "falta → pedidos en mock" },
@@ -67,7 +68,7 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
-    bridgeHost: process.env.TANGO_BRIDGE_URL ? new URL(process.env.TANGO_BRIDGE_URL).host : null,
+    bridgeHost: bridgeBase ? new URL(bridgeBase).host : null,
     endpoints,
     fuentes,
     config,

@@ -1,4 +1,5 @@
 import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource } from "./types";
+import { getBridgeUrl } from "../bridge-url";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -49,8 +50,7 @@ function filaAVenta(r: any): VentaSku {
 // Vercel (cloud) no llega al SQL interno. Si está TANGO_BRIDGE_URL, las ventas se
 // piden a un bridge HTTP que corre en la red de la empresa (ver scripts/tango-bridge.mjs),
 // publicado por Cloudflare Tunnel. En la red interna se usa SQL directo (sin bridge).
-async function ventasViaBridge(q: RangoQuery): Promise<VentaSku[]> {
-  const base = process.env.TANGO_BRIDGE_URL!.replace(/\/$/, "");
+async function ventasViaBridge(q: RangoQuery, base: string): Promise<VentaSku[]> {
   const u = new URL(`${base}/ventas`);
   u.searchParams.set("desde", q.desde);
   u.searchParams.set("hasta", q.hasta);
@@ -65,7 +65,8 @@ async function ventasViaBridge(q: RangoQuery): Promise<VentaSku[]> {
 
 export const tangoVentasSource: VentasSource = {
   async getVentas(q: RangoQuery): Promise<VentaSku[]> {
-    if (process.env.TANGO_BRIDGE_URL) return ventasViaBridge(q);
+    const base = await getBridgeUrl();
+    if (base) return ventasViaBridge(q, base);
 
     if (!process.env.TANGO_DB_HOST) {
       throw new Error(
@@ -114,8 +115,7 @@ function filaAPrecio(r: any): PrecioProducto {
   };
 }
 
-async function preciosViaBridge(): Promise<PrecioProducto[]> {
-  const base = process.env.TANGO_BRIDGE_URL!.replace(/\/$/, "");
+async function preciosViaBridge(base: string): Promise<PrecioProducto[]> {
   const res = await fetch(`${base}/precios`, {
     headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "", "ngrok-skip-browser-warning": "true" },
     cache: "no-store",
@@ -127,7 +127,8 @@ async function preciosViaBridge(): Promise<PrecioProducto[]> {
 
 export const tangoPreciosSource: PreciosSource = {
   async getPrecios(): Promise<PrecioProducto[]> {
-    if (process.env.TANGO_BRIDGE_URL) return preciosViaBridge();
+    const base = await getBridgeUrl();
+    if (base) return preciosViaBridge(base);
     if (!process.env.TANGO_DB_HOST) {
       throw new Error(
         "Tango no está configurado (falta TANGO_DB_HOST o TANGO_BRIDGE_URL). Configurá TANGO_* / el bridge, o usá DATA_SOURCE=mock."
