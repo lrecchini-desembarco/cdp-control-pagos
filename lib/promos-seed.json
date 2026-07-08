@@ -1,0 +1,4 @@
+[
+  { "id": "promo-indep", "nombre": "Día de la Independencia — 10% OFF", "descripcion": "10% en burgers seleccionadas", "tipo": "salon", "listaId": "MT-L1", "marca": "Mr. Tasty", "fechaInicio": "2026-07-09", "fechaFin": "2026-07-09", "aprobada": true, "productos": [ { "skuTango": "138001", "descPct": 0.10 }, { "skuTango": "138005", "descPct": 0.10 } ] },
+  { "id": "promo-meli-almuerzos", "nombre": "Almuerzos y Cenas (MeLi)", "descripcion": "Campaña MeLi julio", "tipo": "apps", "listaId": "MT-L1A", "marca": "Mr. Tasty", "canal": "meli", "fechaInicio": "2026-07-01", "fechaFin": "2026-07-31", "pisoPct": 0.20, "aprobada": false, "productos": [ { "skuTango": "138019", "descPct": 0.25 } ] }
+]
