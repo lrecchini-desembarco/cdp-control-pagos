@@ -60,13 +60,20 @@ export async function construirResumen(): Promise<ResumenNotif> {
   return { texto: lineas.join("\n"), totales, hayAlgo };
 }
 
-interface Notifier {
-  enviar(texto: string): Promise<{ ok: boolean; info: string }>;
+interface EnviarOpts {
+  subject?: string; // asunto para email (los canales de chat lo ignoran)
 }
+
+interface Notifier {
+  enviar(texto: string, opts?: EnviarOpts): Promise<{ ok: boolean; info: string }>;
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const noneNotifier: Notifier = {
   async enviar() {
-    return { ok: true, info: "Canal 'none': no se envió (configurá NOTIFY_CHANNEL=slack y SLACK_WEBHOOK_URL)." };
+    return { ok: true, info: "Canal 'none': no se envió (configurá NOTIFY_CHANNEL y sus datos)." };
   },
 };
 
@@ -85,12 +92,54 @@ const slackNotifier: Notifier = {
   },
 };
 
+/**
+ * Email por SMTP de Google Workspace (Gmail). Config por env (NO se hardcodea nada):
+ *   NOTIFY_CHANNEL   = "email"
+ *   SMTP_USER        = casilla que envía (ej. notificaciones@eldesembarco.com)
+ *   SMTP_PASS        = App Password de esa casilla (16 chars, requiere 2FA)
+ *   NOTIFY_EMAIL_TO  = destinatarios, separados por coma (ej. rrhh@…,admin@…)
+ *   SMTP_HOST/PORT   = opcionales (default smtp.gmail.com:465)
+ *   NOTIFY_EMAIL_FROM= opcional (default = SMTP_USER)
+ */
+const emailNotifier: Notifier = {
+  async enviar(texto: string, opts?: EnviarOpts) {
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const to = process.env.NOTIFY_EMAIL_TO || user;
+    const from = process.env.NOTIFY_EMAIL_FROM || user;
+    if (!user || !pass) return { ok: false, info: "Faltan SMTP_USER / SMTP_PASS (App Password de Workspace)." };
+    if (!to) return { ok: false, info: "Falta NOTIFY_EMAIL_TO." };
+    const host = process.env.SMTP_HOST || "smtp.gmail.com";
+    const port = Number(process.env.SMTP_PORT || 465);
+    try {
+      const nodemailer = (await import("nodemailer")).default;
+      const transport = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
+      const plano = texto.replace(/\*/g, ""); // saca el *bold* estilo Slack
+      const subject = opts?.subject || plano.split("\n")[0] || "Notificación · CDP Control";
+      await transport.sendMail({
+        from,
+        to,
+        subject,
+        text: plano,
+        html: `<pre style="font:14px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;white-space:pre-wrap">${escapeHtml(plano)}</pre>`,
+      });
+      return { ok: true, info: `Email enviado a ${to}.` };
+    } catch (e) {
+      return { ok: false, info: `Error SMTP: ${e instanceof Error ? e.message : "desconocido"}.` };
+    }
+  },
+};
+
 export function canalActual(): string {
   return process.env.NOTIFY_CHANNEL ?? "none";
 }
 
 function getNotifier(): Notifier {
-  return canalActual() === "slack" ? slackNotifier : noneNotifier;
+  switch (canalActual()) {
+    case "slack": return slackNotifier;
+    case "email": return emailNotifier;
+    default: return noneNotifier;
+  }
 }
 
 /**
@@ -98,9 +147,9 @@ function getNotifier(): Notifier {
  * Lo usan features puntuales, ej. avisar un nuevo ingreso en el organigrama.
  * En canal "none" no manda nada pero devuelve enviado:false + el preview.
  */
-export async function notificar(texto: string): Promise<{ canal: string; enviado: boolean; info: string; preview: string }> {
+export async function notificar(texto: string, opts?: { subject?: string }): Promise<{ canal: string; enviado: boolean; info: string; preview: string }> {
   const canal = canalActual();
-  const res = await getNotifier().enviar(texto);
+  const res = await getNotifier().enviar(texto, opts);
   return { canal, enviado: res.ok && canal !== "none", info: res.info, preview: texto };
 }
 

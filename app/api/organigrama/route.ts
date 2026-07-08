@@ -17,7 +17,8 @@ async function avisarIngreso(nuevo: NodoOrg, nodos: NodoOrg[], por: string) {
       `• Reporta a: ${jefe ? `${jefe.nombre || jefe.cargo}` : "— (máxima autoridad)"}`,
       `• Cargado por ${por} · ${fecha}`,
     ].join("\n");
-    return await notificar(texto);
+    const subject = `Nuevo ingreso: ${nuevo.nombre || "(sin nombre)"}${nuevo.cargo ? ` — ${nuevo.cargo}` : ""}`;
+    return await notificar(texto, { subject });
   } catch {
     return { enviado: false, canal: "error", info: "No se pudo notificar.", preview: "" };
   }

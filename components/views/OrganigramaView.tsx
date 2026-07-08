@@ -240,8 +240,8 @@ export default function OrganigramaView() {
                   <input type="checkbox" className="mt-0.5" checked={form.avisar}
                     onChange={(e) => setForm((f) => f && { ...f, avisar: e.target.checked })} />
                   <span className="text-2xs text-muted">
-                    <span className="font-medium text-ink">Avisar el ingreso</span> por el canal de notificaciones (Slack).
-                    Si no hay canal configurado, no se manda nada.
+                    <span className="font-medium text-ink">Avisar el ingreso</span> por el canal configurado
+                    (email de Google Workspace o Slack). Si no hay canal, no se manda nada.
                   </span>
                 </label>
               )}

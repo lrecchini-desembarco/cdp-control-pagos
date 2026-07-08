@@ -6,18 +6,31 @@ Para que **lo urgente llegue solo**, sin entrar a mirar. Arma un resumen de las
 
 ## Configuración
 
-En `.env.local`:
+En `.env.local` (o variables de entorno en Vercel):
 
 ```
-NOTIFY_CHANNEL=slack            # "slack" | "none"
+NOTIFY_CHANNEL=email            # "email" | "slack" | "none"
+
+# --- email (Google Workspace / Gmail por SMTP) ---
+SMTP_USER=notificaciones@eldesembarco.com   # casilla que envía
+SMTP_PASS=xxxxxxxxxxxxxxxx                   # App Password de esa casilla (16 chars, requiere 2FA)
+NOTIFY_EMAIL_TO=rrhh@eldesembarco.com,admin@eldesembarco.com   # destinatarios (coma)
+# opcionales:
+# NOTIFY_EMAIL_FROM=...        # default = SMTP_USER
+# SMTP_HOST=smtp.gmail.com     # default
+# SMTP_PORT=465                # default (465 = SSL; 587 = STARTTLS)
+
+# --- slack ---
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 ```
 
-- **none** (default): no envía; `/api/notify` devuelve el texto como *preview* (sirve
-  para ver el formato sin webhook).
-- **slack**: postea el resumen al Incoming Webhook (Slack → Apps → *Incoming Webhooks*).
-- ¿Mail? Es un adapter más en `lib/notify.ts` (mismo patrón que Slack) cuando definas
-  el proveedor (SMTP / Resend / etc.).
+- **none** (default): no envía; `/api/notify` devuelve el texto como *preview*.
+- **email** (Google Workspace): manda por SMTP `smtp.gmail.com` autenticando con una
+  casilla del dominio + **App Password**. Cómo sacar el App Password: la casilla debe
+  tener **verificación en 2 pasos** activada → cuenta de Google → *Seguridad* →
+  *Contraseñas de aplicaciones* → generás una de 16 caracteres y la ponés en `SMTP_PASS`.
+  El secreto va SOLO como variable de entorno; no se hardcodea en el repo.
+- **slack**: postea al Incoming Webhook (Slack → Apps → *Incoming Webhooks*).
 
 ## Cómo se dispara
 
@@ -51,5 +64,13 @@ Si no hay nada urgente, manda un "✅ Todo en orden".
 ## Implementación
 
 - `lib/notify.ts` — `construirResumen()` (junta alertas + catálogo), notifiers
-  (`slack` / `none`) y `enviarResumen()`.
+  (`email` / `slack` / `none`), `enviarResumen()` y `notificar(texto, {subject})`
+  (mensaje suelto reutilizable).
 - `app/api/notify/route.ts` — `GET`/`POST` que envían y devuelven el resultado.
+
+## Otros avisos que usan el mismo canal
+
+- **Nuevo ingreso al organigrama**: al dar de alta una persona en `/organigrama`
+  (checkbox "Avisar el ingreso"), se manda por el canal configurado con
+  `notificar(...)`. Asunto: *"Nuevo ingreso: {nombre} — {cargo}"*. Nunca frena el alta
+  si el envío falla.
