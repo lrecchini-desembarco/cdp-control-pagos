@@ -6,7 +6,8 @@ import type { Rol } from "./roles";
 export interface Usuario {
   email: string;
   rol: Rol;
-  pass?: string; // hash de su clave propia; si falta, usa la clave genérica
+  pass?: string;   // hash de su clave propia; si falta, usa la clave genérica
+  nav?: string[];  // pantallas que ve ESTE usuario (pisa el nav del rol). Si falta, usa el del rol.
 }
 
 // Usuarios sembrados (sirven de ejemplo y garantizan que siempre haya un admin).
@@ -31,7 +32,7 @@ export async function findUsuario(email: string): Promise<Usuario | undefined> {
   return (await getUsuarios()).find((u) => norm(u.email) === e);
 }
 
-export async function addUsuario(email: string, rol: Rol, password?: string): Promise<Usuario[]> {
+export async function addUsuario(email: string, rol: Rol, password?: string, nav?: string[]): Promise<Usuario[]> {
   if (!email.includes("@") || !esRol(rol)) throw new Error("Email o rol inválido.");
   const e = norm(email);
   const actuales = await getUsuarios();
@@ -39,7 +40,10 @@ export async function addUsuario(email: string, rol: Rol, password?: string): Pr
   const users = actuales.filter((u) => norm(u.email) !== e);
   // Clave nueva si la mandan; si no, conserva la que tenía (al editar el rol).
   const pass = password ? hashPassword(password) : previo?.pass;
-  users.push({ email: norm(email), rol, ...(pass ? { pass } : {}) });
+  // nav propio: si mandan un array lo usa (aunque sea vacío = solo lo fijo); si es
+  // undefined, conserva el que tenía. Los admin ven todo igual (blindar lo maneja).
+  const navPropio = nav !== undefined ? nav : previo?.nav;
+  users.push({ email: norm(email), rol, ...(pass ? { pass } : {}), ...(navPropio ? { nav: navPropio } : {}) });
   await writeStore("usuarios", users);
   return users;
 }

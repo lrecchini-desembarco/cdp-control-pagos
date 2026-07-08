@@ -11,7 +11,7 @@ const defaults = (): NavByRol =>
 
 // Garantías anti-autobloqueo: /guia siempre. El ADMIN es superusuario y SIEMPRE ve
 // todo el catálogo (así las rutas nuevas aparecen solas, sin habilitarlas a mano).
-function blindar(rol: Rol, nav: string[]): string[] {
+export function blindar(rol: Rol, nav: string[]): string[] {
   if (rol === "admin") return NAV_CATALOG.map((i) => i.href);
   const limpio = nav.filter((h) => CATALOGO.has(h));
   const set = new Set(limpio);

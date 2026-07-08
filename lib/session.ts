@@ -6,6 +6,7 @@ import type { Rol } from "./roles";
 export interface Sesion {
   email: string;
   rol: Rol;
+  nav?: string[]; // pantallas propias del usuario (pisan el rol); undefined = usar el rol
 }
 
 /**
@@ -16,5 +17,5 @@ export async function getSesion(): Promise<Sesion | null> {
   const email = cookies().get(COOKIE)?.value;
   if (!email) return null;
   const u = await findUsuario(email);
-  return u ? { email: u.email, rol: u.rol } : null;
+  return u ? { email: u.email, rol: u.rol, ...(u.nav ? { nav: u.nav } : {}) } : null;
 }

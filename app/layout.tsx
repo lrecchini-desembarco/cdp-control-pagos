@@ -8,7 +8,7 @@ import Topbar from "@/components/layout/Topbar";
 import EstadoSeccion from "@/components/layout/EstadoSeccion";
 import { getSesion } from "@/lib/session";
 import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav } from "@/lib/roles";
-import { getRolesNav } from "@/lib/roles-store";
+import { getRolesNav, blindar } from "@/lib/roles-store";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
@@ -31,9 +31,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Pantallas de TV: tablero puro, SIN menú lateral ni barra superior (aunque haya sesión).
   const esPantallaTv = ruta === "/tv" || ruta === "/cartelera";
 
-  // Nav por rol: editable desde /usuarios, persistido en el store.
+  // Nav del usuario: si tiene nav propio (elegido en Usuarios) lo usa; si no, el del rol.
   const navByRol = sesion ? await getRolesNav() : null;
-  const miNav = navByRol && sesion ? navByRol[sesion.rol] ?? [] : [];
+  const miNav = sesion
+    ? sesion.nav
+      ? blindar(sesion.rol, sesion.nav)
+      : navByRol?.[sesion.rol] ?? []
+    : [];
   // Gating por rol: si el rol no puede ver esta ruta, lo mandamos a su home (las TV se saltan).
   if (sesion && pathname && !esPantallaTv && !puedeVerNav(miNav, ruta)) {
     redirect(homeDeNav(miNav));

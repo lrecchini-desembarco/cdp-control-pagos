@@ -10,9 +10,9 @@ async function soloAdmin() {
   return s?.rol === "admin" ? s : null;
 }
 
-// Nunca exponer el hash de la clave al cliente.
+// Nunca exponer el hash de la clave al cliente. El nav propio sí (no es sensible).
 const limpiar = (us: Usuario[]) =>
-  us.map((u) => ({ email: u.email, rol: u.rol, tieneClave: Boolean(u.pass) }));
+  us.map((u) => ({ email: u.email, rol: u.rol, tieneClave: Boolean(u.pass), nav: u.nav ?? null }));
 
 export async function GET() {
   if (!(await soloAdmin())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
@@ -22,8 +22,8 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   if (!(await soloAdmin())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
   try {
-    const { email, rol, password } = (await req.json()) as { email?: string; rol?: string; password?: string };
-    const usuarios = await addUsuario(String(email), rol as any, password || undefined);
+    const { email, rol, password, nav } = (await req.json()) as { email?: string; rol?: string; password?: string; nav?: string[] };
+    const usuarios = await addUsuario(String(email), rol as any, password || undefined, Array.isArray(nav) ? nav : undefined);
     return NextResponse.json({ ok: true, usuarios: limpiar(usuarios) });
   } catch (e) {
     return NextResponse.json(
