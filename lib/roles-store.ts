@@ -1,5 +1,5 @@
 import { readStore, writeStore } from "./store";
-import { ROLES, ROLES_LIST, NAV_CATALOG, puedeVerNav, homeDeNav, type Rol } from "./roles";
+import { ROLES, ROLES_LIST, NAV_CATALOG, UNIVERSALES, puedeVerNav, homeDeNav, type Rol } from "./roles";
 
 // Qué items del menú ve cada rol. Editable desde /usuarios y persistido (KV/file).
 // Si el store está vacío, usa los defaults de ROLES (comportamiento actual).
@@ -15,7 +15,7 @@ export function blindar(rol: Rol, nav: string[]): string[] {
   if (rol === "admin") return NAV_CATALOG.map((i) => i.href);
   const limpio = nav.filter((h) => CATALOGO.has(h));
   const set = new Set(limpio);
-  set.add("/guia");
+  for (const u of UNIVERSALES) set.add(u);
   // preserva el orden del catálogo
   return NAV_CATALOG.map((i) => i.href).filter((h) => set.has(h));
 }

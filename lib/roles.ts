@@ -96,6 +96,8 @@ export const NAV_CATALOG: NavItem[] = [
   // Locales
   { href: "/apertura", label: "Apertura de locales", icon: "◱", section: "Locales" },
   { href: "/inventario", label: "Inventario", icon: "▧", section: "Locales" },
+  // Empresa — estructura y personas
+  { href: "/organigrama", label: "Organigrama", icon: "⧉", section: "Empresa" },
   // Sistema — configuración y salud
   { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema" },
   { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema" },
@@ -105,16 +107,18 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?", section: "Ayuda" },
 ];
 
-// /guia y /usuarios (para admin) son "fijas": nunca se pueden sacar (evita autobloqueo).
-export const NAV_SIEMPRE = ["/guia"];
+// Rutas universales: las ve todo el mundo, no se pueden sacar (evita autobloqueo).
+// /guia (ayuda) y /organigrama (estructura de la empresa, todos se ubican).
+export const UNIVERSALES = ["/guia", "/organigrama"];
+export const NAV_SIEMPRE = UNIVERSALES;
 
-/** /guia es accesible para todos; el resto según el rol (defaults de ROLES). */
+/** Las universales las ve cualquiera; el resto según el rol (defaults de ROLES). */
 export function puedeVer(rol: Rol, href: string): boolean {
-  if (href === "/guia") return true;
+  if (UNIVERSALES.includes(href)) return true;
   return ROLES[rol].nav.includes(href);
 }
 export const homeDe = (rol: Rol) => ROLES[rol].nav[0];
 
 // Versiones "config-aware": operan sobre un array de nav (el del store, editable).
-export const puedeVerNav = (nav: string[], href: string): boolean => href === "/guia" || nav.includes(href);
+export const puedeVerNav = (nav: string[], href: string): boolean => UNIVERSALES.includes(href) || nav.includes(href);
 export const homeDeNav = (nav: string[]): string => nav.find((h) => h !== "/guia") ?? nav[0] ?? "/guia";

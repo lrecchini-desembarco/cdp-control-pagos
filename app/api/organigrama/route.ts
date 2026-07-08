@@ -1,0 +1,42 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSesion } from "@/lib/session";
+import { getOrganigrama, upsertNodo, removeNodo, moverNodo, setOrganigrama } from "@/lib/organigrama-store";
+
+export const dynamic = "force-dynamic";
+
+// Editar el organigrama: admin y operaciones. Verlo: cualquiera logueado.
+async function puedeEditar() {
+  const s = await getSesion();
+  return s && (s.rol === "admin" || s.rol === "operaciones") ? s : null;
+}
+
+export async function GET() {
+  const s = await getSesion();
+  if (!s) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  const editable = s.rol === "admin" || s.rol === "operaciones";
+  return NextResponse.json({ ok: true, nodos: await getOrganigrama(), editable, email: s.email });
+}
+
+// POST: alta/edición (body de nodo), o acciones {accion:"mover", id, dir} / {accion:"import", nodos}.
+export async function POST(req: NextRequest) {
+  if (!(await puedeEditar())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
+  try {
+    const body = await req.json();
+    if (body?.accion === "mover" && body?.id) {
+      return NextResponse.json({ ok: true, nodos: await moverNodo(String(body.id), body.dir === -1 ? -1 : 1) });
+    }
+    if (body?.accion === "import" && Array.isArray(body?.nodos)) {
+      return NextResponse.json({ ok: true, nodos: await setOrganigrama(body.nodos) });
+    }
+    return NextResponse.json({ ok: true, nodos: await upsertNodo(body) });
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "No se pudo guardar." }, { status: 400 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  if (!(await puedeEditar())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ ok: false, error: "Falta id." }, { status: 400 });
+  return NextResponse.json({ ok: true, nodos: await removeNodo(id) });
+}

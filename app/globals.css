@@ -40,6 +40,38 @@ html, body {
   @page { margin: 14mm; }
 }
 
+/* Organigrama: árbol top-down con conectores CSS (técnica clásica ul/li + pseudo-elementos).
+   El contenedor hace scroll horizontal si el árbol es más ancho que la pantalla (escalable). */
+:root { --org-line: #D9D6CD; }
+.org, .org ul { margin: 0; padding: 0; }
+.org { display: flex; justify-content: center; }
+.org ul { display: flex; justify-content: center; padding-top: 22px; position: relative; }
+.org li {
+  list-style: none;
+  position: relative;
+  padding: 22px 10px 0 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* medio-borde superior a cada lado del nodo (arma la barra horizontal entre hermanos) */
+.org li::before, .org li::after {
+  content: ""; position: absolute; top: 0; right: 50%;
+  border-top: 2px solid var(--org-line); width: 50%; height: 22px;
+}
+.org li::after { right: auto; left: 50%; border-left: 2px solid var(--org-line); }
+.org li:only-child::before, .org li:only-child::after { display: none; }
+.org li:first-child::before, .org li:last-child::after { border: 0 none; }
+.org li:last-child::before { border-right: 2px solid var(--org-line); border-radius: 0 8px 0 0; }
+.org li:first-child::after { border-radius: 8px 0 0 0; }
+/* línea vertical que baja del nodo padre hacia la barra de sus hijos */
+.org ul::before {
+  content: ""; position: absolute; top: 0; left: 50%;
+  border-left: 2px solid var(--org-line); width: 0; height: 22px;
+}
+/* la raíz no lleva conector arriba */
+.org > li { padding-top: 0; }
+
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 .skeleton {
   position: relative; overflow: hidden; background: #ECEAE3;
