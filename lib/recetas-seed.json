@@ -2,7 +2,7 @@
 {
 "skuTango": "020030",
 "descripcion": "AGUA S/GAS SMART 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "AGs/g",
@@ -13,7 +13,7 @@
 {
 "skuTango": "020031",
 "descripcion": "AGUA C/GAS SMART 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "AGc/g",
@@ -24,7 +24,7 @@
 {
 "skuTango": "020009",
 "descripcion": "COCA COLA 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc1",
@@ -33,7 +33,7 @@
 ]
 },
 {
-"skuTango": "800019.0",
+"skuTango": "800019",
 "descripcion": "COCA COLA ZERO 500 CC",
 "marca": "Mr. Tasty",
 "componentes": [
@@ -46,7 +46,7 @@
 {
 "skuTango": "020011",
 "descripcion": "COCA COLA LIGHT 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc3",
@@ -57,7 +57,7 @@
 {
 "skuTango": "800021",
 "descripcion": "SPRITE 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc5",
@@ -68,7 +68,7 @@
 {
 "skuTango": "020013",
 "descripcion": "SPRITE ZERO 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc6",
@@ -79,7 +79,7 @@
 {
 "skuTango": "020014",
 "descripcion": "FANTA 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc4",
@@ -90,7 +90,7 @@
 {
 "skuTango": "020033",
 "descripcion": "AQUARIUS MANZANA 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc7",
@@ -101,7 +101,7 @@
 {
 "skuTango": "020032",
 "descripcion": "AQUARIUS NARANJA 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc7",
@@ -112,7 +112,7 @@
 {
 "skuTango": "020037",
 "descripcion": "AQUARIUS PERA 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc7",
@@ -123,7 +123,7 @@
 {
 "skuTango": "020034",
 "descripcion": "AQUARIUS POMELO 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc7",
@@ -134,7 +134,7 @@
 {
 "skuTango": "020041",
 "descripcion": "AQUARIUS UVA 500 CC",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "coc7",
@@ -700,7 +700,7 @@
 {
 "skuTango": "140001",
 "descripcion": "ESTUCHE DE PAPAS",
-"marca": "Mr. Tasty",
+"marca": "Mila & Go",
 "componentes": [
 {
 "insumoCod": "papasmc",
@@ -712,6 +712,10 @@
 },
 {
 "insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
 "cant": 1.0
 }
 ]
@@ -2066,39 +2070,6 @@
 ]
 },
 {
-"skuTango": "020030",
-"descripcion": "AGUA S/GAS SMART 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "AGs/g",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020031",
-"descripcion": "AGUA C/GAS SMART 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "AGc/g",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020009",
-"descripcion": "COCA COLA 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc1",
-"cant": 1.0
-}
-]
-},
-{
 "skuTango": "020010",
 "descripcion": "COCA COLA ZERO 500 CC",
 "marca": "Mila & Go",
@@ -2110,106 +2081,7 @@
 ]
 },
 {
-"skuTango": "020011",
-"descripcion": "COCA COLA LIGHT 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc3",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "800021",
-"descripcion": "SPRITE 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc5",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020013",
-"descripcion": "SPRITE ZERO 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc6",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020014",
-"descripcion": "FANTA 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc4",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020033",
-"descripcion": "AQUARIUS MANZANA 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc7",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020032",
-"descripcion": "AQUARIUS NARANJA 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc7",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020037",
-"descripcion": "AQUARIUS PERA 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc7",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020034",
-"descripcion": "AQUARIUS POMELO 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc7",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "020041",
-"descripcion": "AQUARIUS UVA 500 CC",
-"marca": "Mila & Go",
-"componentes": [
-{
-"insumoCod": "coc7",
-"cant": 1.0
-}
-]
-},
-{
-"skuTango": "150001.0",
+"skuTango": "150001",
 "descripcion": "MILANESA CLASICA DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2252,7 +2124,7 @@
 ]
 },
 {
-"skuTango": "150005.0",
+"skuTango": "150005",
 "descripcion": "MILANESA CLASICA DE POLLO CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2295,7 +2167,7 @@
 ]
 },
 {
-"skuTango": "150002.0",
+"skuTango": "150002",
 "descripcion": "MILANESA CABALLO DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2342,7 +2214,7 @@
 ]
 },
 {
-"skuTango": "150006.0",
+"skuTango": "150006",
 "descripcion": "MILANESA CABALLO DE POLLO CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2389,7 +2261,7 @@
 ]
 },
 {
-"skuTango": "150003.0",
+"skuTango": "150003",
 "descripcion": "MILANESA NAPOLITANA DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2444,7 +2316,7 @@
 ]
 },
 {
-"skuTango": "150007.0",
+"skuTango": "150007",
 "descripcion": "MILANESA NAPOLITANA DE POLLO CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2499,7 +2371,7 @@
 ]
 },
 {
-"skuTango": "150004.0",
+"skuTango": "150004",
 "descripcion": "MILANESA CHEDDAR Y PANCETA DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2554,7 +2426,7 @@
 ]
 },
 {
-"skuTango": "150008.0",
+"skuTango": "150008",
 "descripcion": "MILANESA CHEDDAR Y PANCETA DE POLLO CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2609,7 +2481,7 @@
 ]
 },
 {
-"skuTango": "150011.0",
+"skuTango": "150011",
 "descripcion": "MILANESA MUZZARELLA Y MORRON DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2656,7 +2528,7 @@
 ]
 },
 {
-"skuTango": "150010.0",
+"skuTango": "150010",
 "descripcion": "MILANESA MUZZARELLA Y MORRON DE POLLO CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2703,7 +2575,7 @@
 ]
 },
 {
-"skuTango": "150015.0",
+"skuTango": "150015",
 "descripcion": "MILANESOTA CLASICA DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2746,7 +2618,7 @@
 ]
 },
 {
-"skuTango": "150009.0",
+"skuTango": "150009",
 "descripcion": "MILANESOTA CABALLO DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2793,7 +2665,7 @@
 ]
 },
 {
-"skuTango": "150020.0",
+"skuTango": "150020",
 "descripcion": "MILANESOTA NAPOLITANA DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2848,7 +2720,7 @@
 ]
 },
 {
-"skuTango": "150013.0",
+"skuTango": "150013",
 "descripcion": "MILANESOTA CHEDDAR Y PANCETA DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2903,7 +2775,7 @@
 ]
 },
 {
-"skuTango": "150017.0",
+"skuTango": "150017",
 "descripcion": "MILANESOTA MUZZARELLA Y MORRON DE CARNE CON PAPAS",
 "marca": "Mila & Go",
 "componentes": [
@@ -2950,7 +2822,7 @@
 ]
 },
 {
-"skuTango": "170011.0",
+"skuTango": "170011",
 "descripcion": "SANDWICH MILANESA CARNE",
 "marca": "Mila & Go",
 "componentes": [
@@ -2989,7 +2861,7 @@
 ]
 },
 {
-"skuTango": "170012.0",
+"skuTango": "170012",
 "descripcion": "SANDWICH MILANESA POLLO",
 "marca": "Mila & Go",
 "componentes": [
@@ -3028,7 +2900,7 @@
 ]
 },
 {
-"skuTango": "170001.0",
+"skuTango": "170001",
 "descripcion": "SANDWICH MILA COMPLETO CARNE",
 "marca": "Mila & Go",
 "componentes": [
@@ -3079,7 +2951,7 @@
 ]
 },
 {
-"skuTango": "170003.0",
+"skuTango": "170003",
 "descripcion": "SANDWICH MILA COMPLETO POLLO",
 "marca": "Mila & Go",
 "componentes": [
@@ -3130,7 +3002,7 @@
 ]
 },
 {
-"skuTango": "170002.0",
+"skuTango": "170002",
 "descripcion": "SANDWICH MILA ESPECIAL CARNE",
 "marca": "Mila & Go",
 "componentes": [
@@ -3169,7 +3041,7 @@
 ]
 },
 {
-"skuTango": "170004.0",
+"skuTango": "170004",
 "descripcion": "SANDWICH MILA ESPECIAL POLLO",
 "marca": "Mila & Go",
 "componentes": [
@@ -3208,7 +3080,7 @@
 ]
 },
 {
-"skuTango": "508050.0",
+"skuTango": "508050",
 "descripcion": "BALDE MIXTO TASTY MILA DE CARNE",
 "marca": "Mila & Go",
 "componentes": [
@@ -3283,25 +3155,68 @@
 ]
 },
 {
-"skuTango": "140001.0",
-"descripcion": "ESTUCHE DE PAPAS",
-"marca": "Mila & Go",
+"skuTango": "130016",
+"descripcion": "DOBLE CHEESE",
+"marca": "El Desembarco",
 "componentes": [
 {
-"insumoCod": "papasmc",
-"cant": 100.0
+"insumoCod": "bolas blend",
+"cant": 2
+}
+]
 },
 {
-"insumoCod": "49.0",
-"cant": 2.0
+"skuTango": "138002",
+"descripcion": "BURGER CLASICA DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "TUKI80",
+"cant": 1
+}
+]
 },
 {
-"insumoCod": "estuche",
-"cant": 1.0
+"skuTango": "138004",
+"descripcion": "BURGER QUESO DE CARNE (sin papas)",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "TUKI80",
+"cant": 1
+}
+]
 },
 {
-"insumoCod": "servilletam",
-"cant": 1.0
+"skuTango": "138103",
+"descripcion": "BURGER CUARTO DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "TUKI80",
+"cant": 1
+}
+]
+},
+{
+"skuTango": "508063",
+"descripcion": "BALDE MUNDIALISTA (ed. limitada)",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "TUKI80",
+"cant": 4
+}
+]
+},
+{
+"skuTango": "508065",
+"descripcion": "BANDEJA SLICE 2 BACON DOBLE 55 g",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "MEDALLON55",
+"cant": 4
 }
 ]
 }

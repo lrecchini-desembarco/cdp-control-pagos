@@ -1,4 +1,5 @@
 import { precioConImpuestos, type Insumo } from "./insumos";
+import type { ProductoMap } from "./types";
 
 // Recetas (BOM) versionadas. Cada receta es un producto (SKU de Tango) con sus
 // componentes = insumo + cantidad. El costo se calcula SIEMPRE contra el maestro
@@ -51,6 +52,30 @@ export function indiceInsumos(insumos: Insumo[]): Map<string, Insumo> {
 
 export const versionVigente = (r: Receta): VersionReceta | undefined =>
   r.versiones[r.versiones.length - 1];
+
+// Insumos del CDP que Raven trackea (los únicos que cruzan pedido vs venta).
+// El resto de los insumos de la receta (pan, cheddar, packaging) no entra al cruce.
+const INS_A_CDP: Record<string, { cdp: string; nombre: string }> = {
+  tuki80: { cdp: "083009", nombre: "Medallón Tuki 80g" },
+  medallon55: { cdp: "083041", nombre: "Medallón Tuki 55g" },
+  "bolas blend": { cdp: "050027", nombre: "Bolas Blend 100g" },
+};
+
+/** Deriva el productoMap del Cruce a partir de las recetas vigentes: por cada
+ *  componente que sea un insumo del CDP, una regla skuVenta -> insumo × cantidad.
+ *  Así editar una receta cambia el cruce (fuente única, sin hardcode). */
+export function productoMapDesdeRecetas(recetas: Receta[]): ProductoMap[] {
+  const out: ProductoMap[] = [];
+  for (const r of recetas) {
+    const v = versionVigente(r);
+    for (const c of v?.componentes ?? []) {
+      const m = INS_A_CDP[c.insumoCod.trim().toLowerCase()];
+      if (!m) continue;
+      out.push({ codigoCdp: m.cdp, insumoNombre: m.nombre, skuVenta: r.skuTango, skuNombre: r.descripcion, factor: c.cant, modo: "bom" });
+    }
+  }
+  return out;
+}
 
 /** Cuesta la versión vigente de una receta contra el maestro de insumos. */
 export function costearReceta(r: Receta, idx: Map<string, Insumo>): RecetaCosteada {

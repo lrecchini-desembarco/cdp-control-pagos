@@ -1,5 +1,7 @@
 import { recentDates, unidadDe, nombreInsumo, brandDeInsumo } from "./catalogo";
 import { getMapeos } from "./mapeos-store";
+import { getRecetas } from "./recetas-store";
+import { productoMapDesdeRecetas } from "./recetas";
 import { getSources } from "./sources";
 import { armarClaveSuc } from "./sucursal-key";
 import type { MapeosData } from "./mapeos-store";
@@ -96,6 +98,12 @@ export function rangoPorDefecto(): RangoQuery {
  */
 export async function getCruce(q: RangoQuery = rangoPorDefecto()): Promise<CruceRow[]> {
   const { pedidos, ventas } = getSources();
-  const [p, v, mapeos] = await Promise.all([pedidos.getPedidos(q), ventas.getVentas(q), getMapeos()]);
-  return construirCruce(p, v, mapeos);
+  const [p, v, mapeos, recetas] = await Promise.all([
+    pedidos.getPedidos(q), ventas.getVentas(q), getMapeos(), getRecetas(),
+  ]);
+  // El productoMap del cruce se deriva de las RECETAS (editable). Si por algún
+  // motivo no hay recetas, cae al productoMap del maestro (defaults de catálogo).
+  const derivado = productoMapDesdeRecetas(recetas);
+  const productoMap = derivado.length ? derivado : mapeos.productoMap;
+  return construirCruce(p, v, { ...mapeos, productoMap });
 }

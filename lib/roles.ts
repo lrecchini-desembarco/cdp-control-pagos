@@ -64,7 +64,8 @@ export interface NavItem {
   href: string;
   label: string;
   icon: string;
-  beta?: boolean; // true = en construcción (chip "beta"); si no, productivo (punto verde)
+  beta?: boolean;    // true = en construcción (chip "beta"); si no, productivo (punto verde)
+  section?: string;  // encabezado de sección en el menú (ej. "Costos")
 }
 // Los `beta: true` dependen de datos externos que aún no están (Raven token / recetas
 // reales / vista de Sistemas). El resto es productivo.
@@ -77,8 +78,8 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/precios", label: "Precios", icon: "$" },
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉" },
   { href: "/compras", label: "Compras vs Ventas", icon: "⇲" },
-  { href: "/insumos", label: "Insumos", icon: "◆" },
-  { href: "/recetas", label: "Recetas", icon: "❏" },
+  { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos" },
+  { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos" },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
   { href: "/resenas", label: "Reseñas", icon: "★" },
   { href: "/clientes", label: "Clientes", icon: "☺" },

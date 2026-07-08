@@ -84,11 +84,18 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
-        {visibles.map((n) => {
+        {visibles.map((n, i) => {
           const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
+          // Encabezado de sección: se muestra cuando la sección cambia respecto al ítem anterior.
+          const header = n.section && n.section !== visibles[i - 1]?.section ? n.section : null;
           return (
+            <div key={n.href}>
+              {header && (
+                <p className="mb-1 mt-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted/70">
+                  {header}
+                </p>
+              )}
             <Link
-              key={n.href}
               href={n.href}
               draggable
               onDragStart={() => (dragHref.current = n.href)}
@@ -125,6 +132,7 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
                 ⠿
               </span>
             </Link>
+            </div>
           );
         })}
       </nav>
