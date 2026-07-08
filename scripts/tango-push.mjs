@@ -6,12 +6,17 @@
 // Autostart sugerido: tarea S4U que lo relance (igual que el watchdog del túnel).
 // Necesita en .env.local: TUNEL_ADMIN_SECRETO y TUNEL_BRIDGE_LOCATOR.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, appendFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import path from "node:path";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const LOG = path.join(ROOT, "tango-push.log");
+const log = (m) => { try { appendFileSync(LOG, `${new Date().toISOString()} [pid ${process.pid}] ${m}\n`); } catch {} };
+log(`arranco (cwd=${process.cwd()})`);
+process.on("uncaughtException", (e) => { log(`uncaught: ${e?.stack || e}`); });
+process.on("unhandledRejection", (e) => { log(`unhandled: ${e}`); });
 const env = {};
 try {
   for (const line of readFileSync(path.join(ROOT, ".env.local"), "utf8").split(/\r?\n/)) {
@@ -29,7 +34,7 @@ const DIAS = 32;                    // ventana completa (cubre rangos de hasta ~
 const INTERVALO_MS = 10 * 60 * 1000;
 
 if (!SECRETO || !PUSH_URL) {
-  console.error("Faltan TUNEL_ADMIN_SECRETO / TUNEL_BRIDGE_LOCATOR en .env.local");
+  log(`FALTA config: SECRETO=${Boolean(SECRETO)} PUSH_URL=${PUSH_URL || "?"} · .env.local en ${ROOT}`);
   process.exit(1);
 }
 
@@ -78,13 +83,13 @@ async function ciclo() {
   await push({ tipo: "precios", data: pack(precios) });
   await push({ tipo: "fresh", dias: ultimosDias(DIAS) });
 
-  console.log(`${ts()} push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} filas ventas + ${precios.length} precios`);
+  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} filas ventas + ${precios.length} precios`);
   ciclos++;
 }
 
-console.log(`${ts()} tango-push -> ${PUSH_URL} cada ${INTERVALO_MS / 60000} min (ventana ${DIAS} días)`);
+log(`tango-push -> ${PUSH_URL} cada ${INTERVALO_MS / 60000} min (ventana ${DIAS} días)`);
 // eslint-disable-next-line no-constant-condition
 while (true) {
-  try { await ciclo(); } catch (e) { console.error(`${ts()} error: ${e instanceof Error ? e.message : e}`); }
+  try { await ciclo(); } catch (e) { log(`error en push: ${e instanceof Error ? e.message : e}`); }
   await dormir(INTERVALO_MS);
 }
