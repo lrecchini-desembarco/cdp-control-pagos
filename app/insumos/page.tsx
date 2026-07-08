@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSesion } from "@/lib/session";
-import { homeDe, puedeVer } from "@/lib/roles";
+import { homeDeSesion, sesionPuedeVer } from "@/lib/roles-store";
 import InsumosView from "@/components/views/InsumosView";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,6 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const s = await getSesion();
   if (!s) redirect("/login");
-  if (!puedeVer(s.rol, "/insumos")) redirect(homeDe(s.rol));
+  if (!(await sesionPuedeVer(s, "/insumos"))) redirect(await homeDeSesion(s));
   return <InsumosView />;
 }

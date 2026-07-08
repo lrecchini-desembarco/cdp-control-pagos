@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSesion } from "@/lib/session";
-import { homeDe, puedeVer } from "@/lib/roles";
+import { homeDeSesion, sesionPuedeVer } from "@/lib/roles-store";
 import RentabilidadView from "@/components/views/RentabilidadView";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,6 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const s = await getSesion();
   if (!s) redirect("/login");
-  if (!puedeVer(s.rol, "/rentabilidad")) redirect(homeDe(s.rol));
+  if (!(await sesionPuedeVer(s, "/rentabilidad"))) redirect(await homeDeSesion(s));
   return <RentabilidadView />;
 }

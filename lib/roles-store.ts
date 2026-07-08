@@ -1,5 +1,5 @@
 import { readStore, writeStore } from "./store";
-import { ROLES, ROLES_LIST, NAV_CATALOG, type Rol } from "./roles";
+import { ROLES, ROLES_LIST, NAV_CATALOG, puedeVerNav, homeDeNav, type Rol } from "./roles";
 
 // Qué items del menú ve cada rol. Editable desde /usuarios y persistido (KV/file).
 // Si el store está vacío, usa los defaults de ROLES (comportamiento actual).
@@ -36,4 +36,22 @@ export async function setRolNav(rol: Rol, nav: string[]): Promise<NavByRol> {
   cur[rol] = blindar(rol, nav);
   await writeStore("roles_nav", cur);
   return cur;
+}
+
+// --- Permiso EFECTIVO de un usuario (respeta el nav propio, si lo tiene) ---
+// Es lo que deben usar los guards de las páginas: el sidebar (layout) ya usa este
+// mismo nav, así que "lo que ve" y "a dónde puede entrar" quedan siempre alineados.
+interface SesionNav { rol: Rol; nav?: string[] }
+
+/** Nav efectivo del usuario: su nav propio si lo tiene; si no, el del rol. Admin ve todo. */
+export async function navDeSesion(s: SesionNav): Promise<string[]> {
+  if (s.rol === "admin") return blindar("admin", []);
+  if (s.nav) return blindar(s.rol, s.nav);
+  return (await getRolesNav())[s.rol] ?? [];
+}
+export async function sesionPuedeVer(s: SesionNav, href: string): Promise<boolean> {
+  return puedeVerNav(await navDeSesion(s), href);
+}
+export async function homeDeSesion(s: SesionNav): Promise<string> {
+  return homeDeNav(await navDeSesion(s));
 }
