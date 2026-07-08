@@ -12,43 +12,43 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
     label: "Local",
-    nav: ["/resenas", "/cupones", "/firmas", "/guia"],
+    nav: ["/resenas", "/cupones", "/organigrama", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   comparacion: {
     label: "Comparación",
     // Solo el comparativo REAL + remitos + compras. El /cruce insumo-nivel (beta,
     // pendiente de receta) se saca para no confundir con el "todo rojo".
-    nav: ["/pedidos", "/remitos", "/compras", "/guia"],
+    nav: ["/pedidos", "/remitos", "/compras", "/organigrama", "/guia"],
     gestionaUsuarios: false,
   },
   resenas: {
     label: "Reseñas",
     // Solo ve Reseñas + Clientes (el CRM que se arma con las reseñas/cupones).
-    nav: ["/resenas", "/clientes", "/guia"],
+    nav: ["/resenas", "/clientes", "/organigrama", "/guia"],
     gestionaUsuarios: false,
   },
   gerencia: {
     label: "Gerencia",
     // Gerencia: solo el cuadro de Nuevos locales (Apertura de locales). El admin
     // puede sumarle más pantallas desde Usuarios si hace falta.
-    nav: ["/apertura", "/guia"],
+    nav: ["/apertura", "/organigrama", "/guia"],
     gestionaUsuarios: false,
   },
   "apps-gerencia": {
     label: "Apps Gerencia",
     // Reportes de gerencia: Ventas por turno, Precios y Compras vs Ventas.
-    nav: ["/ventas", "/precios", "/compras", "/guia"],
+    nav: ["/ventas", "/precios", "/compras", "/organigrama", "/guia"],
     gestionaUsuarios: false,
   },
 };
@@ -108,8 +108,8 @@ export const NAV_CATALOG: NavItem[] = [
 ];
 
 // Rutas universales: las ve todo el mundo, no se pueden sacar (evita autobloqueo).
-// /guia (ayuda) y /organigrama (estructura de la empresa, todos se ubican).
-export const UNIVERSALES = ["/guia", "/organigrama"];
+// Solo /guia (ayuda). /organigrama es togglable por rol/usuario desde Usuarios.
+export const UNIVERSALES = ["/guia"];
 export const NAV_SIEMPRE = UNIVERSALES;
 
 /** Las universales las ve cualquiera; el resto según el rol (defaults de ROLES). */

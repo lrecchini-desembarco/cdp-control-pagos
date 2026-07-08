@@ -130,6 +130,12 @@ export default function OrganigramaView() {
               ? "Agregá personas, cambialas de jefe y reordenalas — se guarda al instante."
               : "Podés verlo completo y ubicar tu casillero."}
           </p>
+          <div className="no-print mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-faint">
+            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-action" /> Dirección</span>
+            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm border-2 border-action/50 bg-surface" /> Áreas</span>
+            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm border border-line bg-surface" /> Equipos</span>
+            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-warn" /> Tu casillero</span>
+          </div>
         </div>
         <div className="flex items-center gap-2 no-print">
           <Button variant="outline" onClick={exportarPDF} disabled={estado !== "ok" || arbol.length === 0}>⬇ Exportar PDF</Button>
@@ -263,6 +269,23 @@ export default function OrganigramaView() {
   );
 }
 
+// Iniciales de la persona (para el avatar). Si no hay nombre, un punto.
+const iniciales = (nombre: string) =>
+  (nombre || "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "·";
+
+// Total de personas a cargo (todos los descendientes) de un nodo.
+function totalEquipo(n: NodoArbol): number {
+  return n.hijos.reduce((s, h) => s + 1 + totalEquipo(h), 0);
+}
+
+// Estilo por RANGO (nivel de profundidad): raíz destacada (llena), áreas con acento,
+// el resto plano. Comunica la jerarquía de un vistazo.
+const RANGO = [
+  { card: "w-[210px] border-transparent bg-action text-white shadow-md", cargo: "text-white", nombre: "text-white/70", avatar: "bg-white/20 text-white ring-white/30", chip: "bg-white/15 text-white/90" },
+  { card: "w-[198px] border-action/40 bg-surface shadow-sm", cargo: "text-ink", nombre: "text-muted", avatar: "bg-action/15 text-action ring-action/20", chip: "bg-ink/5 text-faint" },
+  { card: "w-[182px] border-line bg-surface shadow-sm", cargo: "text-ink", nombre: "text-muted", avatar: "bg-ink/10 text-muted ring-line", chip: "bg-ink/5 text-faint" },
+];
+
 // Un nodo + su subárbol (recursivo).
 function Rama({
   n, miId, editable, onAdd, onEdit, onMove, onDelete,
@@ -276,16 +299,28 @@ function Rama({
   onDelete: (n: NodoOrg) => void;
 }) {
   const esVos = n.id === miId;
+  const r = RANGO[Math.min(n.nivel, 2)];
+  const equipo = totalEquipo(n);
   return (
     <li>
-      <div className={`group relative w-[190px] rounded-xl border px-3 py-2 text-center shadow-sm transition-colors ${
-        esVos ? "border-action bg-action/10 ring-2 ring-action/40" : "border-line bg-surface hover:border-action/40"
+      <div className={`group relative rounded-xl border px-3 py-2.5 text-center transition-colors ${r.card} ${
+        esVos ? "ring-2 ring-warn ring-offset-2" : ""
       }`}>
         {esVos && (
-          <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-action px-2 py-0.5 text-[10px] font-semibold text-white">Vos</span>
+          <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-warn px-2 py-0.5 text-[10px] font-bold uppercase text-white shadow">Vos</span>
         )}
-        <p className="truncate text-sm font-semibold text-ink" title={n.cargo}>{n.cargo || "—"}</p>
-        <p className="truncate text-2xs text-muted" title={n.nombre}>{n.nombre || <span className="text-faint">Sin asignar</span>}</p>
+        <div className={`mx-auto mb-1 grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold ring-2 ${r.avatar}`} aria-hidden>
+          {iniciales(n.nombre)}
+        </div>
+        <p className={`truncate text-sm font-semibold ${r.cargo}`} title={n.cargo}>{n.cargo || "—"}</p>
+        <p className={`truncate text-2xs ${r.nombre}`} title={n.nombre}>{n.nombre || "Sin asignar"}</p>
+        {equipo > 0 && (
+          <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[9px] font-medium ${r.chip}`} title={`${equipo} ${equipo === 1 ? "persona" : "personas"} a cargo en total`}>
+            {n.hijos.length === equipo
+              ? `${equipo} a cargo`
+              : `${n.hijos.length} directos · ${equipo} en total`}
+          </span>
+        )}
 
         {editable && (
           <div className="pointer-events-none absolute -bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
