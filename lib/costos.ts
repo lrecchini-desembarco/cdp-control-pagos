@@ -1,16 +1,15 @@
 // Costos de ELABORACIÓN en el CDP (sin IVA), por unidad de insumo.
-// Fuente: "Ventas Junio CDP.xlsx" (hoja "Precios Junio 2026"), columna
-// "Costo Por Receta sin IVA". Cuando la receta viene por caja de N unidades,
-// el costo unitario = costo receta / N.
+// Fuente: "MRT M&G Costos y Precios - Julio 2026 1Q.xlsx", hoja INS_L1,
+// columna "Precio UM p/ costo". Costo unitario = precio del bulto / factor de la caja.
 //
 // Se usan para valorizar el "$ en riesgo" (lo pedido al CDP que no se vendió).
 // NO es el precio de transferencia al local (esa es "LISTA PRECIOS"), es el
 // costo de producirlo. Al sumar más códigos de Raven, agregar acá su costo.
 
-export const COSTOS_VIGENCIA = "Junio 2026";
+export const COSTOS_VIGENCIA = "Julio 2026";
 // Vigencia estructurada, para avisar en pantalla cuando los costos quedaron viejos.
 const VIGENCIA_ANIO = 2026;
-const VIGENCIA_MES = 6; // junio
+const VIGENCIA_MES = 7; // julio
 /** Meses transcurridos desde la vigencia de los costos (0 = al día, >0 = vencidos). */
 export const mesesDesactualizado = (): number => {
   const h = new Date();
@@ -19,9 +18,9 @@ export const mesesDesactualizado = (): number => {
 
 // code (Raven / CDP) -> costo de elaborar 1 unidad, sin IVA.
 export const COSTO_CDP: Record<string, number> = {
-  "050027": 949.69,        // Bolas Blend (1 unidad)
-  "083009": 37858 / 60,    // Medallón Tuki 80g  — "Hamburguesa Tuki" caja x60 = $630,97/u
-  "083041": 31234 / 72,    // Medallón Tuki 55g  — "Hamburguesa Tuki 55 grs" caja x72 = $433,81/u
+  "050027": 37450 / 25,    // Bolas Blend 100g  — bolsa x25 = $1.498/u
+  "083009": 49565 / 60,    // Medallón Tuki 80g — caja x60 = $826,08/u
+  "083041": 39858 / 72,    // Medallón Tuki 55g — caja x72 = $553,58/u
 };
 
 /** Costo de elaborar 1 unidad del insumo en el CDP (0 si no hay costo cargado). */
