@@ -17,15 +17,17 @@ interface Datos {
   email: string;
 }
 
-type Form = { id?: string; nombre: string; cargo: string; email: string; parentId: string | null };
+type Form = { id?: string; nombre: string; cargo: string; email: string; parentId: string | null; avisar: boolean };
 
-const vacio = (parentId: string | null = null): Form => ({ nombre: "", cargo: "", email: "", parentId });
+const vacio = (parentId: string | null = null): Form => ({ nombre: "", cargo: "", email: "", parentId, avisar: true });
 
 export default function OrganigramaView() {
   const [d, setD] = useState<Datos | null>(null);
   const [estado, setEstado] = useState<"loading" | "ok" | "error">("loading");
   const [form, setForm] = useState<Form | null>(null); // modal abierto
   const [msg, setMsg] = useState("");
+  const [toast, setToast] = useState("");
+  const [hoy, setHoy] = useState("");
 
   async function cargar() {
     setEstado("loading");
@@ -38,7 +40,23 @@ export default function OrganigramaView() {
       setEstado("error");
     }
   }
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    cargar();
+    setHoy(new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }));
+  }, []);
+
+  // Exportar a PDF: usa la impresión del navegador ("Guardar como PDF"). Inyecta
+  // orientación apaisada solo para esta impresión (no toca el resto del sistema).
+  function exportarPDF() {
+    const st = document.createElement("style");
+    st.id = "org-print-page";
+    st.textContent = "@page { size: A4 landscape; margin: 8mm; }";
+    document.head.appendChild(st);
+    const limpiar = () => { document.getElementById("org-print-page")?.remove(); window.removeEventListener("afterprint", limpiar); };
+    window.addEventListener("afterprint", limpiar);
+    window.print();
+    setTimeout(limpiar, 1000);
+  }
 
   const nodos = d?.nodos ?? [];
   const editable = d?.editable ?? false;
@@ -46,7 +64,7 @@ export default function OrganigramaView() {
   const miNodo = useMemo(() => nodoDeEmail(nodos, d?.email), [nodos, d?.email]);
   const miLinea = useMemo(() => (miNodo ? caminoAlRaiz(nodos, miNodo.id) : []), [nodos, miNodo]);
 
-  async function post(body: unknown) {
+  async function post(body: unknown): Promise<any | null> {
     setMsg("");
     try {
       const j = await (await fetch("/api/organigrama", {
@@ -54,22 +72,32 @@ export default function OrganigramaView() {
       })).json();
       if (j.ok) setD((prev) => (prev ? { ...prev, nodos: j.nodos } : prev));
       else setMsg(j.error || "No se pudo guardar.");
-      return j.ok;
+      return j;
     } catch {
       setMsg("Error de red.");
-      return false;
+      return null;
     }
   }
+
+  function avisar(t: string) { setToast(t); setTimeout(() => setToast(""), 4000); }
 
   async function guardarForm(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
     if (!form.nombre.trim() && !form.cargo.trim()) { setMsg("Poné al menos nombre o cargo."); return; }
-    const ok = await post({
+    const esAlta = !form.id;
+    const j = await post({
       ...(form.id ? { id: form.id } : {}),
       nombre: form.nombre, cargo: form.cargo, email: form.email, parentId: form.parentId,
+      ...(esAlta ? { notificar: form.avisar } : {}),
     });
-    if (ok) setForm(null);
+    if (j?.ok) {
+      setForm(null);
+      if (esAlta) {
+        const nombre = form.nombre.trim() || form.cargo.trim();
+        avisar(j.notificado?.enviado ? `Se agregó a ${nombre} y se avisó el ingreso.` : `Se agregó a ${nombre}.`);
+      }
+    }
   }
 
   async function borrar(n: NodoOrg) {
@@ -103,9 +131,12 @@ export default function OrganigramaView() {
               : "Podés verlo completo y ubicar tu casillero."}
           </p>
         </div>
-        {editable && (
-          <Button onClick={() => { setMsg(""); setForm(vacio(null)); }}>＋ Agregar persona</Button>
-        )}
+        <div className="flex items-center gap-2 no-print">
+          <Button variant="outline" onClick={exportarPDF} disabled={estado !== "ok" || arbol.length === 0}>⬇ Exportar PDF</Button>
+          {editable && (
+            <Button onClick={() => { setMsg(""); setForm(vacio(null)); }}>＋ Agregar persona</Button>
+          )}
+        </div>
       </div>
 
       {/* Tu ubicación */}
@@ -133,7 +164,11 @@ export default function OrganigramaView() {
         )
       )}
 
-      <Card className="overflow-hidden">
+      <Card id="print-area" className="overflow-hidden">
+        <div className="hidden px-4 pt-4 print:block">
+          <p className="font-display text-lg font-semibold text-ink">Organigrama · El Desembarco</p>
+          <p className="text-2xs text-faint">Generado el {hoy}</p>
+        </div>
         {estado === "loading" ? (
           <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
         ) : estado === "error" ? (
@@ -151,7 +186,7 @@ export default function OrganigramaView() {
                 {arbol.map((n) => (
                   <Rama key={n.id} n={n} miId={miNodo?.id} editable={editable}
                     onAdd={(pid) => { setMsg(""); setForm(vacio(pid)); }}
-                    onEdit={(x) => { setMsg(""); setForm({ id: x.id, nombre: x.nombre, cargo: x.cargo, email: x.email ?? "", parentId: x.parentId }); }}
+                    onEdit={(x) => { setMsg(""); setForm({ id: x.id, nombre: x.nombre, cargo: x.cargo, email: x.email ?? "", parentId: x.parentId, avisar: false }); }}
                     onMove={mover} onDelete={borrar} />
                 ))}
               </ul>
@@ -163,8 +198,9 @@ export default function OrganigramaView() {
       {/* Modal alta/edición */}
       {form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setForm(null)}>
-          <Card className="w-full max-w-md p-5" >
-            <form onClick={(e) => e.stopPropagation()} onSubmit={guardarForm} className="space-y-3">
+          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <Card className="p-5">
+            <form onSubmit={guardarForm} className="space-y-3">
               <h2 className="font-display text-base font-semibold text-ink">
                 {form.id ? "Editar casillero" : "Agregar persona"}
               </h2>
@@ -193,6 +229,16 @@ export default function OrganigramaView() {
                 <input type="email" className={inputClass} placeholder="nombre@eldesembarco.com"
                   value={form.email} onChange={(e) => setForm((f) => f && { ...f, email: e.target.value })} />
               </label>
+              {!form.id && (
+                <label className="flex items-start gap-2 rounded-lg border border-line bg-ink/[0.02] px-3 py-2">
+                  <input type="checkbox" className="mt-0.5" checked={form.avisar}
+                    onChange={(e) => setForm((f) => f && { ...f, avisar: e.target.checked })} />
+                  <span className="text-2xs text-muted">
+                    <span className="font-medium text-ink">Avisar el ingreso</span> por el canal de notificaciones (Slack).
+                    Si no hay canal configurado, no se manda nada.
+                  </span>
+                </label>
+              )}
               {msg && <p className="text-2xs text-bad">{msg}</p>}
               <div className="flex items-center gap-2 pt-1">
                 <Button type="submit">{form.id ? "Guardar" : "Agregar"}</Button>
@@ -204,6 +250,13 @@ export default function OrganigramaView() {
               </div>
             </form>
           </Card>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="no-print fixed bottom-5 right-5 z-50 rounded-lg border border-ok/30 bg-ok/10 px-4 py-2.5 text-sm font-medium text-ok shadow-lg">
+          {toast}
         </div>
       )}
     </div>

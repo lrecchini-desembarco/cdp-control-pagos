@@ -93,6 +93,17 @@ function getNotifier(): Notifier {
   return canalActual() === "slack" ? slackNotifier : noneNotifier;
 }
 
+/**
+ * Envía un mensaje suelto por el canal configurado (no el resumen de alertas).
+ * Lo usan features puntuales, ej. avisar un nuevo ingreso en el organigrama.
+ * En canal "none" no manda nada pero devuelve enviado:false + el preview.
+ */
+export async function notificar(texto: string): Promise<{ canal: string; enviado: boolean; info: string; preview: string }> {
+  const canal = canalActual();
+  const res = await getNotifier().enviar(texto);
+  return { canal, enviado: res.ok && canal !== "none", info: res.info, preview: texto };
+}
+
 export async function enviarResumen(): Promise<{
   canal: string;
   enviado: boolean;

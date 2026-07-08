@@ -38,6 +38,9 @@ html, body {
   #print-area { position: absolute; left: 0; top: 0; width: 100%; }
   .no-print { display: none !important; }
   @page { margin: 14mm; }
+  /* Organigrama: que el árbol no quede recortado por el scroll y conserve colores */
+  #print-area, #print-area * { overflow: visible !important; }
+  #print-area * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* Organigrama: árbol top-down con conectores CSS (técnica clásica ul/li + pseudo-elementos).
