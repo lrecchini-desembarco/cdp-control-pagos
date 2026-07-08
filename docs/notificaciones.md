@@ -9,7 +9,7 @@ Para que **lo urgente llegue solo**, sin entrar a mirar. Arma un resumen de las
 En `.env.local` (o variables de entorno en Vercel):
 
 ```
-NOTIFY_CHANNEL=email            # "email" | "slack" | "none"
+NOTIFY_CHANNEL=email            # "email" | "none"
 
 # --- email (Google Workspace / Gmail por SMTP) ---
 SMTP_USER=notificaciones@eldesembarco.com   # casilla que envía
@@ -19,9 +19,6 @@ NOTIFY_EMAIL_TO=rrhh@eldesembarco.com,admin@eldesembarco.com   # destinatarios (
 # NOTIFY_EMAIL_FROM=...        # default = SMTP_USER
 # SMTP_HOST=smtp.gmail.com     # default
 # SMTP_PORT=465                # default (465 = SSL; 587 = STARTTLS)
-
-# --- slack ---
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 ```
 
 - **none** (default): no envía; `/api/notify` devuelve el texto como *preview*.
@@ -30,7 +27,6 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
   tener **verificación en 2 pasos** activada → cuenta de Google → *Seguridad* →
   *Contraseñas de aplicaciones* → generás una de 16 caracteres y la ponés en `SMTP_PASS`.
   El secreto va SOLO como variable de entorno; no se hardcodea en el repo.
-- **slack**: postea al Incoming Webhook (Slack → Apps → *Incoming Webhooks*).
 
 ## Cómo se dispara
 
@@ -64,7 +60,7 @@ Si no hay nada urgente, manda un "✅ Todo en orden".
 ## Implementación
 
 - `lib/notify.ts` — `construirResumen()` (junta alertas + catálogo), notifiers
-  (`email` / `slack` / `none`), `enviarResumen()` y `notificar(texto, {subject})`
+  (`email` / `none`), `enviarResumen()` y `notificar(texto, {subject})`
   (mensaje suelto reutilizable).
 - `app/api/notify/route.ts` — `GET`/`POST` que envían y devuelven el resultado.
 

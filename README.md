@@ -59,7 +59,7 @@ el rol se deriva del store (no se puede escalar tocando la cookie).
 - **Mapeos** (`/mapeos`) — sucursales (Raven → código canónico) y productos (insumo CDP → SKU → factor/BOM).
 - **Control de catálogo** (`/catalogo`) — audita el maestro de Tango (precio $0, cross-brand, sin marca,
   candidatos a baja), prioriza y exporta la lista "a corregir". Ver [`docs/catalogo.md`](docs/catalogo.md).
-- **Notificaciones** — resumen de alertas + catálogo crítico por Slack/cron. Botón "Enviar resumen ahora"
+- **Notificaciones** — resumen de alertas + catálogo crítico por email (Google Workspace)/cron. Botón "Enviar resumen ahora"
   en `/alertas` y endpoint `/api/notify`. Ver [`docs/notificaciones.md`](docs/notificaciones.md).
 
 ## Datos

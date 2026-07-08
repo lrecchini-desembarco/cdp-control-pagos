@@ -55,7 +55,7 @@ export default function AlertasView() {
       if (!j.ok) throw new Error(j.error ?? "No se pudo enviar.");
       const text =
         j.canal === "none"
-          ? "Canal sin configurar: configurá NOTIFY_CHANNEL=slack y SLACK_WEBHOOK_URL para que se envíe solo."
+          ? "Canal sin configurar: poné NOTIFY_CHANNEL=email + SMTP_USER/SMTP_PASS/NOTIFY_EMAIL_TO para que se envíe solo."
           : j.enviado
           ? `Resumen enviado por ${j.canal}.`
           : j.info;

@@ -6,7 +6,7 @@ import type { NodoOrg } from "@/lib/organigrama";
 
 export const dynamic = "force-dynamic";
 
-// Aviso de nuevo ingreso por el canal configurado (Slack/none). Nunca frena el alta.
+// Aviso de nuevo ingreso por el canal configurado (email/none). Nunca frena el alta.
 async function avisarIngreso(nuevo: NodoOrg, nodos: NodoOrg[], por: string) {
   try {
     const jefe = nuevo.parentId ? nodos.find((n) => n.id === nuevo.parentId) : undefined;

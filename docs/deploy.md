@@ -35,11 +35,14 @@ TANGO_BRIDGE_SECRET=<el mismo BRIDGE_SECRET del bridge>
 > Sin estas, Ventas y Precios muestran datos de ejemplo (mock) y lo indican con un badge.
 > El **Cruce** además necesita `RAVEN_TOKEN` (pedidos reales) para ser útil.
 
-**d. Notificaciones (opcional):**
+**d. Notificaciones por email — Google Workspace (opcional):**
 ```
-NOTIFY_CHANNEL=slack
-SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+NOTIFY_CHANNEL=email
+SMTP_USER=notificaciones@eldesembarco.com   # casilla que envía
+SMTP_PASS=xxxxxxxxxxxxxxxx                   # App Password (16 chars, 2FA)
+NOTIFY_EMAIL_TO=rrhh@eldesembarco.com,admin@eldesembarco.com
 ```
+Ver detalle en `docs/notificaciones.md`.
 
 ### Resumen: qué variable prende qué
 | Variable | Para qué | ¿Obligatoria? |
@@ -53,7 +56,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 | `PRECIOS_SOURCE=live` | Precios reales (Tango) | Solo para Tango |
 | `TANGO_BRIDGE_URL` / `TANGO_BRIDGE_SECRET` | Puente al SQL interno | Solo para Tango |
 | `RAVEN_TOKEN` | Pedidos reales (Cruce) | Solo para Cruce |
-| `NOTIFY_CHANNEL` / `SLACK_WEBHOOK_URL` | Envío de notificaciones | Opcional |
+| `NOTIFY_CHANNEL=email` + `SMTP_USER`/`SMTP_PASS`/`NOTIFY_EMAIL_TO` | Notificaciones por email (Workspace) | Opcional |
 
 ## 3) Persistencia — provisionar Vercel KV  ⚠️ importante
 - Project → **Storage** → crear una base **KV** (Upstash) y conectarla al proyecto.
@@ -73,7 +76,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 
 ## 6) Notificaciones automáticas (opcional)
 - Ya hay un **cron** (`vercel.json`) que pega a `/api/notify` 1 vez por día (12:00 UTC ≈ 9:00 ART).
-- Para que **envíe**: agregar `NOTIFY_CHANNEL=slack` y `SLACK_WEBHOOK_URL=...`.
+- Para que **envíe**: agregar `NOTIFY_CHANNEL=email` + `SMTP_USER`/`SMTP_PASS`/`NOTIFY_EMAIL_TO`.
 - Sin eso, el cron corre pero no manda nada (no molesta).
 
 ## Qué queda real vs mock

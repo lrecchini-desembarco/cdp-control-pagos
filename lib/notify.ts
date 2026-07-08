@@ -6,11 +6,11 @@ import { fmtInt } from "./brands";
  * Notificaciones: arma un resumen de lo urgente (alertas operativas + problemas
  * críticos de catálogo) y lo envía por el canal configurado.
  *
- *   NOTIFY_CHANNEL = "slack" | "none"   (default none)
- *   SLACK_WEBHOOK_URL = https://hooks.slack.com/services/...
+ *   NOTIFY_CHANNEL = "email" | "none"   (default none)
+ *   email: SMTP de Google Workspace (ver emailNotifier / docs/notificaciones.md)
  *
  * En "none" no envía nada pero devuelve el texto (preview), así se puede probar
- * el formato sin webhook. Pensado para dispararse manualmente (botón en Alertas)
+ * el formato sin canal. Pensado para dispararse manualmente (botón en Alertas)
  * o por cron (ver docs/notificaciones.md).
  */
 
@@ -77,21 +77,6 @@ const noneNotifier: Notifier = {
   },
 };
 
-const slackNotifier: Notifier = {
-  async enviar(texto: string) {
-    const url = process.env.SLACK_WEBHOOK_URL;
-    if (!url) return { ok: false, info: "Falta SLACK_WEBHOOK_URL." };
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: texto }),
-    });
-    return r.ok
-      ? { ok: true, info: "Enviado a Slack." }
-      : { ok: false, info: `Slack respondió ${r.status}.` };
-  },
-};
-
 /**
  * Email por SMTP de Google Workspace (Gmail). Config por env (NO se hardcodea nada):
  *   NOTIFY_CHANNEL   = "email"
@@ -114,7 +99,7 @@ const emailNotifier: Notifier = {
     try {
       const nodemailer = (await import("nodemailer")).default;
       const transport = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
-      const plano = texto.replace(/\*/g, ""); // saca el *bold* estilo Slack
+      const plano = texto.replace(/\*/g, ""); // saca el *bold* del markdown
       const subject = opts?.subject || plano.split("\n")[0] || "Notificación · CDP Control";
       await transport.sendMail({
         from,
@@ -136,7 +121,6 @@ export function canalActual(): string {
 
 function getNotifier(): Notifier {
   switch (canalActual()) {
-    case "slack": return slackNotifier;
     case "email": return emailNotifier;
     default: return noneNotifier;
   }

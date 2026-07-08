@@ -77,7 +77,7 @@ La detección (`detectarAlertas(cruce)`) es pura y no depende de la fuente: con
 
 ## Próximos pasos
 
-- **Notificación** (mail/Slack) al superar umbral, en vez de entrar a mirar.
+- **Notificación** por email (Google Workspace) al superar umbral, en vez de entrar a mirar.
 - **Silenciar / snooze** de alertas resueltas (los `id` ya son estables).
 - **Valorizar en $** para priorizar por plata expuesta.
 - **Stock teórico acumulado** en vez de comparar día a día.
