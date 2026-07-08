@@ -66,7 +66,7 @@ export default function InsumosView() {
           <h1 className="font-display text-xl font-semibold text-ink">Insumos</h1>
           <p className="mt-0.5 max-w-2xl text-sm text-muted">
             Maestro de insumos y su <b>costo por unidad de receta</b>. Es la base de las recetas y los márgenes.
-            Precio unitario = precio del bulto ÷ factor. Datos iniciales del Excel de costos; editables acá.
+            Precio unitario = precio del bulto / factor. Datos iniciales del Excel de costos; editables acá.
           </p>
         </div>
         <Button onClick={() => setEdit("nuevo")}>+ Nuevo insumo</Button>

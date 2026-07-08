@@ -1,0 +1,3308 @@
+[
+{
+"skuTango": "020030",
+"descripcion": "AGUA S/GAS SMART 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "AGs/g",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020031",
+"descripcion": "AGUA C/GAS SMART 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "AGc/g",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020009",
+"descripcion": "COCA COLA 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc1",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "800019.0",
+"descripcion": "COCA COLA ZERO 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc2",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020011",
+"descripcion": "COCA COLA LIGHT 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc3",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "800021",
+"descripcion": "SPRITE 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc5",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020013",
+"descripcion": "SPRITE ZERO 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc6",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020014",
+"descripcion": "FANTA 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc4",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020033",
+"descripcion": "AQUARIUS MANZANA 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020032",
+"descripcion": "AQUARIUS NARANJA 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020037",
+"descripcion": "AQUARIUS PERA 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020034",
+"descripcion": "AQUARIUS POMELO 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020041",
+"descripcion": "AQUARIUS UVA 500 CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "38004",
+"descripcion": "LATA CERVEZA TASTY 500CC",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "LATA2",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "130006",
+"descripcion": "BURGER QUESO DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+},
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "Lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "Tomate",
+"cant": 40.0
+},
+{
+"insumoCod": "Mayo",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138001",
+"descripcion": "BURGER CUARTO CON QUESO DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 15.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138005",
+"descripcion": "BURGER DOBLE CUARTO CON QUESO DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 2.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 15.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138042",
+"descripcion": "BURGER TRIPLE CUARTO CON QUESO DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 3.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 3.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 20.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138003",
+"descripcion": "BURGER BACON DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 25.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138040",
+"descripcion": "BURGER DOBLE BACON DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 2.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 50.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138047",
+"descripcion": "BURGER TRIPLE BACON DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 3.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 3.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 50.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138009",
+"descripcion": "BURGER QUESO DE POLLO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "medpollo",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138008",
+"descripcion": "BURGER BACON DE POLLO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "medpollo",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 25.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "508016",
+"descripcion": "BALDE DE 4 BURGER CUARTO DE CARNE + 4 PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 4.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 4.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 4.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 60.0
+},
+{
+"insumoCod": "Ket",
+"cant": 120.0
+},
+{
+"insumoCod": "papelt",
+"cant": 4.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 400.0
+},
+{
+"insumoCod": "estuche",
+"cant": 4.0
+},
+{
+"insumoCod": "49.0",
+"cant": 8.0
+},
+{
+"insumoCod": "BALDE",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 4.0
+}
+]
+},
+{
+"skuTango": "508041",
+"descripcion": "BALDE MIXTO TASTY MILA DE CARNE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "pan univ",
+"cant": 2.0
+},
+{
+"insumoCod": "tuki80",
+"cant": 2.0
+},
+{
+"insumoCod": "chedf",
+"cant": 2.0
+},
+{
+"insumoCod": "lechuga",
+"cant": 40.0
+},
+{
+"insumoCod": "tomate",
+"cant": 80.0
+},
+{
+"insumoCod": "mayo",
+"cant": 60.0
+},
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "Lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "Tomate",
+"cant": 60.0
+},
+{
+"insumoCod": "Mayo",
+"cant": 50.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 400.0
+},
+{
+"insumoCod": "49.0",
+"cant": 32.0
+},
+{
+"insumoCod": "estuche",
+"cant": 4.0
+},
+{
+"insumoCod": "balde",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 3.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 4.0
+}
+]
+},
+{
+"skuTango": "508019",
+"descripcion": "2 CUARTO CON QUESO + BANDEJA CHICA DE PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 2.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 2.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 30.0
+},
+{
+"insumoCod": "Ket",
+"cant": 60.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 300.0
+},
+{
+"insumoCod": "49.0",
+"cant": 6.0
+},
+{
+"insumoCod": "bandejach",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "140001",
+"descripcion": "ESTUCHE DE PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "148002",
+"descripcion": "CONO DE PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "papasmc",
+"cant": 160.0
+},
+{
+"insumoCod": "49.0",
+"cant": 3.0
+},
+{
+"insumoCod": "tastydesc3",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "148009",
+"descripcion": "BANDEJA DE PAPAS INDIVIDUAL",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAPASMC",
+"cant": 300.0
+},
+{
+"insumoCod": "49.0",
+"cant": 6.0
+},
+{
+"insumoCod": "BANDEJAGR",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 0.5
+}
+]
+},
+{
+"skuTango": "148010",
+"descripcion": "BANDEJA DE PAPAS PARA COMPARTIR",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAPASMC",
+"cant": 600.0
+},
+{
+"insumoCod": "49.0",
+"cant": 12.0
+},
+{
+"insumoCod": "BANDEJACH",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 0.5
+}
+]
+},
+{
+"skuTango": "148011",
+"descripcion": "BANDEJA DE PAPAS INDIVIDUAL C/ CHEDDAR Y PANCETA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAPASMC",
+"cant": 300.0
+},
+{
+"insumoCod": "49.0",
+"cant": 6.0
+},
+{
+"insumoCod": "1115.0",
+"cant": 60.0
+},
+{
+"insumoCod": "21.0",
+"cant": 40.0
+},
+{
+"insumoCod": "BANDEJACH",
+"cant": 1.0
+},
+{
+"insumoCod": "Papelt",
+"cant": 0.5
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "148012",
+"descripcion": "BANDEJA DE PAPAS P/ COMPARTIR C/ CHEDDAR Y PANCETA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAPASMC",
+"cant": 600.0
+},
+{
+"insumoCod": "49.0",
+"cant": 12.0
+},
+{
+"insumoCod": "1115.0",
+"cant": 80.0
+},
+{
+"insumoCod": "21.0",
+"cant": 60.0
+},
+{
+"insumoCod": "BANDEJAGR",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 0.5
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "148007",
+"descripcion": "TEQUEÑOS X 6 UN",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "1088.0",
+"cant": 6.0
+},
+{
+"insumoCod": "bandejach",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 0.5
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "148013",
+"descripcion": "NUGGETS CON PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "NUGGETS",
+"cant": 220.0
+},
+{
+"insumoCod": "PAPASMC",
+"cant": 150.0
+},
+{
+"insumoCod": "49.0",
+"cant": 3.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 0.5
+}
+]
+},
+{
+"skuTango": "138033",
+"descripcion": "TRIANGULOS DE MUZZARELLA CON PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "TRIANGULOS",
+"cant": 250.0
+},
+{
+"insumoCod": "PAPASMC",
+"cant": 150.0
+},
+{
+"insumoCod": "49.0",
+"cant": 3.0
+},
+{
+"insumoCod": "BANDEJAGR",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 0.5
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138032",
+"descripcion": "PILETA DE CHEDDAR",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "1115.0",
+"cant": 120.0
+},
+{
+"insumoCod": "pileta",
+"cant": 1.0
+},
+{
+"insumoCod": "guantes",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "220017",
+"descripcion": "TOSTADO JAMON Y QUESO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "18.0",
+"cant": 30.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "220018",
+"descripcion": "TOSTADO JAMON QUESO Y HUEVO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "18.0",
+"cant": 30.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "Huev",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "148008",
+"descripcion": "PANCHO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "pancho tasty",
+"cant": 1.0
+},
+{
+"insumoCod": "salchichafriar",
+"cant": 1.0
+},
+{
+"insumoCod": "tastydesc7",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+},
+{
+"insumoCod": "mayo",
+"cant": 14.0
+},
+{
+"insumoCod": "ket",
+"cant": 14.0
+},
+{
+"insumoCod": "papasp",
+"cant": 10.0
+}
+]
+},
+{
+"skuTango": "508049",
+"descripcion": "BALDE PANCHOS x 6 (SIN PAPAS)",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "pancho tasty",
+"cant": 6.0
+},
+{
+"insumoCod": "salchitasty",
+"cant": 6.0
+},
+{
+"insumoCod": "BALDE",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "220001",
+"descripcion": "CAFE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "CAF01",
+"cant": 1.0
+},
+{
+"insumoCod": "684.0",
+"cant": 1.0
+},
+{
+"insumoCod": "tastydesc10",
+"cant": 1.0
+},
+{
+"insumoCod": "tastydesc9",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "040020",
+"descripcion": "MEDIALUNAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "MEDIALUNAT",
+"cant": 1.0
+},
+{
+"insumoCod": "SERVILLETAT",
+"cant": 2.0
+},
+{
+"insumoCod": "tastydesc8",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "168003",
+"descripcion": "CONO DE HELADO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "cono",
+"cant": 1.0
+},
+{
+"insumoCod": "helado",
+"cant": 27.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "168004",
+"descripcion": "2 CONOS DE HELADO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "cono",
+"cant": 2.0
+},
+{
+"insumoCod": "helado",
+"cant": 54.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "138075",
+"descripcion": "PILETA DE CONOS DE HELADO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "ensalpolip",
+"cant": 1.0
+},
+{
+"insumoCod": "helado",
+"cant": 108.0
+},
+{
+"insumoCod": "cono",
+"cant": 4.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "502002",
+"descripcion": "AGREGA PAPAS Y BEBIDA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAPASMC",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "ESTUCHE",
+"cant": 1.0
+},
+{
+"insumoCod": "coc1",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "198006",
+"descripcion": "ADICIONAL MEDALLON CARNE 80 g",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "198009",
+"descripcion": "ADICIONAL MEDALLON DE POLLO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "MEDPOLLO",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "198003",
+"descripcion": "EXTRA CHEDDAR FETA - BURGER",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "198004",
+"descripcion": "EXTRA PANCETA FETA - BURGER",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "pancetaf",
+"cant": 25.0
+}
+]
+},
+{
+"skuTango": "198005",
+"descripcion": "EXTRA HUEVO - BURGER",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "Huev",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "198007",
+"descripcion": "ADICIONAL LECHUGA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "Lechuga",
+"cant": 20.0
+}
+]
+},
+{
+"skuTango": "198008",
+"descripcion": "ADICIONAL TOMATE",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "Tomate",
+"cant": 40.0
+}
+]
+},
+{
+"skuTango": "198001",
+"descripcion": "EXTRA CHEDDAR FUNDIDO - PANCHO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "1115.0",
+"cant": 20.0
+}
+]
+},
+{
+"skuTango": "198002",
+"descripcion": "EXTRA DE PANCETA CUBO - PANCHO",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "21.0",
+"cant": 20.0
+}
+]
+},
+{
+"skuTango": "138019",
+"descripcion": "BURGER QUESO DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138017",
+"descripcion": "BURGER CLÁSICA DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "Lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "Tomate",
+"cant": 40.0
+},
+{
+"insumoCod": "Mayo",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138016",
+"descripcion": "BURGER CUARTO CON QUESO DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 20.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138020",
+"descripcion": "BURGER DOBLE CUARTO CON QUESO DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 2.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 20.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138025",
+"descripcion": "BURGER TRIPLE CUARTO CON QUESO DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 3.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 3.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 20.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138018",
+"descripcion": "BURGER BACON DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 25.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138026",
+"descripcion": "BURGER DOBLE BACON DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 2.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 50.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138027",
+"descripcion": "BURGER TRIPLE BACON DE CARNE + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 3.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 3.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 50.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138024",
+"descripcion": "BURGER QUESO DE POLLO + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "medpollo",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "138023",
+"descripcion": "BURGER BACON DE POLLO + PAPAS",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "medpollo",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 25.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "508047",
+"descripcion": "BALDE A LA BOLSA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 4.0
+},
+{
+"insumoCod": "TUKI80",
+"cant": 4.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 4.0
+},
+{
+"insumoCod": "Cebolla",
+"cant": 60.0
+},
+{
+"insumoCod": "Ket",
+"cant": 120.0
+},
+{
+"insumoCod": "papelt",
+"cant": 4.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 400.0
+},
+{
+"insumoCod": "49.0",
+"cant": 8.0
+},
+{
+"insumoCod": "estuche",
+"cant": 4.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 2.0
+}
+]
+},
+{
+"skuTango": "508043",
+"descripcion": "COMBO CHEESE BURGER (55 g) + PAPAS + BEBIDA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "MEDALLON55",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "coc1",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "508044",
+"descripcion": "COMBO CHEESE BACON (55 g) + PAPAS + BEBIDA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "MEDALLON55",
+"cant": 1.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 1.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 25.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "coc1",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "508045",
+"descripcion": "COMBO CHEESE BACON DOBLE (55 g) + PAPAS + BEBIDA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "MEDALLON55",
+"cant": 2.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 2.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 25.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "coc1",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "508046",
+"descripcion": "COMBO CHEESE BACON TRIPLE (55 g) + PAPAS + BEBIDA",
+"marca": "Mr. Tasty",
+"componentes": [
+{
+"insumoCod": "PAN UNIV",
+"cant": 1.0
+},
+{
+"insumoCod": "MEDALLON55",
+"cant": 3.0
+},
+{
+"insumoCod": "CHEDF",
+"cant": 3.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 50.0
+},
+{
+"insumoCod": "Ket",
+"cant": 30.0
+},
+{
+"insumoCod": "papelt",
+"cant": 1.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "coc1",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletat",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020030",
+"descripcion": "AGUA S/GAS SMART 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "AGs/g",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020031",
+"descripcion": "AGUA C/GAS SMART 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "AGc/g",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020009",
+"descripcion": "COCA COLA 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc1",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020010",
+"descripcion": "COCA COLA ZERO 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc2",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020011",
+"descripcion": "COCA COLA LIGHT 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc3",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "800021",
+"descripcion": "SPRITE 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc5",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020013",
+"descripcion": "SPRITE ZERO 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc6",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020014",
+"descripcion": "FANTA 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc4",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020033",
+"descripcion": "AQUARIUS MANZANA 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020032",
+"descripcion": "AQUARIUS NARANJA 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020037",
+"descripcion": "AQUARIUS PERA 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020034",
+"descripcion": "AQUARIUS POMELO 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "020041",
+"descripcion": "AQUARIUS UVA 500 CC",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "coc7",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150001.0",
+"descripcion": "MILANESA CLASICA DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "limon",
+"cant": 20.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 0.5
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150005.0",
+"descripcion": "MILANESA CLASICA DE POLLO CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "limon",
+"cant": 20.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 0.5
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150002.0",
+"descripcion": "MILANESA CABALLO DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "huev",
+"cant": 2.0
+},
+{
+"insumoCod": "ciboulette",
+"cant": 10.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150006.0",
+"descripcion": "MILANESA CABALLO DE POLLO CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "huev",
+"cant": 2.0
+},
+{
+"insumoCod": "ciboulette",
+"cant": 10.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150003.0",
+"descripcion": "MILANESA NAPOLITANA DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "muzza mila",
+"cant": 1.0
+},
+{
+"insumoCod": "salsafileto",
+"cant": 70.0
+},
+{
+"insumoCod": "oregano",
+"cant": 0.0
+},
+{
+"insumoCod": "18.0",
+"cant": 30.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150007.0",
+"descripcion": "MILANESA NAPOLITANA DE POLLO CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "muzza mila",
+"cant": 1.0
+},
+{
+"insumoCod": "salsafileto",
+"cant": 70.0
+},
+{
+"insumoCod": "oregano",
+"cant": 0.0
+},
+{
+"insumoCod": "18.0",
+"cant": 30.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150004.0",
+"descripcion": "MILANESA CHEDDAR Y PANCETA DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "1115.0",
+"cant": 70.0
+},
+{
+"insumoCod": "68.0",
+"cant": 25.0
+},
+{
+"insumoCod": "21.0",
+"cant": 50.0
+},
+{
+"insumoCod": "cebcara",
+"cant": 30.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150008.0",
+"descripcion": "MILANESA CHEDDAR Y PANCETA DE POLLO CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "1115.0",
+"cant": 70.0
+},
+{
+"insumoCod": "68.0",
+"cant": 25.0
+},
+{
+"insumoCod": "21.0",
+"cant": 50.0
+},
+{
+"insumoCod": "cebcara",
+"cant": 30.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150011.0",
+"descripcion": "MILANESA MUZZARELLA Y MORRON DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "muzza mila",
+"cant": 1.0
+},
+{
+"insumoCod": "morron",
+"cant": 60.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150010.0",
+"descripcion": "MILANESA MUZZARELLA Y MORRON DE POLLO CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "muzza mila",
+"cant": 1.0
+},
+{
+"insumoCod": "morron",
+"cant": 60.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150015.0",
+"descripcion": "MILANESOTA CLASICA DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarnexl",
+"cant": 1.0
+},
+{
+"insumoCod": "limon",
+"cant": 20.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 0.5
+},
+{
+"insumoCod": "cajam",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150009.0",
+"descripcion": "MILANESOTA CABALLO DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarnexl",
+"cant": 1.0
+},
+{
+"insumoCod": "huev",
+"cant": 4.0
+},
+{
+"insumoCod": "ciboulette",
+"cant": 10.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150020.0",
+"descripcion": "MILANESOTA NAPOLITANA DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarnexl",
+"cant": 1.0
+},
+{
+"insumoCod": "muzza mila",
+"cant": 2.0
+},
+{
+"insumoCod": "salsafileto",
+"cant": 140.0
+},
+{
+"insumoCod": "oregano",
+"cant": 0.0
+},
+{
+"insumoCod": "18.0",
+"cant": 60.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150013.0",
+"descripcion": "MILANESOTA CHEDDAR Y PANCETA DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarnexl",
+"cant": 1.0
+},
+{
+"insumoCod": "1115.0",
+"cant": 140.0
+},
+{
+"insumoCod": "68.0",
+"cant": 45.0
+},
+{
+"insumoCod": "21.0",
+"cant": 100.0
+},
+{
+"insumoCod": "cebcara",
+"cant": 60.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "150017.0",
+"descripcion": "MILANESOTA MUZZARELLA Y MORRON DE CARNE CON PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "milacarnexl",
+"cant": 1.0
+},
+{
+"insumoCod": "muzza mila",
+"cant": 2.0
+},
+{
+"insumoCod": "morron",
+"cant": 120.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 200.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "caja mg",
+"cant": 1.0
+},
+{
+"insumoCod": "folexds",
+"cant": 2.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "170011.0",
+"descripcion": "SANDWICH MILANESA CARNE",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "tomate",
+"cant": 30.0
+},
+{
+"insumoCod": "mayo",
+"cant": 30.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "170012.0",
+"descripcion": "SANDWICH MILANESA POLLO",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "tomate",
+"cant": 30.0
+},
+{
+"insumoCod": "mayo",
+"cant": 30.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "170001.0",
+"descripcion": "SANDWICH MILA COMPLETO CARNE",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "tomate",
+"cant": 30.0
+},
+{
+"insumoCod": "mayo",
+"cant": 30.0
+},
+{
+"insumoCod": "18.0",
+"cant": 30.0
+},
+{
+"insumoCod": "huev",
+"cant": 2.0
+},
+{
+"insumoCod": "chedf",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "170003.0",
+"descripcion": "SANDWICH MILA COMPLETO POLLO",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "tomate",
+"cant": 30.0
+},
+{
+"insumoCod": "mayo",
+"cant": 30.0
+},
+{
+"insumoCod": "18.0",
+"cant": 30.0
+},
+{
+"insumoCod": "huev",
+"cant": 2.0
+},
+{
+"insumoCod": "chedf",
+"cant": 2.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "170002.0",
+"descripcion": "SANDWICH MILA ESPECIAL CARNE",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "chedf",
+"cant": 2.0
+},
+{
+"insumoCod": "cebcara",
+"cant": 50.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 40.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "170004.0",
+"descripcion": "SANDWICH MILA ESPECIAL POLLO",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milapollo",
+"cant": 1.0
+},
+{
+"insumoCod": "chedf",
+"cant": 2.0
+},
+{
+"insumoCod": "cebcara",
+"cant": 50.0
+},
+{
+"insumoCod": "pancetaf",
+"cant": 40.0
+},
+{
+"insumoCod": "papel mg",
+"cant": 1.0
+},
+{
+"insumoCod": "bolsat",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+},
+{
+"skuTango": "508050.0",
+"descripcion": "BALDE MIXTO TASTY MILA DE CARNE",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "pan univ",
+"cant": 2.0
+},
+{
+"insumoCod": "tuki80",
+"cant": 2.0
+},
+{
+"insumoCod": "chedf",
+"cant": 2.0
+},
+{
+"insumoCod": "lechuga",
+"cant": 40.0
+},
+{
+"insumoCod": "tomate",
+"cant": 80.0
+},
+{
+"insumoCod": "mayo",
+"cant": 60.0
+},
+{
+"insumoCod": "ciabatta",
+"cant": 1.0
+},
+{
+"insumoCod": "milacarne",
+"cant": 1.0
+},
+{
+"insumoCod": "Lechuga",
+"cant": 20.0
+},
+{
+"insumoCod": "Tomate",
+"cant": 60.0
+},
+{
+"insumoCod": "Mayo",
+"cant": 50.0
+},
+{
+"insumoCod": "papasmc",
+"cant": 400.0
+},
+{
+"insumoCod": "49.0",
+"cant": 32.0
+},
+{
+"insumoCod": "estuche",
+"cant": 4.0
+},
+{
+"insumoCod": "balde",
+"cant": 1.0
+},
+{
+"insumoCod": "papelt",
+"cant": 3.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 4.0
+}
+]
+},
+{
+"skuTango": "140001.0",
+"descripcion": "ESTUCHE DE PAPAS",
+"marca": "Mila & Go",
+"componentes": [
+{
+"insumoCod": "papasmc",
+"cant": 100.0
+},
+{
+"insumoCod": "49.0",
+"cant": 2.0
+},
+{
+"insumoCod": "estuche",
+"cant": 1.0
+},
+{
+"insumoCod": "servilletam",
+"cant": 1.0
+}
+]
+}
+]
