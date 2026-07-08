@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -88,6 +88,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/listas", label: "Precios y margen", icon: "▤", section: "Costos" },
   { href: "/apps", label: "Margen apps", icon: "◧", section: "Costos" },
   { href: "/promos", label: "Promociones", icon: "◎", section: "Costos" },
+  { href: "/rentabilidad", label: "Rentabilidad", icon: "◉", section: "Costos" },
   // Clientes — reseñas, CRM y cupones
   { href: "/resenas", label: "Reseñas", icon: "★", section: "Clientes" },
   { href: "/clientes", label: "Clientes", icon: "☺", section: "Clientes" },
