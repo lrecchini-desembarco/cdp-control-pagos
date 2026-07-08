@@ -2,18 +2,11 @@ import Link from "next/link";
 import { getCruce } from "@/lib/cruce";
 import { getMapeos } from "@/lib/mapeos-store";
 import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
-import { getControlCatalogo } from "@/lib/catalogo-control";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { Card } from "@/components/ui/primitives";
-import type { CruceRow, ResumenCatalogo } from "@/lib/types";
+import type { CruceRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-const CAT_VACIO: ResumenCatalogo = {
-  articulos: 0,
-  conProblemas: 0,
-  porTipo: { "precio-cero": 0, "cross-brand": 0, "sin-marca": 0, "sin-venta": 0 },
-};
 
 export default async function Page() {
   let cruce: CruceRow[] = [];
@@ -25,14 +18,6 @@ export default async function Page() {
   }
   const mapeos = await getMapeos();
   const alertas = resumenAlertas(detectarAlertas(cruce, mapeos));
-
-  let catalogo: ResumenCatalogo = CAT_VACIO;
-  try {
-    catalogo = (await getControlCatalogo()).resumen;
-  } catch {
-    /* si la fuente de catálogo falla, la banda queda en 0 */
-  }
-  const catCriticos = catalogo.porTipo["precio-cero"];
 
   const ultimaFecha = cruce.map((r) => r.fecha).sort().reverse()[0] ?? "—";
   const hoy = cruce.filter((r) => r.fecha === ultimaFecha);
@@ -108,44 +93,6 @@ export default async function Page() {
         </Card>
       </Link>
 
-      {/* Banda de catálogo: estado de la calidad de datos de Tango */}
-      <Link href="/catalogo">
-        <Card
-          className={`group flex items-center gap-3 p-4 transition-colors ${
-            catCriticos > 0
-              ? "border-bad/30 bg-bad/5 hover:border-bad/50"
-              : catalogo.conProblemas > 0
-              ? "border-warn/30 bg-warn/5 hover:border-warn/50"
-              : "hover:border-action/40"
-          }`}
-        >
-          <span
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-base font-bold ${
-              catCriticos > 0
-                ? "bg-bad/15 text-bad"
-                : catalogo.conProblemas > 0
-                ? "bg-warn/15 text-warn"
-                : "bg-ok/15 text-ok"
-            }`}
-          >
-            {catalogo.conProblemas > 0 ? "▤" : "✓"}
-          </span>
-          <div className="flex-1">
-            <p className="font-display text-sm font-semibold text-ink">
-              {catalogo.conProblemas === 0
-                ? "Catálogo limpio"
-                : `${catalogo.conProblemas} artículo${catalogo.conProblemas === 1 ? "" : "s"} a corregir`}
-            </p>
-            <p className="mt-0.5 text-xs text-muted">
-              {catalogo.conProblemas === 0
-                ? "Ningún artículo activo con precio $0, marca cruzada o sin clasificar."
-                : `${catalogo.porTipo["precio-cero"]} en $0 · ${catalogo.porTipo["cross-brand"]} cross-brand · ${catalogo.porTipo["sin-marca"]} sin marca · ${catalogo.porTipo["sin-venta"]} a dar de baja`}
-            </p>
-          </div>
-          <span className="text-sm font-medium text-muted group-hover:text-action">Ver catálogo →</span>
-        </Card>
-      </Link>
-
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Pedido al CDP" value={fmtInt(pedido)} sub="último día" />
         <Stat label="Venta equivalente" value={fmtInt(venta)} sub="traducida a insumo" />
@@ -160,24 +107,24 @@ export default async function Page() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Access
+          href="/pedidos"
+          title="CDP vs Ventas (local)"
+          desc="Lo que cada local pidió al CDP contra lo que vendió."
+        />
+        <Access
           href="/cruce"
           title="Cruce CDP vs ventas"
           desc="Detectá sobre-pedido y faltantes por sucursal y producto."
         />
         <Access
-          href="/raven"
-          title="Consultar Raven"
-          desc="Traé los pedidos de un producto para una fecha de entrega."
+          href="/listas"
+          title="Precios y margen"
+          desc="Costo de receta, CMV y margen por lista y producto."
         />
         <Access
           href="/mapeos"
           title="Mapeos"
           desc={`${activas} sucursales activas · ${mapeos.productoMap.length} reglas de producto.`}
-        />
-        <Access
-          href="/catalogo"
-          title="Control de catálogo"
-          desc="Precios en $0, marcas cruzadas y artículos a dar de baja."
         />
       </div>
     </div>

@@ -69,29 +69,38 @@ export interface NavItem {
 }
 // Los `beta: true` dependen de datos externos que aún no están (Raven token / recetas
 // reales / vista de Sistemas). El resto es productivo.
+// Ordenado por secciones (contiguas). El sidebar dibuja el encabezado de cada
+// sección al cambiar. Resumen y Alertas van arriba sin sección (son el "home").
 export const NAV_CATALOG: NavItem[] = [
   { href: "/", label: "Resumen", icon: "◰" },
   { href: "/alertas", label: "Alertas", icon: "!" },
-  { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄", beta: true },
-  { href: "/pedidos", label: "CDP vs Ventas (local)", icon: "⇊" },
-  { href: "/ventas", label: "Ventas por turno", icon: "▦" },
-  { href: "/precios", label: "Precios", icon: "$" },
-  { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉" },
-  { href: "/compras", label: "Compras vs Ventas", icon: "⇲" },
+  // CDP vs Ventas — control de abastecimiento
+  { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄", beta: true, section: "CDP vs Ventas" },
+  { href: "/pedidos", label: "CDP vs Ventas (local)", icon: "⇊", section: "CDP vs Ventas" },
+  // Ventas y compras
+  { href: "/ventas", label: "Ventas por turno", icon: "▦", section: "Ventas y compras" },
+  { href: "/precios", label: "Precios", icon: "$", section: "Ventas y compras" },
+  { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉", section: "Ventas y compras" },
+  { href: "/compras", label: "Compras vs Ventas", icon: "⇲", section: "Ventas y compras" },
+  // Costos y precios (módulo Costos)
   { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos" },
   { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos" },
   { href: "/listas", label: "Precios y margen", icon: "▤", section: "Costos" },
   { href: "/apps", label: "Margen apps", icon: "◧", section: "Costos" },
-  { href: "/mapeos", label: "Mapeos", icon: "⊞" },
-  { href: "/resenas", label: "Reseñas", icon: "★" },
-  { href: "/clientes", label: "Clientes", icon: "☺" },
-  { href: "/cupones", label: "Validar cupón", icon: "◈" },
-  { href: "/usuarios", label: "Usuarios", icon: "◑" },
-  { href: "/inventario", label: "Inventario", icon: "▧" },
-  { href: "/apertura", label: "Apertura de locales", icon: "◱" },
-  { href: "/estado", label: "Sistema · Endpoints", icon: "⚙" },
-  { href: "/firmas", label: "Firmas", icon: "✎" },
-  { href: "/guia", label: "¿Qué puedo hacer?", icon: "?" },
+  // Clientes — reseñas, CRM y cupones
+  { href: "/resenas", label: "Reseñas", icon: "★", section: "Clientes" },
+  { href: "/clientes", label: "Clientes", icon: "☺", section: "Clientes" },
+  { href: "/cupones", label: "Validar cupón", icon: "◈", section: "Clientes" },
+  // Locales
+  { href: "/apertura", label: "Apertura de locales", icon: "◱", section: "Locales" },
+  { href: "/inventario", label: "Inventario", icon: "▧", section: "Locales" },
+  // Sistema — configuración y salud
+  { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema" },
+  { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema" },
+  { href: "/estado", label: "Salud y endpoints", icon: "⚙", section: "Sistema" },
+  // Ayuda y herramientas
+  { href: "/firmas", label: "Firmas", icon: "✎", section: "Ayuda" },
+  { href: "/guia", label: "¿Qué puedo hacer?", icon: "?", section: "Ayuda" },
 ];
 
 // /guia y /usuarios (para admin) son "fijas": nunca se pueden sacar (evita autobloqueo).
