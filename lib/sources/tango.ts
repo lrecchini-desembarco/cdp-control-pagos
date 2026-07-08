@@ -1,5 +1,6 @@
 import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource } from "./types";
 import { getBridgeUrl } from "../bridge-url";
+import { ventasDesdeCache, preciosDesdeCache } from "../tango-cache";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -65,6 +66,10 @@ async function ventasViaBridge(q: RangoQuery, base: string): Promise<VentaSku[]>
 
 export const tangoVentasSource: VentasSource = {
   async getVentas(q: RangoQuery): Promise<VentaSku[]> {
+    // 1) Cache en KV (empujado por la PC de carga, sin túnel). Es la vía normal.
+    const cache = await ventasDesdeCache(q);
+    if (cache) return cache;
+    // 2) Respaldo: bridge por túnel (si está y el cache no cubre el rango).
     const base = await getBridgeUrl();
     if (base) return ventasViaBridge(q, base);
 
@@ -127,6 +132,9 @@ async function preciosViaBridge(base: string): Promise<PrecioProducto[]> {
 
 export const tangoPreciosSource: PreciosSource = {
   async getPrecios(): Promise<PrecioProducto[]> {
+    // 1) Cache en KV (empujado por la PC de carga). 2) Respaldo: bridge.
+    const cache = await preciosDesdeCache();
+    if (cache) return cache;
     const base = await getBridgeUrl();
     if (base) return preciosViaBridge(base);
     if (!process.env.TANGO_DB_HOST) {
