@@ -1,6 +1,9 @@
 import { getSources, getPreciosSource } from "./sources";
 import { brandDeSucursal } from "./ventas";
 import { rangoActividad } from "./actividad";
+import { getRecetas } from "./recetas-store";
+import { getInsumos } from "./insumos-store";
+import { costearReceta, indiceInsumos } from "./recetas";
 import type { RangoQuery } from "./sources/types";
 
 /**
@@ -20,11 +23,16 @@ export interface FactProducto {
   unidades: number; precio: number; facturacion: number;
   acumulado?: number;        // % acumulado de facturación (curva ABC)
   clase?: "A" | "B" | "C";   // A = hasta 80% · B = 80-95% · C = resto
+  costoUnit?: number;        // costo de receta por unidad (con impuestos), si hay receta
+  margen?: number;           // margen bruto total = facturación − costo × unidades
+  margenPct?: number;        // margen / facturación
+  tieneCosto?: boolean;      // false = sin receta (no se puede calcular margen)
 }
 export interface FactTurno { turno: string; unidades: number; facturacion: number; }
 export interface FactLocal {
   sucursal: string; marca: string;
   unidades: number; facturacion: number; cobertura: number; // % de sus unidades con precio
+  margen: number;            // margen bruto (solo de productos con receta)
 }
 export interface FactMarca { marca: string; unidades: number; facturacion: number; }
 
@@ -36,6 +44,9 @@ export interface Facturacion {
   unidadesConPrecio: number;
   cobertura: number;        // % de unidades que pudieron valorizarse
   ticketProm: number;       // $ por unidad (no por ticket: no tenemos tickets aún)
+  margenTotal: number;      // margen bruto total (facturación − costo, de lo que tiene receta)
+  facturacionConCosto: number; // facturación de los productos con receta (base del margen)
+  coberturaCosto: number;   // % de la facturación que tiene receta para costear
   abc: { a: number; b: number; c: number }; // cantidad de productos por clase
   porProducto: FactProducto[];
   porLocal: FactLocal[];
@@ -45,7 +56,18 @@ export interface Facturacion {
 
 export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<Facturacion> {
   const { ventas } = getSources();
-  const [data, precios] = await Promise.all([ventas.getVentas(q), getPreciosSource().getPrecios()]);
+  const [data, precios, recetas, insumos] = await Promise.all([
+    ventas.getVentas(q), getPreciosSource().getPrecios(), getRecetas(), getInsumos(),
+  ]);
+
+  // Costo de receta por SKU de venta (con impuestos), del módulo Costos. Sirve para el
+  // margen bruto real: solo cubre lo que tenga receta cargada (se reporta cobertura).
+  const idxIns = indiceInsumos(insumos);
+  const costoPorSku = new Map<string, number>();
+  for (const r of recetas) {
+    const c = costearReceta(r, idxIns).costoConImp;
+    if (c > 0) costoPorSku.set(r.skuTango, c);
+  }
 
   // Precio por SKU×local; y fallback: precio del SKU en cualquier local (mejora cobertura).
   const pLocal = new Map<string, number>();
@@ -60,19 +82,23 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
     pLocal.get(clave(sku, suc)) ?? pSku.get(sku) ?? 0;
 
   const prod = new Map<string, FactProducto>();
-  const local = new Map<string, { sucursal: string; marca: string; unidades: number; facturacion: number; conPrecio: number }>();
+  const local = new Map<string, { sucursal: string; marca: string; unidades: number; facturacion: number; conPrecio: number; margen: number }>();
   const turno = new Map<string, FactTurno>();
   let refFecha = "";
   let total = 0, unidades = 0, unidadesConPrecio = 0;
+  let margenTotal = 0, facturacionConCosto = 0;
 
   for (const v of data) {
     if (v.fecha > refFecha) refFecha = v.fecha;
     const precio = precioDe(v.sku, v.sucursalCanonico);
     const fact = precio * v.unidades;
     const marca = brandDeSucursal(v.sucursalCanonico);
+    const cu = costoPorSku.get(v.sku) ?? 0; // costo unitario de receta (0 = sin receta)
+    const margenRow = precio > 0 && cu > 0 ? fact - cu * v.unidades : 0;
 
     unidades += v.unidades;
     if (precio > 0) { unidadesConPrecio += v.unidades; total += fact; }
+    if (precio > 0 && cu > 0) { margenTotal += margenRow; facturacionConCosto += fact; }
 
     const tn = v.turno ?? "noche";
     let tu = turno.get(tn);
@@ -86,9 +112,10 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
     if (precio > 0) pr.precio = precio; // último precio visto
 
     let lo = local.get(v.sucursalCanonico);
-    if (!lo) { lo = { sucursal: v.sucursalCanonico, marca, unidades: 0, facturacion: 0, conPrecio: 0 }; local.set(v.sucursalCanonico, lo); }
+    if (!lo) { lo = { sucursal: v.sucursalCanonico, marca, unidades: 0, facturacion: 0, conPrecio: 0, margen: 0 }; local.set(v.sucursalCanonico, lo); }
     lo.unidades += v.unidades;
     lo.facturacion += fact;
+    lo.margen += margenRow;
     if (precio > 0) lo.conPrecio += v.unidades;
   }
 
@@ -102,9 +129,18 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
     p.acumulado = total ? acc / total : 0;
     p.clase = cumAntes < 0.8 ? "A" : cumAntes < 0.95 ? "B" : "C";
     abc[p.clase === "A" ? "a" : p.clase === "B" ? "b" : "c"]++;
+    // Margen bruto del producto (costo de receta constante por SKU).
+    const cu = costoPorSku.get(p.sku);
+    if (cu != null && cu > 0) {
+      p.costoUnit = cu; p.tieneCosto = true;
+      p.margen = p.facturacion - cu * p.unidades;
+      p.margenPct = p.facturacion ? p.margen / p.facturacion : 0;
+    } else {
+      p.tieneCosto = false;
+    }
   }
   const porLocal = Array.from(local.values())
-    .map((l) => ({ sucursal: l.sucursal, marca: l.marca, unidades: l.unidades, facturacion: l.facturacion, cobertura: l.unidades ? l.conPrecio / l.unidades : 0 }))
+    .map((l) => ({ sucursal: l.sucursal, marca: l.marca, unidades: l.unidades, facturacion: l.facturacion, cobertura: l.unidades ? l.conPrecio / l.unidades : 0, margen: l.margen }))
     .sort((a, b) => b.facturacion - a.facturacion);
 
   const marcaMap = new Map<string, FactMarca>();
@@ -126,6 +162,9 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
     unidadesConPrecio,
     cobertura: unidades ? unidadesConPrecio / unidades : 0,
     ticketProm: unidadesConPrecio ? total / unidadesConPrecio : 0,
+    margenTotal,
+    facturacionConCosto,
+    coberturaCosto: total ? facturacionConCosto / total : 0,
     abc,
     porProducto,
     porLocal,

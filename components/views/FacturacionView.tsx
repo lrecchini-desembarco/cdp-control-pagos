@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 
-interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; }
-interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; }
+interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; }
+interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; margen: number; }
 interface FactMarca { marca: string; unidades: number; facturacion: number; }
 interface FactTurno { turno: string; unidades: number; facturacion: number; }
 interface Datos {
   ok: boolean; source: string; ventasSource?: string; preciosSource?: string; refFecha: string;
   total: number; unidades: number; unidadesConPrecio: number; cobertura: number; ticketProm: number;
+  margenTotal: number; facturacionConCosto: number; coberturaCosto: number;
   abc: { a: number; b: number; c: number };
   porProducto: FactProducto[]; porLocal: FactLocal[]; porMarca: FactMarca[]; porTurno: FactTurno[];
 }
@@ -72,11 +73,11 @@ export default function FacturacionView() {
 
   function exportar() {
     if (tab === "locales") {
-      descargarCSV("facturacion-locales", ["Local", "Marca", "Unidades", "Facturación estimada", "Cobertura %"],
-        locales.map((l) => [l.sucursal, marcaLabel(l.marca), l.unidades, Math.round(l.facturacion), (l.cobertura * 100).toFixed(0)]));
+      descargarCSV("facturacion-locales", ["Local", "Marca", "Unidades", "Facturación estimada", "Margen bruto", "Cobertura %"],
+        locales.map((l) => [l.sucursal, marcaLabel(l.marca), l.unidades, Math.round(l.facturacion), Math.round(l.margen), (l.cobertura * 100).toFixed(0)]));
     } else if (tab === "productos") {
-      descargarCSV("facturacion-productos", ["SKU", "Producto", "Marca", "Unidades", "Precio", "Facturación estimada"],
-        productos.map((p) => [p.sku, p.nombre, marcaLabel(p.marca), p.unidades, Math.round(p.precio), Math.round(p.facturacion)]));
+      descargarCSV("facturacion-productos", ["SKU", "Producto", "Marca", "Clase ABC", "Unidades", "Precio", "Facturación estimada", "Margen bruto", "Margen %"],
+        productos.map((p) => [p.sku, p.nombre, marcaLabel(p.marca), p.clase ?? "", p.unidades, Math.round(p.precio), Math.round(p.facturacion), p.tieneCosto ? Math.round(p.margen ?? 0) : "", p.tieneCosto ? Math.round((p.margenPct ?? 0) * 100) : ""]));
     } else {
       descargarCSV("facturacion-marcas", ["Marca", "Unidades", "Facturación estimada"],
         (d?.porMarca ?? []).map((m) => [marcaLabel(m.marca), m.unidades, Math.round(m.facturacion)]));
@@ -107,15 +108,17 @@ export default function FacturacionView() {
           <b className="text-action-700">Estimada:</b> unidades reales × <b>precio efectivo</b> (última venta registrada por Tango), no el
           importe exacto de cada comanda. Es muy fiel para períodos recientes. La facturación <b>exacta</b> se activa cuando Sistemas
           exponga <code className="rounded bg-paper px-1">IMPORTE_NETO</code> (ya está el SQL listo) — y esta pantalla la toma sin cambios.
+          El <b>margen bruto</b> = facturación − costo de receta (del módulo Costos); solo cubre lo que tiene receta cargada (mirá la cobertura).
         </p>
       </Card>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Facturación estimada" value={d ? money(d.total) : "—"} tone="ok" sub="últimos 30 días" />
-        <Kpi label="Unidades vendidas" value={d ? int(d.unidades) : "—"} />
-        <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub="precio promedio ponderado" />
-        <Kpi label="Cobertura" value={d ? `${Math.round(d.cobertura * 100)}%` : "—"} tone={d && d.cobertura < 0.9 ? "warn" : undefined} sub="unidades con precio" />
+        <Kpi label="Margen bruto estimado" value={d ? money(d.margenTotal) : "—"} tone={d ? "ok" : undefined}
+          sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} />
+        <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub={d ? `${int(d.unidades)} unidades` : "precio promedio"} />
+        <Kpi label="Cobertura precio" value={d ? `${Math.round(d.cobertura * 100)}%` : "—"} tone={d && d.cobertura < 0.9 ? "warn" : undefined} sub="unidades con precio" />
       </div>
 
       {/* Facturación por turno */}
@@ -178,7 +181,7 @@ export default function FacturacionView() {
                 <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                   <th className="px-4 py-2 font-medium">#</th><th className="px-3 py-2 font-medium">Producto</th>
                   <th className="px-3 py-2 text-right font-medium">Unidades</th><th className="px-3 py-2 text-right font-medium">Precio</th>
-                  <th className="px-3 py-2 font-medium">Facturación estimada</th>
+                  <th className="px-3 py-2 font-medium">Facturación estimada</th><th className="px-3 py-2 text-right font-medium">Margen bruto</th>
                 </tr></thead>
                 <tbody>
                   {productos.slice(0, LIMITE).map((p, i) => (
@@ -196,6 +199,11 @@ export default function FacturacionView() {
                           <span className="font-mono tnum font-medium text-ink">{money(p.facturacion)}</span>
                         </div>
                       </td>
+                      <td className="px-3 py-2 text-right">
+                        {p.tieneCosto
+                          ? <span className={`font-mono tnum font-medium ${(p.margen ?? 0) < 0 ? "text-bad" : "text-ok"}`}>{money(p.margen ?? 0)} <span className="text-2xs text-faint">{Math.round((p.margenPct ?? 0) * 100)}%</span></span>
+                          : <span className="text-2xs text-faint" title="No hay receta cargada para costear este producto">sin receta</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -210,7 +218,7 @@ export default function FacturacionView() {
               <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                 <th className="px-4 py-2 font-medium">#</th><th className="px-3 py-2 font-medium">Local</th>
                 <th className="px-3 py-2 text-right font-medium">Unidades</th><th className="px-3 py-2 font-medium">Facturación estimada</th>
-                <th className="px-3 py-2 text-right font-medium">Cobertura</th>
+                <th className="px-3 py-2 text-right font-medium">Margen bruto</th><th className="px-3 py-2 text-right font-medium">Cobertura</th>
               </tr></thead>
               <tbody>
                 {locales.map((l, i) => (
@@ -224,6 +232,7 @@ export default function FacturacionView() {
                         <span className="font-mono tnum font-medium text-ink">{money(l.facturacion)}</span>
                       </div>
                     </td>
+                    <td className="px-3 py-2 text-right font-mono tnum text-ok">{l.margen ? money(l.margen) : "—"}</td>
                     <td className="px-3 py-2 text-right"><span className={`text-2xs tnum ${l.cobertura < 0.9 ? "text-warn" : "text-faint"}`}>{Math.round(l.cobertura * 100)}%</span></td>
                   </tr>
                 ))}
