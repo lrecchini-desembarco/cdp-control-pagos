@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAlertas } from "@/lib/alertas";
-import { dataSourceName } from "@/lib/sources";
+import { dataSourceName, pedidosSourceName } from "@/lib/sources";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const { alertas, silenciadas, resumen } = await getAlertas();
-    return NextResponse.json({ ok: true, source: dataSourceName(), alertas, silenciadas, resumen });
+    return NextResponse.json({ ok: true, source: dataSourceName(), pedidosSource: pedidosSourceName(), alertas, silenciadas, resumen });
   } catch (e) {
     console.error("[alertas] error:", e);
     return NextResponse.json(

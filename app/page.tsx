@@ -3,6 +3,7 @@ import { getCruce } from "@/lib/cruce";
 import { getMapeos } from "@/lib/mapeos-store";
 import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
+import { pedidosSourceName } from "@/lib/sources";
 import { Card } from "@/components/ui/primitives";
 import type { CruceRow } from "@/lib/types";
 
@@ -18,6 +19,7 @@ export default async function Page() {
   }
   const mapeos = await getMapeos();
   const alertas = resumenAlertas(detectarAlertas(cruce, mapeos));
+  const pedidosMock = pedidosSourceName() === "mock"; // pedidos simulados => desvíos no reales
 
   const ultimaFecha = cruce.map((r) => r.fecha).sort().reverse()[0] ?? "—";
   const hoy = cruce.filter((r) => r.fecha === ultimaFecha);
@@ -51,6 +53,17 @@ export default async function Page() {
           <p className="mt-1 text-xs text-muted">{fuenteError}</p>
           <p className="mt-1 text-2xs text-faint">
             Configurá las variables de entorno (Raven + Tango) o usá <span className="font-mono">DATA_SOURCE=mock</span> para desarrollo. Ver <span className="font-mono">README</span> / <span className="font-mono">docs/datos.md</span>.
+          </p>
+        </Card>
+      )}
+
+      {/* Aviso: pedidos simulados => Desvío neto / Líneas a revisar / alertas NO son reales */}
+      {pedidosMock && !fuenteError && (
+        <Card className="border-l-4 border-l-warn/60 bg-warn/5 p-3">
+          <p className="text-xs text-ink">
+            <b className="text-warn">Modo demo:</b> los pedidos al CDP son <b>simulados</b> — las ventas sí son reales de Tango,
+            pero el <b>Desvío neto</b>, las <b>Líneas a revisar</b> y las alertas de quiebre/sobre-pedido salen del pedido y
+            <b> no representan la operación real</b> hasta activar <code className="rounded bg-paper px-1">PEDIDOS_SOURCE=live</code>.
           </p>
         </Card>
       )}

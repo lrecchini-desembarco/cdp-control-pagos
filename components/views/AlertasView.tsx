@@ -45,6 +45,7 @@ export default function AlertasView() {
 
   const [notifBusy, setNotifBusy] = useState(false);
   const [notifMsg, setNotifMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pedidosMock, setPedidosMock] = useState(false); // pedidos simulados => desvíos no reales
 
   async function enviarResumen() {
     setNotifBusy(true);
@@ -76,6 +77,7 @@ export default function AlertasView() {
       setAlertas(j.alertas as Alerta[]);
       setSilenciadas((j.silenciadas as Alerta[]) ?? []);
       setResumen(j.resumen as ResumenAlertas);
+      setPedidosMock(j.pedidosSource === "mock");
       setStatus("ok");
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : "Error desconocido.");
@@ -128,6 +130,17 @@ export default function AlertasView() {
           )}
         </div>
       </div>
+
+      {/* Aviso: pedidos simulados => quiebres/sobrepedidos NO son reales */}
+      {pedidosMock && status === "ok" && (
+        <Card className="border-l-4 border-l-warn/60 bg-warn/5 p-3">
+          <p className="text-xs text-ink">
+            <b className="text-warn">Modo demo:</b> los pedidos al CDP son <b>simulados</b> — las ventas sí son reales de Tango,
+            pero para pedidos reales de Raven falta <code className="rounded bg-paper px-1">PEDIDOS_SOURCE=live</code>. Mientras tanto,
+            las alertas de <b>quiebre y sobre-pedido no representan la operación real</b> (las de punto ciego sí).
+          </p>
+        </Card>
+      )}
 
       {/* KPIs por severidad */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
