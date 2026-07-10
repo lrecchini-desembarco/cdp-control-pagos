@@ -158,8 +158,8 @@ export default function FacturacionView() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? moneyC(d.total) : "—"} title={d ? money(d.total) : undefined} tone="ok" sub={`últimos ${dias} días`} sensible />
-        <Kpi label={d?.exacta ? "Margen bruto" : "Margen bruto estimado"} value={d ? moneyC(d.margenTotal) : "—"} title={d ? money(d.margenTotal) : undefined} tone={d ? "ok" : undefined}
+        <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? moneyC(d.total) : "—"} full={d ? money(d.total) : undefined} tone="ok" sub={`últimos ${dias} días`} sensible />
+        <Kpi label={d?.exacta ? "Margen bruto" : "Margen bruto estimado"} value={d ? moneyC(d.margenTotal) : "—"} full={d ? money(d.margenTotal) : undefined} tone={d ? "ok" : undefined}
           sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} sensible />
         <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub={d ? `${int(d.unidades)} unidades` : "precio promedio"} sensible />
         <Kpi label="Cobertura precio" value={d ? `${Math.round(d.cobertura * 100)}%` : "—"} tone={d && d.cobertura < 0.9 ? "warn" : undefined} sub="unidades con precio" />
@@ -169,9 +169,9 @@ export default function FacturacionView() {
       {d && d.porTurno.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {d.porTurno.map((t) => (
-            <Card key={t.turno} className="p-3">
+            <Card key={t.turno} className="group p-3">
               <p className="text-2xs uppercase tracking-wide text-faint">{TURNO_LABEL[t.turno] ?? t.turno}</p>
-              <p className="mt-0.5 font-display text-lg font-semibold text-ink monto">{moneyC(t.facturacion)}</p>
+              <p className="mt-0.5 font-display text-lg font-semibold text-ink"><MontoDual compact={moneyC(t.facturacion)} full={money(t.facturacion)} sensible /></p>
               <p className="text-2xs text-faint">{int(t.unidades)} u · {d.total ? Math.round((t.facturacion / d.total) * 100) : 0}% del total</p>
             </Card>
           ))}
@@ -346,9 +346,9 @@ export default function FacturacionView() {
         ) : (
           <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
             {(d?.porMarca ?? []).map((m) => (
-              <Card key={m.marca} className="p-4">
+              <Card key={m.marca} className="group p-4">
                 <p className="text-2xs uppercase tracking-wide text-faint">{marcaLabel(m.marca)}</p>
-                <p className="mt-0.5 font-display text-2xl font-semibold text-ok monto">{moneyC(m.facturacion)}</p>
+                <p className="mt-0.5 font-display text-2xl font-semibold text-ok"><MontoDual compact={moneyC(m.facturacion)} full={money(m.facturacion)} sensible /></p>
                 <p className="text-2xs text-faint">{int(m.unidades)} unidades · {d && d.total ? Math.round((m.facturacion / d.total) * 100) : 0}% del total</p>
               </Card>
             ))}
@@ -486,13 +486,28 @@ function TendenciaChart({ dias, metric }: { dias: FactDia[]; metric: "facturacio
   );
 }
 
-function Kpi({ label, value, sub, tone, title, sensible }: { label: string; value: string; sub?: string; tone?: "ok" | "warn" | "bad"; title?: string; sensible?: boolean }) {
+function Kpi({ label, value, sub, tone, full, sensible }: { label: string; value: string; sub?: string; tone?: "ok" | "warn" | "bad"; full?: string; sensible?: boolean }) {
   const c = tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : "text-ink";
   return (
-    <Card className="p-3">
+    <Card className="group p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${c} ${sensible ? "monto" : ""}`} title={sensible ? undefined : title}>{value}</p>
+      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${c}`}>
+        {full
+          ? <MontoDual compact={value} full={full} sensible={sensible} />
+          : <span className={sensible ? "monto" : ""}>{value}</span>}
+      </p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
+  );
+}
+
+// Monto abreviado ("$5,13 mil M") que, al pasar el mouse por la card (grupo), muestra
+// el número COMPLETO en el mismo lugar (no en tooltip). Respeta la privacidad (.monto).
+function MontoDual({ compact, full, sensible }: { compact: string; full: string; sensible?: boolean }) {
+  return (
+    <span className={sensible ? "monto" : ""}>
+      <span className="group-hover:hidden">{compact}</span>
+      <span className="hidden whitespace-nowrap text-[0.7em] group-hover:inline">{full}</span>
+    </span>
   );
 }
