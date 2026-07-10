@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 
-interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; }
+interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; tieneReceta?: boolean; }
 interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; margen: number; }
 interface FactMarca { marca: string; unidades: number; facturacion: number; }
 interface FactTurno { turno: string; unidades: number; facturacion: number; }
@@ -89,9 +89,12 @@ export default function FacturacionView() {
   // si no está en Tango, en vez de un filtro que siempre da 0).
   const marcasChips = useMemo(() => ["", ...(d?.porMarca ?? []).map((m) => m.marca)], [d]);
 
-  // Productos que facturan pero NO tienen receta (el hueco del margen). Ordenados por $.
-  const sinReceta = useMemo(() => productos.filter((p) => p.tieneCosto === false).sort((a, b) => b.facturacion - a.facturacion), [productos]);
+  // Productos que facturan pero NO tienen receta cargada (el hueco del margen). Ordenados por $.
+  // OJO: "sin receta" = la receta no existe. Los que SÍ tienen receta pero le falta un insumo
+  // en el maestro NO van acá: son "receta incompleta" (existen, hay que completarlas, no crearlas).
+  const sinReceta = useMemo(() => productos.filter((p) => !p.tieneReceta).sort((a, b) => b.facturacion - a.facturacion), [productos]);
   const factSinReceta = useMemo(() => sinReceta.reduce((s, p) => s + p.facturacion, 0), [sinReceta]);
+  const incompletas = useMemo(() => productos.filter((p) => p.tieneReceta && !p.tieneCosto), [productos]);
 
   const totalFilt = useMemo(() => (tab === "locales" ? locales : tab === "sin-receta" ? sinReceta : productos).reduce((s, x) => s + x.facturacion, 0), [tab, locales, productos, sinReceta]);
 
@@ -269,7 +272,9 @@ export default function FacturacionView() {
                       <td className="px-3 py-2 text-right">
                         {p.tieneCosto
                           ? <span className={`font-mono tnum font-medium ${(p.margen ?? 0) < 0 ? "text-bad" : "text-ok"}`}><span className="monto">{money(p.margen ?? 0)}</span> <span className="text-2xs text-faint">{Math.round((p.margenPct ?? 0) * 100)}%</span></span>
-                          : <span className="text-2xs text-faint" title="No hay receta cargada para costear este producto">sin receta</span>}
+                          : p.tieneReceta
+                            ? <span className="text-2xs text-warn" title="Tiene receta cargada pero le falta un insumo en el maestro para poder costearla. Completá el insumo en Insumos.">receta incompleta</span>
+                            : <span className="text-2xs text-faint" title="No hay ninguna receta cargada para este producto">sin receta</span>}
                       </td>
                     </tr>
                   ))}
@@ -311,9 +316,10 @@ export default function FacturacionView() {
           sinReceta.length === 0 ? <EmptyState title="Todo con receta" desc="Todos los productos que facturan ya tienen receta cargada. 👏" /> : (
             <>
             <p className="border-b border-line px-4 py-2.5 text-2xs text-muted">
-              <b className="text-warn">Falta receta:</b> estos productos facturan pero no se pueden costear (por eso el margen cubre solo una parte).
+              <b className="text-warn">Sin receta:</b> estos productos facturan pero <b>no tienen ninguna receta cargada</b> (no se pueden costear).
               Suman <b className="monto">{money(factSinReceta)}</b>{d && d.total ? ` (${Math.round((factSinReceta / d.total) * 100)}% de la facturación)` : ""}. Cargá su receta en{" "}
-              <Link href="/recetas" className="font-medium text-action hover:underline">Recetas</Link> — de arriba hacia abajo, así sumás margen empezando por lo que más factura.
+              <Link href="/recetas" className="font-medium text-action hover:underline">Recetas</Link> — de arriba hacia abajo, empezando por lo que más factura.
+              {incompletas.length > 0 && <> Aparte hay <b>{incompletas.length}</b> con <b className="text-warn">receta incompleta</b> (tienen receta pero les falta un insumo en el maestro): aparecen en la lista de <b>Productos</b> marcadas y no suman margen hasta completarlas.</>}
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">

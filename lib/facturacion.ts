@@ -27,7 +27,8 @@ export interface FactProducto {
   costoUnit?: number;        // costo de receta por unidad (con impuestos), si hay receta
   margen?: number;           // margen bruto total = facturación − costo × unidades
   margenPct?: number;        // margen / facturación
-  tieneCosto?: boolean;      // false = sin receta (no se puede calcular margen)
+  tieneCosto?: boolean;      // true = receta completa y costeable (hay margen real)
+  tieneReceta?: boolean;     // existe receta para el SKU, aunque esté incompleta (falta insumo)
 }
 export interface FactTurno { turno: string; unidades: number; facturacion: number; }
 export interface FactDia { fecha: string; unidades: number; facturacion: number; }
@@ -79,6 +80,10 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     // Mejor tratarla como "sin costo" (no cubre margen) que mostrar un margen falso.
     if (cost.costoConImp > 0 && cost.nFaltantes === 0) costoPorSku.set(r.skuTango, cost.costoConImp);
   }
+  // SKUs que TIENEN receta cargada (aunque le falte algún insumo). Distingue
+  // "sin receta" (no existe) de "receta incompleta" (existe pero no costeable) —
+  // para el usuario no es lo mismo (una hay que cargarla, la otra completarla).
+  const skusConReceta = new Set(recetas.map((r) => String(r.skuTango)));
 
   // Precio por SKU×local; y fallback: precio del SKU en cualquier local (mejora cobertura).
   const pLocal = new Map<string, number>();
@@ -155,6 +160,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     p.acumulado = total ? acc / total : 0;
     p.clase = cumAntes < 0.8 ? "A" : cumAntes < 0.95 ? "B" : "C";
     abc[p.clase === "A" ? "a" : p.clase === "B" ? "b" : "c"]++;
+    p.tieneReceta = skusConReceta.has(p.sku);
     // Margen bruto del producto (costo de receta constante por SKU).
     const cu = costoPorSku.get(p.sku);
     if (cu != null && cu > 0) {
