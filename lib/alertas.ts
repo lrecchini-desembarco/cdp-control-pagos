@@ -18,8 +18,15 @@ const DIAS_CRONICO = 5;     // repetirse N días lo vuelve crónico
 
 const PESO: Record<Severidad, number> = { critica: 3, alta: 2, media: 1, info: 0 };
 
-const desvio = (r: CruceRow) =>
-  r.pedidoCdp ? (r.pedidoCdp - r.ventaEquiv) / r.pedidoCdp : 0;
+// El desvío (pedido vs venta) por fila. Cuando NO pidió nada (pedidoCdp=0) hay que
+// distinguir dos casos: "vendió sin pedir un insumo que sí se le suele pedir" (quiebre
+// real, -100%) vs "no tenemos el dato de pedido de ese insumo" (los pedidos de Raven
+// cubren pocos productos) -> eso NO es quiebre, es falta de dato. Por eso `desvio`
+// recibe el set de claves que SÍ se piden en la ventana (ver detectarAlertas).
+function desvioCon(r: CruceRow, sePide: Set<string>): number {
+  if (r.pedidoCdp) return (r.pedidoCdp - r.ventaEquiv) / r.pedidoCdp;
+  return r.ventaEquiv > 0 && sePide.has(`${r.sucursal}::${r.codigoCdp}`) ? -1 : 0;
+}
 
 /**
  * Motor de alertas: recorre el cruce y los mapeos y devuelve todo lo que
@@ -31,6 +38,13 @@ export function detectarAlertas(cruce: CruceRow[], mapeos: MapeosData, sinMovimi
   const fechas = Array.from(new Set(cruce.map((r) => r.fecha))).sort().reverse();
   const ultima = fechas[0];
   const alertas: Alerta[] = [];
+
+  // Claves (sucursal::insumo) que SÍ se piden al CDP en la ventana. Sirve para no
+  // confundir "vendió sin pedir algo que sí se le pide" (quiebre) con "no hay dato
+  // de pedido de ese insumo" (los pedidos cubren pocos productos).
+  const sePide = new Set<string>();
+  for (const r of cruce) if (r.pedidoCdp > 0) sePide.add(`${r.sucursal}::${r.codigoCdp}`);
+  const desvio = (r: CruceRow) => desvioCon(r, sePide);
 
   // ── Regla 1 y 2 · Desvíos del último día ────────────────────────────────
   // Lo accionable "hoy": dónde hay que mover un pedido ya mismo.

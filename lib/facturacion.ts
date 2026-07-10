@@ -72,8 +72,11 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
   const idxIns = indiceInsumos(insumos);
   const costoPorSku = new Map<string, number>();
   for (const r of recetas) {
-    const c = costearReceta(r, idxIns).costoConImp;
-    if (c > 0) costoPorSku.set(r.skuTango, c);
+    const cost = costearReceta(r, idxIns);
+    // Solo recetas COMPLETAS: si falta algún insumo en el maestro, ese componente
+    // se costea $0 y el costo total queda sub-valuado -> el margen saldría inflado.
+    // Mejor tratarla como "sin costo" (no cubre margen) que mostrar un margen falso.
+    if (cost.costoConImp > 0 && cost.nFaltantes === 0) costoPorSku.set(r.skuTango, cost.costoConImp);
   }
 
   // Precio por SKU×local; y fallback: precio del SKU en cualquier local (mejora cobertura).

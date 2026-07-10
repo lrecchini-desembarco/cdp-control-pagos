@@ -14,8 +14,12 @@ export const SUCURSALES: Sucursal[] = [
   { ravenCode: "1020", canonico: "DS-URQ", nombre: "Villa Urquiza", brand: "desembarco", activa: true },
   { ravenCode: "1022", canonico: "DS-RAM", nombre: "Ramos Mejía", brand: "desembarco", activa: true },
   { ravenCode: "1042", canonico: "DS-CAS", nombre: "Castelar", brand: "desembarco", activa: false },
-  { ravenCode: "2003", canonico: "MT-PIL", nombre: "Pilar", brand: "tasty", activa: true },
-  { ravenCode: "2008", canonico: "MT-CAB", nombre: "Caballito", brand: "tasty", activa: true },
+  // Nombre CON prefijo "Mrt" para que matchee su gemelo real en Tango ("Mrt Pilar",
+  // "Mrt Caballito") y NO se cruce con el local El Desembarco del mismo nombre
+  // ("Pilar"/"Caballito", que existen aparte). El corto los fusionaba con la marca
+  // equivocada y misbrandeaba el pedido. Ver lib/sucursal-key + brandDeSucursal.
+  { ravenCode: "2003", canonico: "MT-PIL", nombre: "Mrt Pilar", brand: "tasty", activa: true },
+  { ravenCode: "2008", canonico: "MT-CAB", nombre: "Mrt Caballito", brand: "tasty", activa: true },
   // Sucursal nueva que Raven ya reporta pero todavía sin código canónico:
   // está activa y vendiendo, pero no entra al cruce -> punto ciego (genera alerta).
   { ravenCode: "2011", canonico: "", nombre: "Nordelta", brand: "tasty", activa: true },
