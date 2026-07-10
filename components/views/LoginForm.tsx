@@ -21,8 +21,9 @@ function GoogleG() {
   );
 }
 
-export default function LoginForm({ error }: { error?: string }) {
-  const [mostrarClave, setMostrarClave] = useState(false);
+// `googleOn` lo decide el server (si están las credenciales de Google). Mientras esté
+// apagado, el login es el de siempre (email + clave) y no aparece nada de Google.
+export default function LoginForm({ error, googleOn = false }: { error?: string; googleOn?: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,6 +48,34 @@ export default function LoginForm({ error }: { error?: string }) {
     }
   }
 
+  const formClave = (
+    <form onSubmit={entrar} className="space-y-3">
+      <Field label="Email">
+        <input
+          type="email"
+          autoFocus
+          className={inputClass}
+          placeholder="tu.email@eldesembarco.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </Field>
+      <Field label="Clave" hint="Clave genérica provista por el administrador.">
+        <input
+          type="password"
+          className={inputClass}
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </Field>
+      {err && <p className="text-xs text-bad">{err}</p>}
+      <Button type="submit" disabled={busy || !email || !password} className="w-full">
+        {busy ? "Ingresando…" : "Ingresar"}
+      </Button>
+    </form>
+  );
+
   return (
     <div className="grid min-h-screen place-items-center bg-paper px-4">
       <Card className="w-full max-w-sm p-6">
@@ -60,59 +89,25 @@ export default function LoginForm({ error }: { error?: string }) {
           </div>
         </div>
 
-        <p className="mb-4 text-sm text-muted">Ingresá con tu cuenta de El Desembarco.</p>
-
-        {/* Acceso con Google */}
-        <a
-          href="/api/auth/google/start"
-          className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-ink/5"
-        >
-          <GoogleG />
-          Entrar con Google
-        </a>
-
-        {err && <p className="mt-3 text-xs text-bad">{err}</p>}
-
-        <p className="mt-3 text-2xs text-faint">
-          Solo cuentas <b>@eldesembarco.com</b>. Otras cuentas se rechazan.
-        </p>
-
-        {/* Respaldo por clave (temporal, hasta confirmar que Google anda) */}
-        <div className="mt-5 border-t border-line pt-4">
-          {!mostrarClave ? (
-            <button
-              type="button"
-              onClick={() => setMostrarClave(true)}
-              className="text-2xs text-faint hover:text-muted hover:underline"
+        {googleOn ? (
+          <>
+            <p className="mb-4 text-sm text-muted">Ingresá con tu cuenta de El Desembarco.</p>
+            <a
+              href="/api/auth/google/start"
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-ink/5"
             >
-              Acceso con clave (respaldo)
-            </button>
-          ) : (
-            <form onSubmit={entrar} className="space-y-3">
-              <Field label="Email">
-                <input
-                  type="email"
-                  className={inputClass}
-                  placeholder="tu.email@eldesembarco.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </Field>
-              <Field label="Clave" hint="Clave genérica provista por el administrador.">
-                <input
-                  type="password"
-                  className={inputClass}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </Field>
-              <Button type="submit" disabled={busy || !email || !password} className="w-full">
-                {busy ? "Ingresando…" : "Ingresar con clave"}
-              </Button>
-            </form>
-          )}
-        </div>
+              <GoogleG />
+              Entrar con Google
+            </a>
+            {err && <p className="mt-3 text-xs text-bad">{err}</p>}
+            <p className="mt-3 text-2xs text-faint">
+              Solo cuentas <b>@eldesembarco.com</b>. Otras cuentas se rechazan.
+            </p>
+            <div className="mt-5 border-t border-line pt-4">{formClave}</div>
+          </>
+        ) : (
+          formClave
+        )}
       </Card>
     </div>
   );
