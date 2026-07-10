@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
 import { sesionPuedeVer } from "@/lib/roles-store";
 import { getRankingLocales, getProductosDormidos, rangoActividad } from "@/lib/actividad";
-import { dataSourceName } from "@/lib/sources";
+import { dataSourceName, ventasSourceName, preciosSourceName } from "@/lib/sources";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       getRankingLocales({ desde, hasta }),
       getProductosDormidos(umbral),
     ]);
-    return NextResponse.json({ ok: true, source: dataSourceName(), ranking, dormidos });
+    return NextResponse.json({ ok: true, source: dataSourceName(), ventasSource: ventasSourceName(), preciosSource: preciosSourceName(), ranking, dormidos });
   } catch (e) {
     return NextResponse.json(
       { ok: false, source: dataSourceName(), error: e instanceof Error ? e.message : "No se pudo leer la actividad." },

@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -48,7 +48,7 @@ export const ROLES: Record<Rol, RolInfo> = {
   "apps-gerencia": {
     label: "Apps Gerencia",
     // Reportes de gerencia: Ventas por turno, Precios y Compras vs Ventas.
-    nav: ["/ventas", "/precios", "/compras", "/organigrama", "/guia"],
+    nav: ["/ventas", "/precios", "/compras", "/facturacion", "/actividad", "/organigrama", "/guia"],
     gestionaUsuarios: false,
   },
   pendiente: {
@@ -102,6 +102,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉", section: "Ventas y compras", fresh: "carga" },
   { href: "/compras", label: "Compras vs Ventas", icon: "⇲", section: "Ventas y compras", fresh: "carga" },
   { href: "/actividad", label: "Actividad de ventas", icon: "◔", section: "Ventas y compras", fresh: "vivo" },
+  { href: "/facturacion", label: "Facturación", icon: "≣", section: "Ventas y compras", fresh: "vivo" },
   // Costos y precios (módulo Costos) — se cargan a mano (Excel), hoy vigentes
   { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos", fresh: "carga" },
   { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos", fresh: "carga" },

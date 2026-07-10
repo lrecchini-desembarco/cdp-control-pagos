@@ -12,7 +12,7 @@ interface ProductoDormido {
   sku: string; nombre: string; sucursal: string; marca: string; precio: number; ultimaVenta: string; dias: number;
 }
 interface Datos {
-  ok: boolean; source: string;
+  ok: boolean; source: string; ventasSource?: string; preciosSource?: string;
   ranking: { refFecha: string; ventana: { desde: string; hasta: string }; locales: LocalActividad[]; totalUnidades: number; sinMovimiento: number };
   dormidos: { refFecha: string; umbralDias: number; items: ProductoDormido[]; totalPares: number };
 }
@@ -51,7 +51,7 @@ export default function ActividadView() {
   }
   useEffect(() => { cargar(); /* eslint-disable-next-line */ }, []);
 
-  const esMock = d?.source === "mock";
+  const esMock = d?.ventasSource === "mock" || d?.preciosSource === "mock";
 
   const locales = useMemo(() => {
     let l = d?.ranking.locales ?? [];
