@@ -56,11 +56,14 @@ export interface Facturacion {
   porDia: FactDia[];
 }
 
-export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<Facturacion> {
+export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { sucursal?: string }): Promise<Facturacion> {
   const { ventas } = getSources();
-  const [data, precios, recetas, insumos] = await Promise.all([
+  const [dataRaw, precios, recetas, insumos] = await Promise.all([
     ventas.getVentas(q), getPreciosSource().getPrecios(), getRecetas(), getInsumos(),
   ]);
+  // Drill-down: si viene una sucursal, se filtran las ventas a ese local y TODO el
+  // resto del cálculo (productos, margen, ABC, turno, día) queda scopeado a ese local.
+  const data = opts?.sucursal ? dataRaw.filter((v) => v.sucursalCanonico === opts.sucursal) : dataRaw;
 
   // Costo de receta por SKU de venta (con impuestos), del módulo Costos. Sirve para el
   // margen bruto real: solo cubre lo que tenga receta cargada (se reporta cobertura).

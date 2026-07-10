@@ -42,6 +42,17 @@ export default function FacturacionView() {
   const [q, setQ] = useState("");
   const [dias, setDias] = useState(30);
   const [tendMetric, setTendMetric] = useState<"facturacion" | "unidades">("facturacion");
+  const [localSel, setLocalSel] = useState<string | null>(null);
+  const [localData, setLocalData] = useState<Datos | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  async function abrirLocal(sucursal: string) {
+    setLocalSel(sucursal); setLocalData(null); setLocalLoading(true);
+    try {
+      const j = await (await fetch(`/api/facturacion?dias=${dias}&sucursal=${encodeURIComponent(sucursal)}`)).json();
+      if (j.ok) setLocalData(j);
+    } finally { setLocalLoading(false); }
+  }
 
   async function cargar(d = dias) {
     setEstado("loading");
@@ -267,9 +278,10 @@ export default function FacturacionView() {
               </tr></thead>
               <tbody>
                 {locales.map((l, i) => (
-                  <tr key={l.sucursal} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                  <tr key={l.sucursal} onClick={() => abrirLocal(l.sucursal)} title="Ver detalle del local"
+                    className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04]">
                     <td className="px-4 py-2 text-2xs text-faint tnum">{i + 1}</td>
-                    <td className="px-3 py-2"><span className="font-medium text-ink">{l.sucursal}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(l.marca)}</span></td>
+                    <td className="px-3 py-2"><span className="font-medium text-ink">{l.sucursal}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(l.marca)}</span><span className="ml-1.5 text-2xs text-faint">›</span></td>
                     <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(l.unidades)}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
@@ -332,6 +344,83 @@ export default function FacturacionView() {
           </div>
         )}
       </Card>
+
+      {localSel && (
+        <LocalModal sucursal={localSel} data={localData} loading={localLoading} dias={dias} onClose={() => setLocalSel(null)} />
+      )}
+    </div>
+  );
+}
+
+// Detalle de un local: KPIs, tendencia y productos top — con los mismos datos
+// (getFacturacion filtrado por sucursal). Modal.
+function LocalModal({ sucursal, data, loading, dias, onClose }: { sucursal: string; data: Datos | null; loading: boolean; dias: number; onClose: () => void }) {
+  const marca = data?.porMarca[0]?.marca;
+  const margenPct = data && data.facturacionConCosto ? Math.round((data.margenTotal / data.facturacionConCosto) * 100) : 0;
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
+      <div className="my-6 w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+        <Card className="p-5">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-ink">{sucursal}</h2>
+              <p className="text-2xs text-faint">{marca ? marcaLabel(marca) + " · " : ""}últimos {dias} días · facturación estimada</p>
+            </div>
+            <button onClick={onClose} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted hover:bg-ink/5" aria-label="Cerrar">✕</button>
+          </div>
+
+          {loading || !data ? (
+            <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <MiniKpi label="Facturación" value={money(data.total)} tone="ok" />
+                <MiniKpi label="Margen bruto" value={money(data.margenTotal)} sub={`${margenPct}%`} tone="ok" />
+                <MiniKpi label="Unidades" value={int(data.unidades)} />
+                <MiniKpi label="$ por unidad" value={money(data.ticketProm)} />
+              </div>
+
+              {data.porDia.length > 1 && (
+                <div>
+                  <p className="mb-2 text-2xs font-medium uppercase tracking-wide text-faint">Facturación diaria</p>
+                  <TendenciaChart dias={data.porDia} metric="facturacion" />
+                </div>
+              )}
+
+              <div>
+                <p className="mb-1.5 text-2xs font-medium uppercase tracking-wide text-faint">Top productos de este local</p>
+                <div className="overflow-x-auto rounded-lg border border-line">
+                  <table className="w-full text-left text-sm">
+                    <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                      <th className="px-3 py-2 font-medium">Producto</th><th className="px-3 py-2 text-right font-medium">Unidades</th>
+                      <th className="px-3 py-2 text-right font-medium">Facturación</th><th className="px-3 py-2 text-right font-medium">Margen</th>
+                    </tr></thead>
+                    <tbody>
+                      {data.porProducto.slice(0, 12).map((p) => (
+                        <tr key={p.sku} className="border-b border-line/70 last:border-0">
+                          <td className="px-3 py-1.5"><span className="font-medium text-ink">{p.nombre}</span><span className="ml-1.5 font-mono text-2xs text-faint">{p.sku}</span></td>
+                          <td className="px-3 py-1.5 text-right font-mono tnum text-muted">{int(p.unidades)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono tnum text-ink">{money(p.facturacion)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono tnum text-ok">{p.tieneCosto ? money(p.margen ?? 0) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function MiniKpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "ok" }) {
+  return (
+    <div className="rounded-lg border border-line bg-ink/[0.02] p-2.5">
+      <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
+      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum ${tone === "ok" ? "text-ok" : "text-ink"}`}>{value}{sub && <span className="ml-1 text-2xs font-normal text-faint">{sub}</span>}</p>
     </div>
   );
 }

@@ -25,9 +25,10 @@ export async function GET(req: NextRequest) {
     desde = f[f.length - 1];
     hasta = f[0];
   }
+  const sucursal = req.nextUrl.searchParams.get("sucursal") ?? undefined;
   try {
-    const data = await getFacturacion({ desde, hasta });
-    return NextResponse.json({ ok: true, source: dataSourceName(), ventasSource: ventasSourceName(), preciosSource: preciosSourceName(), ...data });
+    const data = await getFacturacion({ desde, hasta }, sucursal ? { sucursal } : undefined);
+    return NextResponse.json({ ok: true, source: dataSourceName(), ventasSource: ventasSourceName(), preciosSource: preciosSourceName(), sucursal, ...data });
   } catch (e) {
     return NextResponse.json(
       { ok: false, source: dataSourceName(), error: e instanceof Error ? e.message : "No se pudo calcular la facturación." },
