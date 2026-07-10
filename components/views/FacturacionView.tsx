@@ -9,12 +9,13 @@ interface FactProducto { sku: string; nombre: string; marca: string; unidades: n
 interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; margen: number; }
 interface FactMarca { marca: string; unidades: number; facturacion: number; }
 interface FactTurno { turno: string; unidades: number; facturacion: number; }
+interface FactDia { fecha: string; unidades: number; facturacion: number; }
 interface Datos {
   ok: boolean; source: string; ventasSource?: string; preciosSource?: string; refFecha: string;
   total: number; unidades: number; unidadesConPrecio: number; cobertura: number; ticketProm: number;
   margenTotal: number; facturacionConCosto: number; coberturaCosto: number;
   abc: { a: number; b: number; c: number };
-  porProducto: FactProducto[]; porLocal: FactLocal[]; porMarca: FactMarca[]; porTurno: FactTurno[];
+  porProducto: FactProducto[]; porLocal: FactLocal[]; porMarca: FactMarca[]; porTurno: FactTurno[]; porDia: FactDia[];
 }
 
 const TURNO_LABEL: Record<string, string> = { mediodia: "Mediodía", tarde: "Tarde", noche: "Noche" };
@@ -40,6 +41,7 @@ export default function FacturacionView() {
   const [marca, setMarca] = useState("");
   const [q, setQ] = useState("");
   const [dias, setDias] = useState(30);
+  const [tendMetric, setTendMetric] = useState<"facturacion" | "unidades">("facturacion");
 
   async function cargar(d = dias) {
     setEstado("loading");
@@ -148,6 +150,24 @@ export default function FacturacionView() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Tendencia diaria */}
+      {d && d.porDia.length > 1 && (
+        <Card className="p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-2xs font-medium uppercase tracking-wide text-faint">Tendencia diaria</p>
+            <div className="flex gap-1">
+              {([["facturacion", "Facturación"], ["unidades", "Unidades"]] as const).map(([id, label]) => (
+                <button key={id} onClick={() => setTendMetric(id)}
+                  className={`rounded-md border px-2 py-0.5 text-2xs font-medium ${tendMetric === id ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <TendenciaChart dias={d.porDia} metric={tendMetric} />
+        </Card>
       )}
 
       {/* Tabs */}
@@ -308,6 +328,47 @@ export default function FacturacionView() {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+// Tendencia diaria: una sola serie (facturación o unidades) en barras. Sin leyenda
+// (el título la nombra); hover por barra; línea de promedio; último día destacado.
+function TendenciaChart({ dias, metric }: { dias: FactDia[]; metric: "facturacion" | "unidades" }) {
+  const N = dias.length;
+  const vals = dias.map((d) => d[metric]);
+  const max = Math.max(1, ...vals);
+  const avg = vals.reduce((s, v) => s + v, 0) / (N || 1);
+  const W = Math.max(320, N * 20);
+  const H = 128, top = 10, plotH = 88, base = top + plotH;
+  const step = W / N;
+  const barW = Math.min(26, step * 0.62);
+  const fmt = (v: number) => (metric === "facturacion" ? moneyC(v) : int(v));
+  const yAvg = base - (avg / max) * plotH;
+  const labelIdx = new Set([0, N > 2 ? Math.floor(N / 2) : -1, N - 1]);
+  return (
+    <div className="overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: N > 16 ? W / 1.6 : undefined }} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`Tendencia diaria de ${metric}`}>
+        <line x1={0} x2={W} y1={yAvg} y2={yAvg} className="stroke-line" strokeDasharray="3 3" />
+        <text x={W} y={yAvg - 3} textAnchor="end" fontSize="9" className="fill-faint">prom {fmt(avg)}</text>
+        <line x1={0} x2={W} y1={base} y2={base} className="stroke-line" />
+        <g className="text-action">
+          {dias.map((d, i) => {
+            const h = Math.max(1, (d[metric] / max) * plotH);
+            const x = i * step + (step - barW) / 2;
+            return (
+              <rect key={d.fecha} x={x} y={base - h} width={barW} height={h} rx={Math.min(3, barW / 2)}
+                className="fill-current" opacity={0.85}>
+                <title>{fecha(d.fecha)}: {fmt(d[metric])}{i === N - 1 ? " (parcial)" : ""}</title>
+              </rect>
+            );
+          })}
+        </g>
+        {dias.map((d, i) => labelIdx.has(i) ? (
+          <text key={d.fecha} x={i * step + step / 2} y={H - 2} textAnchor="middle" fontSize="9" className="fill-faint">{fecha(d.fecha)}</text>
+        ) : null)}
+        <text x={2} y={top + 1} fontSize="9" className="fill-faint">{fmt(max)}</text>
+      </svg>
     </div>
   );
 }

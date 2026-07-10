@@ -29,6 +29,7 @@ export interface FactProducto {
   tieneCosto?: boolean;      // false = sin receta (no se puede calcular margen)
 }
 export interface FactTurno { turno: string; unidades: number; facturacion: number; }
+export interface FactDia { fecha: string; unidades: number; facturacion: number; }
 export interface FactLocal {
   sucursal: string; marca: string;
   unidades: number; facturacion: number; cobertura: number; // % de sus unidades con precio
@@ -52,6 +53,7 @@ export interface Facturacion {
   porLocal: FactLocal[];
   porMarca: FactMarca[];
   porTurno: FactTurno[];
+  porDia: FactDia[];
 }
 
 export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<Facturacion> {
@@ -84,6 +86,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
   const prod = new Map<string, FactProducto>();
   const local = new Map<string, { sucursal: string; marca: string; unidades: number; facturacion: number; conPrecio: number; margen: number }>();
   const turno = new Map<string, FactTurno>();
+  const dia = new Map<string, FactDia>();
   let refFecha = "";
   let total = 0, unidades = 0, unidadesConPrecio = 0;
   let margenTotal = 0, facturacionConCosto = 0;
@@ -104,6 +107,10 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
     let tu = turno.get(tn);
     if (!tu) { tu = { turno: tn, unidades: 0, facturacion: 0 }; turno.set(tn, tu); }
     tu.unidades += v.unidades; tu.facturacion += fact;
+
+    let di = dia.get(v.fecha);
+    if (!di) { di = { fecha: v.fecha, unidades: 0, facturacion: 0 }; dia.set(v.fecha, di); }
+    di.unidades += v.unidades; di.facturacion += fact;
 
     let pr = prod.get(v.sku);
     if (!pr) { pr = { sku: v.sku, nombre: v.nombre ?? v.sku, marca, unidades: 0, precio, facturacion: 0 }; prod.set(v.sku, pr); }
@@ -153,6 +160,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
 
   const ordenTurno = ["mediodia", "tarde", "noche"];
   const porTurno = Array.from(turno.values()).sort((a, b) => ordenTurno.indexOf(a.turno) - ordenTurno.indexOf(b.turno));
+  const porDia = Array.from(dia.values()).sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   return {
     ventana: q,
@@ -170,5 +178,6 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
     porLocal,
     porMarca,
     porTurno,
+    porDia,
   };
 }
