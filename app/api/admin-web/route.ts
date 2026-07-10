@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readStore, writeStore } from "@/lib/store";
+import { iguales } from "@/lib/auth-cookie";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const secreto = process.env.TUNEL_ADMIN_SECRETO;
-  if (!secreto || req.headers.get("x-tunel-secreto") !== secreto) {
+  if (!secreto || !iguales(req.headers.get("x-tunel-secreto") ?? "", secreto)) {
     return NextResponse.json({ ok: false, error: "no autorizado" }, { status: 401 });
   }
   const { url } = await req.json().catch(() => ({}));

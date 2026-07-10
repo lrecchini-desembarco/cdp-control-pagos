@@ -1,4 +1,4 @@
-import { PRODUCTS } from "./catalogo";
+import { PRODUCTS, recentDates } from "./catalogo";
 import { getCruce } from "./cruce";
 import { getMapeos } from "./mapeos-store";
 import { getRankingLocales } from "./actividad";
@@ -34,7 +34,12 @@ function desvioCon(r: CruceRow, sePide: Set<string>): number {
  * para que sumar o ajustar una sea local. Es una función pura: mismas entradas,
  * mismas salidas (clave para testear y, más adelante, para deduplicar/silenciar).
  */
-export function detectarAlertas(cruce: CruceRow[], mapeos: MapeosData, sinMovimiento: LocalActividad[] = []): Alerta[] {
+export function detectarAlertas(
+  cruce: CruceRow[],
+  mapeos: MapeosData,
+  sinMovimiento: LocalActividad[] = [],
+  opts?: { refFecha?: string; hoy?: string }
+): Alerta[] {
   const fechas = Array.from(new Set(cruce.map((r) => r.fecha))).sort().reverse();
   const ultima = fechas[0];
   const alertas: Alerta[] = [];
@@ -193,6 +198,28 @@ export function detectarAlertas(cruce: CruceRow[], mapeos: MapeosData, sinMovimi
     });
   }
 
+  // ── Regla 7 · Feed de datos atrasado ────────────────────────────────────
+  // Red de seguridad: si TODO Tango dejó de actualizar (se cortó el push/bridge),
+  // las reglas por-local no lo ven (miden contra el día más nuevo del set, no el
+  // reloj). Comparamos ese día contra hoy: si el dato más fresco quedó viejo, la
+  // ceguera es del feed, no de los locales -> avisamos aparte.
+  if (opts?.refFecha && opts?.hoy) {
+    const dias = Math.round((Date.parse(opts.hoy) - Date.parse(opts.refFecha)) / 86_400_000);
+    if (dias >= 2) {
+      alertas.push({
+        id: "feed-atrasado",
+        tipo: "feed-atrasado",
+        severidad: dias >= 3 ? "critica" : "alta",
+        titulo: `Los datos de ventas están atrasados ${dias} días`,
+        detalle: `El dato más fresco de Tango es del ${opts.refFecha} y hoy es ${opts.hoy}. Mientras esté cortado, ninguna alerta por local es confiable: un local frenado no se distingue de la carga frenada.`,
+        porque:
+          "Si se cortó la carga de Tango, el control queda ciego: todo parece 'al día' aunque no se esté vendiendo. Hay que revisar el push/bridge de la PC de carga.",
+        accion: { label: "Ver salud del sistema", href: "/estado" },
+        metrica: `+${dias}d`,
+      });
+    }
+  }
+
   return alertas.sort((a, b) => PESO[b.severidad] - PESO[a.severidad]);
 }
 
@@ -214,7 +241,10 @@ export async function getAlertas(): Promise<{
 }> {
   const [cruce, mapeos, ranking] = await Promise.all([getCruce(), getMapeos(), getRankingLocales().catch(() => null)]);
   const sinMov = (ranking?.locales ?? []).filter((l) => l.estado === "sin-movimiento");
-  const todas = detectarAlertas(cruce, mapeos, sinMov);
+  const todas = detectarAlertas(cruce, mapeos, sinMov, {
+    refFecha: ranking?.refFecha,
+    hoy: recentDates(1)[0],
+  });
   const silenciados = await idsSilenciados();
   const alertas = todas.filter((a) => !silenciados.has(a.id));
   const silenciadas = todas.filter((a) => silenciados.has(a.id));

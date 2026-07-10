@@ -27,6 +27,7 @@ const TIPO: Record<AlertaTipo, string> = {
   "sucursal-sin-mapear": "Punto ciego · sucursal",
   "insumo-sin-receta": "Punto ciego · insumo",
   "local-sin-movimiento": "Local sin movimiento",
+  "feed-atrasado": "Datos atrasados",
 };
 
 type FiltroSev = "todas" | Severidad;

@@ -58,7 +58,8 @@ export type AlertaTipo =
   | "recurrente"            // mismo desvío repetido varios días: patrón, no ruido
   | "sucursal-sin-mapear"   // punto ciego: vende pero no entra al cruce
   | "insumo-sin-receta"     // insumo del CDP sin regla: no se puede contrastar
-  | "local-sin-movimiento"; // un local dejó de registrar ventas (Tango): plata que se pierde
+  | "local-sin-movimiento"  // un local dejó de registrar ventas (Tango): plata que se pierde
+  | "feed-atrasado";        // se cortó la carga de Tango: el control queda ciego
 
 /**
  * Una alerta lista para mostrar. Pensada para que un encargado la entienda

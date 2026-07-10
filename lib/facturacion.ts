@@ -4,6 +4,7 @@ import { rangoActividad } from "./actividad";
 import { getRecetas } from "./recetas-store";
 import { getInsumos } from "./insumos-store";
 import { costearReceta, indiceInsumos } from "./recetas";
+import { baseSuc } from "./sucursal-key";
 import type { RangoQuery } from "./sources/types";
 
 /**
@@ -84,14 +85,18 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
   const pSku = new Map<string, number>();
   for (const p of precios) {
     if (p.precio > 0) {
-      pLocal.set(clave(p.sku, p.sucursal), p.precio);
+      // Clave por sucursal NORMALIZADA (baseSuc): ventas y precios vienen de dos
+      // vistas Tango distintas; si difieren en acento/mayúsculas el match por local
+      // fallaba y caía al precio de otro local (pSku). Normalizando, matchea igual.
+      pLocal.set(clave(p.sku, baseSuc(p.sucursal)), p.precio);
       if (!pSku.has(p.sku)) pSku.set(p.sku, p.precio);
     }
   }
   const precioDe = (sku: string, suc: string): number =>
-    pLocal.get(clave(sku, suc)) ?? pSku.get(sku) ?? 0;
+    pLocal.get(clave(sku, baseSuc(suc))) ?? pSku.get(sku) ?? 0;
 
   const prod = new Map<string, FactProducto>();
+  const uppPorSku = new Map<string, number>(); // unidades VALORIZADAS por SKU (para el margen)
   const local = new Map<string, { sucursal: string; marca: string; unidades: number; facturacion: number; conPrecio: number; margen: number }>();
   const turno = new Map<string, FactTurno>();
   const dia = new Map<string, FactDia>();
@@ -129,6 +134,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     if (!pr) { pr = { sku: v.sku, nombre: v.nombre ?? v.sku, marca, unidades: 0, precio, facturacion: 0 }; prod.set(v.sku, pr); }
     pr.unidades += v.unidades;
     pr.facturacion += fact;
+    if (valorizado) uppPorSku.set(v.sku, (uppPorSku.get(v.sku) ?? 0) + v.unidades);
     if (precio > 0) pr.precio = precio; // último precio visto
 
     let lo = local.get(v.sucursalCanonico);
@@ -153,7 +159,10 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     const cu = costoPorSku.get(p.sku);
     if (cu != null && cu > 0) {
       p.costoUnit = cu; p.tieneCosto = true;
-      p.margen = p.facturacion - cu * p.unidades;
+      // Costo solo sobre las unidades VALORIZADAS (las que aportaron facturación),
+      // no sobre el total: si no, se resta costo de unidades que sumaron $0 y el
+      // margen queda subvaluado (inconsistente con margenTotal y el margen por local).
+      p.margen = p.facturacion - cu * (uppPorSku.get(p.sku) ?? 0);
       p.margenPct = p.facturacion ? p.margen / p.facturacion : 0;
     } else {
       p.tieneCosto = false;

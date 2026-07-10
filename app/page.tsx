@@ -3,6 +3,7 @@ import { getCruce } from "@/lib/cruce";
 import { getMapeos } from "@/lib/mapeos-store";
 import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
 import { getRankingLocales } from "@/lib/actividad";
+import { recentDates } from "@/lib/catalogo";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { pedidosSourceName } from "@/lib/sources";
 import { getSesion } from "@/lib/session";
@@ -27,7 +28,10 @@ export default async function Page() {
   const mapeos = await getMapeos();
   const ranking = await getRankingLocales().catch(() => null);
   const sinMov = (ranking?.locales ?? []).filter((l) => l.estado === "sin-movimiento");
-  const alertas = resumenAlertas(detectarAlertas(cruce, mapeos, sinMov));
+  const alertas = resumenAlertas(detectarAlertas(cruce, mapeos, sinMov, {
+    refFecha: ranking?.refFecha,
+    hoy: recentDates(1)[0],
+  }));
   const pedidosMock = pedidosSourceName() === "mock"; // pedidos simulados => desvíos no reales
 
   // Herramientas que este usuario puede ver (para el cartel de bienvenida).
