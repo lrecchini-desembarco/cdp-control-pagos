@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -89,6 +89,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/precios", label: "Precios", icon: "$", section: "Ventas y compras" },
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉", section: "Ventas y compras" },
   { href: "/compras", label: "Compras vs Ventas", icon: "⇲", section: "Ventas y compras" },
+  { href: "/actividad", label: "Actividad de ventas", icon: "◔", section: "Ventas y compras" },
   // Costos y precios (módulo Costos)
   { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos" },
   { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos" },
