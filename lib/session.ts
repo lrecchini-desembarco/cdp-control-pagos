@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { findUsuario } from "./users-store";
-import { COOKIE } from "./auth-cookie";
+import { COOKIE, leerSesionCookie } from "./auth-cookie";
 import type { Rol } from "./roles";
 
 export interface Sesion {
@@ -14,7 +14,7 @@ export interface Sesion {
  * store de usuarios (fuente de verdad), así no se puede escalar tocando la cookie.
  */
 export async function getSesion(): Promise<Sesion | null> {
-  const email = cookies().get(COOKIE)?.value;
+  const email = await leerSesionCookie(cookies().get(COOKIE)?.value);
   if (!email) return null;
   const u = await findUsuario(email);
   return u ? { email: u.email, rol: u.rol, ...(u.nav ? { nav: u.nav } : {}) } : null;

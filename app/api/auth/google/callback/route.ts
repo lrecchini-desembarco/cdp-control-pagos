@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { intercambiarCodigo, dominioPermitido } from "@/lib/google-auth";
 import { ensureUsuario } from "@/lib/users-store";
-import { COOKIE } from "@/lib/auth-cookie";
+import { COOKIE, firmarSesion } from "@/lib/auth-cookie";
 import { homeDe } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     }
     const u = await ensureUsuario(gu.email);
     const res = NextResponse.redirect(`${origin}${homeDe(u.rol)}`);
-    res.cookies.set(COOKIE, u.email, {
+    res.cookies.set(COOKIE, await firmarSesion(u.email), {
       httpOnly: true,
       sameSite: "lax",
       path: "/",

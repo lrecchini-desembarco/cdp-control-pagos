@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findUsuario } from "@/lib/users-store";
 import { verifyPassword } from "@/lib/auth-hash";
-import { COOKIE } from "@/lib/auth-cookie";
+import { COOKIE, firmarSesion } from "@/lib/auth-cookie";
 import { homeDe } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Email no autorizado o clave incorrecta." }, { status: 401 });
     }
     const res = NextResponse.json({ ok: true, rol: u.rol, redirect: homeDe(u.rol) });
-    res.cookies.set(COOKIE, u.email, {
+    res.cookies.set(COOKIE, await firmarSesion(u.email), {
       httpOnly: true,
       sameSite: "lax",
       path: "/",

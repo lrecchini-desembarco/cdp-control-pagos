@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { COOKIE } from "@/lib/auth-cookie";
+import { COOKIE, leerSesionCookie } from "@/lib/auth-cookie";
 
 // Protege las páginas: sin sesión -> al login. Las /api quedan fuera (el cron de
 // notificaciones necesita pegarles). El gating por rol se hace en el layout
@@ -7,10 +7,10 @@ import { COOKIE } from "@/lib/auth-cookie";
 // Pantallas públicas de la TV (sin login) — se sirven sin el layout de la app.
 const PUBLICAS = ["/cartelera", "/tv"];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const esPublica = PUBLICAS.some((p) => pathname === p || pathname.startsWith(p + "/"));
-  const tieneSesion = Boolean(req.cookies.get(COOKIE)?.value);
+  const tieneSesion = Boolean(await leerSesionCookie(req.cookies.get(COOKIE)?.value));
 
   if (!tieneSesion && !esPublica) {
     const url = req.nextUrl.clone();
