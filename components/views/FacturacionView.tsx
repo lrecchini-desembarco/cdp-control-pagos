@@ -120,7 +120,10 @@ export default function FacturacionView() {
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">Facturación</h1>
           <p className="mt-0.5 max-w-2xl text-sm text-muted">
-            Cuánta plata mueve cada producto, local y marca. Estimada con datos reales de Tango (precio × unidades).
+            Cuánta plata mueve cada producto, local y marca.{" "}
+            {d?.exacta
+              ? "Importe real de cada comanda de Tango (IMPORTE_NETO)."
+              : "Estimada con datos reales de Tango (precio × unidades)."}
           </p>
         </div>
         <div className="flex items-center gap-2">
