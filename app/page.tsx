@@ -3,7 +3,7 @@ import { getCruce } from "@/lib/cruce";
 import { getMapeos } from "@/lib/mapeos-store";
 import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
 import { getRankingLocales } from "@/lib/actividad";
-import { recentDates } from "@/lib/catalogo";
+import { hoyAR } from "@/lib/catalogo";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { pedidosSourceName } from "@/lib/sources";
 import { getSesion } from "@/lib/session";
@@ -30,7 +30,7 @@ export default async function Page() {
   const sinMov = (ranking?.locales ?? []).filter((l) => l.estado === "sin-movimiento");
   const alertas = resumenAlertas(detectarAlertas(cruce, mapeos, sinMov, {
     refFecha: ranking?.refFecha,
-    hoy: recentDates(1)[0],
+    hoy: hoyAR(),
   }));
   const pedidosMock = pedidosSourceName() === "mock"; // pedidos simulados => desvíos no reales
 

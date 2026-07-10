@@ -1,4 +1,4 @@
-import { PRODUCTS, recentDates } from "./catalogo";
+import { PRODUCTS, hoyAR } from "./catalogo";
 import { getCruce } from "./cruce";
 import { getMapeos } from "./mapeos-store";
 import { getRankingLocales } from "./actividad";
@@ -18,14 +18,22 @@ const DIAS_CRONICO = 5;     // repetirse N días lo vuelve crónico
 
 const PESO: Record<Severidad, number> = { critica: 3, alta: 2, media: 1, info: 0 };
 
-// El desvío (pedido vs venta) por fila. Cuando NO pidió nada (pedidoCdp=0) hay que
-// distinguir dos casos: "vendió sin pedir un insumo que sí se le suele pedir" (quiebre
-// real, -100%) vs "no tenemos el dato de pedido de ese insumo" (los pedidos de Raven
-// cubren pocos productos) -> eso NO es quiebre, es falta de dato. Por eso `desvio`
-// recibe el set de claves que SÍ se piden en la ventana (ver detectarAlertas).
-function desvioCon(r: CruceRow, sePide: Set<string>): number {
-  if (r.pedidoCdp) return (r.pedidoCdp - r.ventaEquiv) / r.pedidoCdp;
-  return r.ventaEquiv > 0 && sePide.has(`${r.sucursal}::${r.codigoCdp}`) ? -1 : 0;
+// El desvío (pedido vs venta) por fila. Hay que distinguir un desvío REAL de una
+// simple FALTA DE DATO (los pedidos de Raven cubren pocos insumos y no toda venta
+// tiene receta cargada). Por eso recibe dos sets de la ventana:
+//   sePide  = claves (suc::insumo) que alguna vez se pidieron al CDP
+//   seVende = claves que alguna vez tuvieron venta mapeada
+// - pedidoCdp=0 & vende: "vendió sin pedir algo que SÍ se le pide" = quiebre (-100%).
+// - pidió & venta=0 & ese insumo NUNCA se vende ahí: falta de dato, NO sobre-pedido (0).
+//   (Simétrico al quiebre — sin esto, cada pedido sin venta mapeada era un sobre-pedido
+//    fantasma +100% que además escalaba a "recurrente crítica".)
+function desvioCon(r: CruceRow, sePide: Set<string>, seVende: Set<string>): number {
+  const clave = `${r.sucursal}::${r.codigoCdp}`;
+  if (r.pedidoCdp) {
+    if (r.ventaEquiv === 0 && !seVende.has(clave)) return 0;
+    return (r.pedidoCdp - r.ventaEquiv) / r.pedidoCdp;
+  }
+  return r.ventaEquiv > 0 && sePide.has(clave) ? -1 : 0;
 }
 
 /**
@@ -48,8 +56,13 @@ export function detectarAlertas(
   // confundir "vendió sin pedir algo que sí se le pide" (quiebre) con "no hay dato
   // de pedido de ese insumo" (los pedidos cubren pocos productos).
   const sePide = new Set<string>();
-  for (const r of cruce) if (r.pedidoCdp > 0) sePide.add(`${r.sucursal}::${r.codigoCdp}`);
-  const desvio = (r: CruceRow) => desvioCon(r, sePide);
+  const seVende = new Set<string>();
+  for (const r of cruce) {
+    const clave = `${r.sucursal}::${r.codigoCdp}`;
+    if (r.pedidoCdp > 0) sePide.add(clave);
+    if (r.ventaEquiv > 0) seVende.add(clave);
+  }
+  const desvio = (r: CruceRow) => desvioCon(r, sePide, seVende);
 
   // ── Regla 1 y 2 · Desvíos del último día ────────────────────────────────
   // Lo accionable "hoy": dónde hay que mover un pedido ya mismo.
@@ -60,7 +73,7 @@ export function detectarAlertas(
       // Pidió menos de lo que vendió -> se está quedando corto.
       const critica = pct <= -QUIEBRE_GRAVE;
       alertas.push({
-        id: `quiebre:${r.sucursal}:${r.codigoCdp}:${r.fecha}`,
+        id: `quiebre:${r.sucursal}:${r.codigoCdp}`,
         tipo: "quiebre",
         severidad: critica ? "critica" : "alta",
         titulo: `Posible quiebre de ${r.producto} en ${r.sucursal}`,
@@ -83,7 +96,7 @@ export function detectarAlertas(
       // Pidió más de lo que vendió -> exceso.
       const alta = pct >= SOBRE_GRAVE;
       alertas.push({
-        id: `sobrepedido:${r.sucursal}:${r.codigoCdp}:${r.fecha}`,
+        id: `sobrepedido:${r.sucursal}:${r.codigoCdp}`,
         tipo: "sobrepedido",
         severidad: alta ? "alta" : "media",
         titulo: `Sobre-pedido de ${r.producto} en ${r.sucursal}`,
@@ -243,7 +256,7 @@ export async function getAlertas(): Promise<{
   const sinMov = (ranking?.locales ?? []).filter((l) => l.estado === "sin-movimiento");
   const todas = detectarAlertas(cruce, mapeos, sinMov, {
     refFecha: ranking?.refFecha,
-    hoy: recentDates(1)[0],
+    hoy: hoyAR(),
   });
   const silenciados = await idsSilenciados();
   const alertas = todas.filter((a) => !silenciados.has(a.id));

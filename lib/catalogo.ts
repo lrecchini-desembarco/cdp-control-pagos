@@ -73,6 +73,13 @@ export const PRODUCTS: { code: string; name: string; unit: string; brand: import
   { code: "083041", name: "Medallón Tuki 55g", unit: "un", brand: "tasty" },
 ];
 
+/** Hoy en horario de Argentina (AR = UTC-3), ISO AAAA-MM-DD. Importa para comparar
+ *  contra la fecha comercial de Tango: en Vercel el server corre en UTC y de noche
+ *  ya "es mañana", lo que daba falsos "feed atrasado". */
+export function hoyAR(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+}
+
 /** Devuelve las últimas n fechas (incluida hoy) en formato ISO AAAA-MM-DD. */
 export function recentDates(n: number): string[] {
   const out: string[] = [];
