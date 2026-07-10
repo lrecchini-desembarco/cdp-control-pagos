@@ -382,7 +382,7 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: 
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-2xl font-semibold ${c}`}>{value}</p>
+      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${c}`}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );

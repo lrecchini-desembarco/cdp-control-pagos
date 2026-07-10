@@ -6,6 +6,7 @@ import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import EstadoSeccion from "@/components/layout/EstadoSeccion";
+import { MobileNavProvider } from "@/components/layout/MobileNav";
 import { getSesion } from "@/lib/session";
 import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav } from "@/lib/roles";
 import { getRolesNav, blindar } from "@/lib/roles-store";
@@ -54,16 +55,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="es" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body className="font-sans">
         {sesion && !esPantallaTv ? (
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar rol={sesion.rol} items={itemsNav} />
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} />
-              <main className="flex-1 overflow-y-auto px-6 py-6">
-                <EstadoSeccion />
-                {children}
-              </main>
+          <MobileNavProvider>
+            <div className="flex h-screen overflow-hidden">
+              <Sidebar rol={sesion.rol} items={itemsNav} />
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} />
+                <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+                  <EstadoSeccion />
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
+          </MobileNavProvider>
         ) : (
           children
         )}

@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FRESH_META } from "@/lib/roles";
+import { useMobileNav } from "@/components/layout/MobileNav";
 import type { Rol, NavItem, Fresh } from "@/lib/roles";
 
 export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) {
   const path = usePathname();
+  const { abierto, setAbierto } = useMobileNav();
   const verAlertas = items.some((n) => n.href === "/alertas");
 
   const [urgentes, setUrgentes] = useState(0);
@@ -26,7 +28,10 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
   }, [path, verAlertas]);
 
   return (
-    <aside data-rol={rol} className="flex w-60 shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-white">
+    <>
+    {abierto && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setAbierto(false)} aria-hidden />}
+    <aside data-rol={rol}
+      className={`fixed inset-y-0 left-0 z-50 flex w-60 shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${abierto ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
       <div className="flex items-center gap-2.5 px-5 py-5">
         <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 font-display text-sm font-bold">
           DS
@@ -52,6 +57,7 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
               <Link
                 href={n.href}
                 draggable={false}
+                onClick={() => setAbierto(false)}
                 aria-current={active ? "page" : undefined}
                 className={`group mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   active ? "bg-white/10 text-white" : "text-sidebar-muted hover:bg-white/5 hover:text-white"
@@ -86,6 +92,7 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
         </div>
       </div>
     </aside>
+    </>
   );
 }
 
