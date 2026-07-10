@@ -70,8 +70,11 @@ async function ventasViaBridge(q: RangoQuery, base: string): Promise<VentaSku[]>
 export const tangoVentasSource: VentasSource = {
   async getVentas(q: RangoQuery): Promise<VentaSku[]> {
     // 1) Cache en KV (empujado por la PC de carga, sin túnel). Es la vía normal.
+    // El push guarda las filas CRUDAS del bridge (sucursal_canonico, snake_case),
+    // así que hay que pasarlas por filaAVenta igual que el bridge/SQL directo —
+    // si no, sucursalCanonico queda undefined y todo colapsa en una sola marca/local.
     const cache = await ventasDesdeCache(q);
-    if (cache) return cache;
+    if (cache) return cache.map(filaAVenta);
     // 2) Respaldo: bridge por túnel (si está y el cache no cubre el rango).
     const base = await getBridgeUrl();
     if (base) return ventasViaBridge(q, base);
@@ -146,8 +149,9 @@ async function preciosViaBridge(base: string): Promise<PrecioProducto[]> {
 export const tangoPreciosSource: PreciosSource = {
   async getPrecios(): Promise<PrecioProducto[]> {
     // 1) Cache en KV (empujado por la PC de carga). 2) Respaldo: bridge.
+    // Igual que ventas: el push guarda filas crudas (precio_neto), hay que mapearlas.
     const cache = await preciosDesdeCache();
-    if (cache) return cache;
+    if (cache) return cache.map(filaAPrecio);
     const base = await getBridgeUrl();
     if (base) return preciosViaBridge(base);
     if (!process.env.TANGO_DB_HOST) {
