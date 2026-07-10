@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refrescarRatings } from "@/lib/google-ratings-server";
+import { cronOAdmin } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 // ?force=1. Sin sesión (igual que el cron de /api/notify): no expone datos sensibles,
 // solo cachea números públicos de Google, y tiene guarda anti-costo por antigüedad.
 async function handler(req: NextRequest) {
+  if (!(await cronOAdmin(req))) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   const force = req.nextUrl.searchParams.get("force") === "1";
   try {
     const r = await refrescarRatings(force);

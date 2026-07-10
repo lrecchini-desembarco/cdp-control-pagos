@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSesion } from "@/lib/session";
 import { getPrecios } from "@/lib/precios";
 import { preciosSourceName } from "@/lib/sources";
+import { guard } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/precios[?sucursal=] -> precios generales (+ de una sucursal si se pide)
 export async function GET(req: NextRequest) {
-  if (!(await getSesion())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  const g = await guard("/precios");
+  if ("res" in g) return g.res;
   const sucursal = req.nextUrl.searchParams.get("sucursal") ?? undefined;
   try {
     const data = await getPrecios(sucursal);

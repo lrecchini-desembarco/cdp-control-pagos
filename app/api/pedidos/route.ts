@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSesion } from "@/lib/session";
 import { getComparativoPorLocal } from "@/lib/pedidos";
 import { rangoPorDefecto } from "@/lib/cruce";
+import { guard } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/pedidos?desde&hasta -> comparativo CDP (pedido Raven) vs ventas (Tango) por local.
 export async function GET(req: NextRequest) {
-  if (!(await getSesion())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  const g = await guard("/pedidos");
+  if ("res" in g) return g.res;
   const def = rangoPorDefecto();
   const desde = req.nextUrl.searchParams.get("desde") ?? def.desde;
   const hasta = req.nextUrl.searchParams.get("hasta") ?? def.hasta;

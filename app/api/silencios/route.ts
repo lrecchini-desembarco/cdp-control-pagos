@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listarSilencios, silenciar, quitarSilencio } from "@/lib/silencios";
+import { guard } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/silencios -> lista de silencios vigentes
 export async function GET() {
+  const g = await guard("/alertas");
+  if ("res" in g) return g.res;
   return NextResponse.json({ ok: true, silencios: await listarSilencios() });
 }
 
 // POST /api/silencios { id, dias?, motivo? } -> silencia (dias null = indefinido)
 export async function POST(req: NextRequest) {
+  const g = await guard("/alertas");
+  if ("res" in g) return g.res;
   try {
     const { id, dias = 7, motivo } = (await req.json()) as {
       id?: string;
@@ -28,6 +33,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/silencios?id=... -> reactiva (quita el silencio)
 export async function DELETE(req: NextRequest) {
+  const g = await guard("/alertas");
+  if ("res" in g) return g.res;
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ ok: false, error: "Falta id." }, { status: 400 });
   await quitarSilencio(id);

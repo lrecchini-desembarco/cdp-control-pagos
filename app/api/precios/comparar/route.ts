@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { getSesion } from "@/lib/session";
 import { getPrecios } from "@/lib/precios";
 import { scrapearMenus, comparar } from "@/lib/menu-web";
 import { preciosSourceName } from "@/lib/sources";
+import { guard } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30; // scrapear 2 sitios externos puede tardar
 
 // GET /api/precios/comparar -> menú web (lista) vs Tango (efectivo)
 export async function GET() {
-  if (!(await getSesion())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  const g = await guard("/precios");
+  if ("res" in g) return g.res;
   try {
     const [{ general }, web] = await Promise.all([getPrecios(), scrapearMenus()]);
     const filas = comparar(web, general);

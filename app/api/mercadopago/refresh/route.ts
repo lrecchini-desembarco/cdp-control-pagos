@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refrescarMP } from "@/lib/mercadopago-store";
+import { cronOAdmin } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/mercadopago/refresh -> trae los últimos días de MP y los cachea.
 // Lo dispara el CRON (ver vercel.json). No-op sin MERCADOPAGO_ACCESS_TOKEN.
 async function handler(req: NextRequest) {
+  if (!(await cronOAdmin(req))) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   const dias = Number(req.nextUrl.searchParams.get("dias")) || 8;
   try {
     const r = await refrescarMP(dias);
