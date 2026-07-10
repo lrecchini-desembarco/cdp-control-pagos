@@ -116,7 +116,7 @@ export default function FacturacionView() {
             Período
             <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink"
               value={dias} onChange={(e) => { const v = Number(e.target.value); setDias(v); cargar(v); }}>
-              {[7, 15, 30, 60].map((n) => <option key={n} value={n}>{n} días</option>)}
+              {[7, 15, 30].map((n) => <option key={n} value={n}>{n} días</option>)}
             </select>
           </label>
           {esMock ? <Badge tone="warn">datos de ejemplo</Badge> : <Badge tone="ok">en vivo</Badge>}

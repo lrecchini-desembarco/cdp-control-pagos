@@ -25,13 +25,19 @@ export function diasEntre(desde: string, hasta: string): string[] {
   return out;
 }
 
-/** Ventas del rango desde el cache KV. Devuelve null si falta algún día (=> usar bridge). */
+/**
+ * Ventas del rango desde el cache KV. Best-effort: devuelve los días que SÍ están
+ * cacheados (el push guarda ~32 días; pedir un rango más largo NO rompe, muestra lo
+ * disponible). Solo devuelve null si NO hay ningún día cacheado -> ahí sí prueba el
+ * bridge. Así un túnel viejo/caído no tira "fetch failed" cuando el KV tiene los datos.
+ */
 export async function ventasDesdeCache(q: RangoQuery): Promise<VentaSku[] | null> {
   const dias = diasEntre(q.desde, q.hasta);
   const packs = await Promise.all(dias.map((dia) => readStore<string | null>(`tango-ventas:${dia}`, null)));
-  if (packs.some((p) => !p)) return null; // algún día no está cacheado
+  const presentes = packs.filter((p): p is string => Boolean(p));
+  if (presentes.length === 0) return null; // nada cacheado -> respaldo por bridge
   const out: VentaSku[] = [];
-  for (const p of packs) out.push(...unpack<VentaSku[]>(p as string));
+  for (const p of presentes) out.push(...unpack<VentaSku[]>(p));
   return out;
 }
 
