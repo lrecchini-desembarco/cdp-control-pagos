@@ -45,6 +45,8 @@ export interface Facturacion {
   unidadesConPrecio: number;
   cobertura: number;        // % de unidades que pudieron valorizarse
   ticketProm: number;       // $ por unidad (no por ticket: no tenemos tickets aún)
+  exacta: boolean;          // true = la mayoría del $ viene del IMPORTE real de Tango (no estimado)
+  coberturaImporte: number; // % de unidades con importe real
   margenTotal: number;      // margen bruto total (facturación − costo, de lo que tiene receta)
   facturacionConCosto: number; // facturación de los productos con receta (base del margen)
   coberturaCosto: number;   // % de la facturación que tiene receta para costear
@@ -91,20 +93,25 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
   const turno = new Map<string, FactTurno>();
   const dia = new Map<string, FactDia>();
   let refFecha = "";
-  let total = 0, unidades = 0, unidadesConPrecio = 0;
+  let total = 0, unidades = 0, unidadesConPrecio = 0, unidadesConImporte = 0;
   let margenTotal = 0, facturacionConCosto = 0;
 
   for (const v of data) {
     if (v.fecha > refFecha) refFecha = v.fecha;
     const precio = precioDe(v.sku, v.sucursalCanonico);
-    const fact = precio * v.unidades;
+    // Si Tango trae el IMPORTE real del renglón, se usa ese (exacto); si no, el
+    // estimado = precio efectivo × unidades.
+    const tieneImporte = v.importe != null && Number.isFinite(v.importe);
+    const fact = tieneImporte ? (v.importe as number) : precio * v.unidades;
+    const valorizado = tieneImporte || precio > 0; // se le pudo poner $
     const marca = brandDeSucursal(v.sucursalCanonico);
     const cu = costoPorSku.get(v.sku) ?? 0; // costo unitario de receta (0 = sin receta)
-    const margenRow = precio > 0 && cu > 0 ? fact - cu * v.unidades : 0;
+    const margenRow = valorizado && cu > 0 ? fact - cu * v.unidades : 0;
 
     unidades += v.unidades;
-    if (precio > 0) { unidadesConPrecio += v.unidades; total += fact; }
-    if (precio > 0 && cu > 0) { margenTotal += margenRow; facturacionConCosto += fact; }
+    if (valorizado) { unidadesConPrecio += v.unidades; total += fact; }
+    if (tieneImporte) unidadesConImporte += v.unidades;
+    if (valorizado && cu > 0) { margenTotal += margenRow; facturacionConCosto += fact; }
 
     const tn = v.turno ?? "noche";
     let tu = turno.get(tn);
@@ -126,7 +133,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     lo.unidades += v.unidades;
     lo.facturacion += fact;
     lo.margen += margenRow;
-    if (precio > 0) lo.conPrecio += v.unidades;
+    if (valorizado) lo.conPrecio += v.unidades;
   }
 
   const porProducto = Array.from(prod.values()).sort((a, b) => b.facturacion - a.facturacion);
@@ -173,6 +180,8 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     unidadesConPrecio,
     cobertura: unidades ? unidadesConPrecio / unidades : 0,
     ticketProm: unidadesConPrecio ? total / unidadesConPrecio : 0,
+    exacta: unidades > 0 && unidadesConImporte / unidades > 0.9,
+    coberturaImporte: unidades ? unidadesConImporte / unidades : 0,
     margenTotal,
     facturacionConCosto,
     coberturaCosto: total ? facturacionConCosto / total : 0,

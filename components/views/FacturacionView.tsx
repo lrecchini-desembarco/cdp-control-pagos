@@ -13,6 +13,7 @@ interface FactDia { fecha: string; unidades: number; facturacion: number; }
 interface Datos {
   ok: boolean; source: string; ventasSource?: string; preciosSource?: string; refFecha: string;
   total: number; unidades: number; unidadesConPrecio: number; cobertura: number; ticketProm: number;
+  exacta?: boolean; coberturaImporte?: number;
   margenTotal: number; facturacionConCosto: number; coberturaCosto: number;
   abc: { a: number; b: number; c: number };
   porProducto: FactProducto[]; porLocal: FactLocal[]; porMarca: FactMarca[]; porTurno: FactTurno[]; porDia: FactDia[];
@@ -130,25 +131,32 @@ export default function FacturacionView() {
               {[7, 15, 30].map((n) => <option key={n} value={n}>{n} días</option>)}
             </select>
           </label>
-          {esMock ? <Badge tone="warn">datos de ejemplo</Badge> : <Badge tone="ok">en vivo</Badge>}
+          {esMock ? <Badge tone="warn">datos de ejemplo</Badge> : <Badge tone="ok">en vivo · {d?.exacta ? "exacta" : "estimada"}</Badge>}
           {d && <span className="text-2xs text-faint">al {fecha(d.refFecha)}</span>}
         </div>
       </div>
 
       {/* Aviso: es estimada (precio efectivo, no el importe exacto de Tango) */}
       <Card className="border-l-4 border-l-action/50 bg-action/5 p-3">
-        <p className="text-xs text-ink">
-          <b className="text-action-700">Estimada:</b> unidades reales × <b>precio efectivo</b> (última venta registrada por Tango), no el
-          importe exacto de cada comanda. Es muy fiel para períodos recientes. La facturación <b>exacta</b> se activa cuando Sistemas
-          exponga <code className="rounded bg-paper px-1">IMPORTE_NETO</code> (ya está el SQL listo) — y esta pantalla la toma sin cambios.
-          El <b>margen bruto</b> = facturación − costo de receta (del módulo Costos); solo cubre lo que tiene receta cargada (mirá la cobertura).
-        </p>
+        {d?.exacta ? (
+          <p className="text-xs text-ink">
+            <b className="text-action-700">Exacta:</b> el <b>importe real</b> de cada comanda que registró Tango (IMPORTE_NETO), no un estimado.
+            El <b>margen bruto</b> = facturación − costo de receta (del módulo Costos); solo cubre lo que tiene receta cargada (mirá la cobertura).
+          </p>
+        ) : (
+          <p className="text-xs text-ink">
+            <b className="text-action-700">Estimada:</b> unidades reales × <b>precio efectivo</b> (última venta registrada por Tango), no el
+            importe exacto de cada comanda. Es muy fiel para períodos recientes. La facturación <b>exacta</b> se activa cuando Sistemas
+            exponga <code className="rounded bg-paper px-1">IMPORTE_NETO</code> (ya está el SQL listo) — y esta pantalla la toma sola.
+            El <b>margen bruto</b> = facturación − costo de receta (del módulo Costos); solo cubre lo que tiene receta cargada (mirá la cobertura).
+          </p>
+        )}
       </Card>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Facturación estimada" value={d ? money(d.total) : "—"} tone="ok" sub={`últimos ${dias} días`} />
-        <Kpi label="Margen bruto estimado" value={d ? money(d.margenTotal) : "—"} tone={d ? "ok" : undefined}
+        <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? money(d.total) : "—"} tone="ok" sub={`últimos ${dias} días`} />
+        <Kpi label={d?.exacta ? "Margen bruto" : "Margen bruto estimado"} value={d ? money(d.margenTotal) : "—"} tone={d ? "ok" : undefined}
           sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} />
         <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub={d ? `${int(d.unidades)} unidades` : "precio promedio"} />
         <Kpi label="Cobertura precio" value={d ? `${Math.round(d.cobertura * 100)}%` : "—"} tone={d && d.cobertura < 0.9 ? "warn" : undefined} sub="unidades con precio" />

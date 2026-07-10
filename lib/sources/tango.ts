@@ -44,6 +44,9 @@ function filaAVenta(r: any): VentaSku {
     nombre: r.nombre != null ? String(r.nombre) : undefined,
     sucursalCanonico: String(r.sucursal_canonico),
     unidades: Number(r.unidades) || 0,
+    // importe real (IMPORTE_NETO) si la vista lo trae; si no, queda undefined y la
+    // app cae al estimado (precio efectivo × unidades).
+    importe: r.importe != null ? Number(r.importe) : undefined,
     turno: r.turno ? String(r.turno) : undefined,
   };
 }
@@ -81,17 +84,27 @@ export const tangoVentasSource: VentasSource = {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const sql = require("mssql");
     const pool = await getPool();
-    const result = await pool
-      .request()
-      .input("desde", sql.Date, q.desde)
-      .input("hasta", sql.Date, q.hasta)
-      .query(VENTAS_QUERY);
-
+    const consulta = (query: string) =>
+      pool.request().input("desde", sql.Date, q.desde).input("hasta", sql.Date, q.hasta).query(query);
+    // Primero la vista con IMPORTE (facturación exacta); si no existe todavía, la de siempre.
+    let result;
+    try { result = await consulta(VENTAS_QUERY_PLATA); }
+    catch { result = await consulta(VENTAS_QUERY); }
     return result.recordset.map(filaAVenta);
   },
 };
 
-// Query de la vista (compartida por el SQL directo y el bridge HTTP).
+// Vista con IMPORTE_NETO (facturación exacta). La crea Sistemas: docs/sql/tango-plata.sql.
+export const VENTAS_QUERY_PLATA = `
+  SELECT
+    CONVERT(varchar(10), fecha, 23) AS fecha,
+    sucursal_canonico, sku, nombre, turno, unidades, importe
+  FROM dbo.vw_VentasArticuloDiaria
+  WHERE fecha BETWEEN @desde AND @hasta
+  ORDER BY fecha, sucursal_canonico, sku;
+`;
+
+// Vista de siempre (solo unidades) — fallback si la de importe no está.
 export const VENTAS_QUERY = `
   SELECT
     CONVERT(varchar(10), fecha, 23) AS fecha,

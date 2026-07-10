@@ -54,6 +54,17 @@ const config = {
   pool: { max: 5, min: 0, idleTimeoutMillis: 30_000 },
 };
 
+// Vista con IMPORTE (facturación exacta). La crea Sistemas (docs/sql/tango-plata.sql).
+// Si todavía no existe, /ventas cae automáticamente a VENTAS_QUERY (solo unidades).
+const VENTAS_QUERY_PLATA = `
+  SELECT
+    CONVERT(varchar(10), fecha, 23) AS fecha,
+    sucursal_canonico, sku, nombre, turno, unidades, importe
+  FROM dbo.vw_VentasArticuloDiaria
+  WHERE fecha BETWEEN @desde AND @hasta
+  ORDER BY fecha, sucursal_canonico, sku;
+`;
+
 const VENTAS_QUERY = `
   SELECT
     CONVERT(varchar(10), fecha, 23) AS fecha,
@@ -171,7 +182,12 @@ const server = createServer(async (req, res) => {
     if (!isFecha(desde) || !isFecha(hasta)) return json(400, { error: "desde/hasta AAAA-MM-DD requeridos" });
     try {
       const pool = await getPool();
-      const r = await pool.request().input("desde", sql.Date, desde).input("hasta", sql.Date, hasta).query(VENTAS_QUERY);
+      const consulta = (query) =>
+        pool.request().input("desde", sql.Date, desde).input("hasta", sql.Date, hasta).query(query);
+      // Vista con importe primero; si no existe (o falta permiso), cae a la de siempre.
+      let r;
+      try { r = await consulta(VENTAS_QUERY_PLATA); }
+      catch (e2) { console.error("ventas (plata) no disponible, uso unidades:", e2.message); r = await consulta(VENTAS_QUERY); }
       return json(200, r.recordset);
     } catch (e) {
       console.error("ventas error:", e.message);

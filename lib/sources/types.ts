@@ -18,6 +18,7 @@ export interface VentaSku {
   nombre?: string;          // descripción del artículo (DESC_CTA_ARTICULO)
   sucursalCanonico: string; // código canónico de la sucursal
   unidades: number;
+  importe?: number;         // $ real del renglón (IMPORTE_NETO de Tango), si la vista lo expone
   turno?: string;           // mediodia | tarde | noche (slug de lib/turnos)
 }
 
