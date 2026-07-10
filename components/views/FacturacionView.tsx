@@ -73,6 +73,10 @@ export default function FacturacionView() {
     return l;
   }, [d, marca, q]);
 
+  // Chips de marca según lo que realmente hay en los datos (ej. Mila & Go no aparece
+  // si no está en Tango, en vez de un filtro que siempre da 0).
+  const marcasChips = useMemo(() => ["", ...(d?.porMarca ?? []).map((m) => m.marca)], [d]);
+
   // Productos que facturan pero NO tienen receta (el hueco del margen). Ordenados por $.
   const sinReceta = useMemo(() => productos.filter((p) => p.tieneCosto === false).sort((a, b) => b.facturacion - a.facturacion), [productos]);
   const factSinReceta = useMemo(() => sinReceta.reduce((s, p) => s + p.facturacion, 0), [sinReceta]);
@@ -189,10 +193,10 @@ export default function FacturacionView() {
       {tab !== "marcas" && (
         <Card className="flex flex-wrap items-center gap-3 p-3">
           <div className="flex flex-wrap gap-1.5">
-            {[["", "Todas"], ["desembarco", "El Desembarco"], ["tasty", "Mr Tasty"], ["mila", "Mila & Go"]].map(([id, label]) => (
+            {marcasChips.map((id) => (
               <button key={id} onClick={() => setMarca(id)}
                 className={`rounded-full border px-3 py-1 text-2xs font-medium ${marca === id ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"}`}>
-                {label}
+                {id === "" ? "Todas" : marcaLabel(id)}
               </button>
             ))}
           </div>

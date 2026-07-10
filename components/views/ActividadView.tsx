@@ -71,6 +71,8 @@ export default function ActividadView() {
   }, [d, marca, q]);
 
   const maxPart = useMemo(() => Math.max(0.0001, ...(locales.map((l) => l.participacion))), [locales]);
+  // Chips de marca según lo que hay en los datos (no muestra Mila si no está en Tango).
+  const marcasChips = useMemo(() => ["", ...Array.from(new Set((d?.ranking.locales ?? []).map((l) => l.marca)))], [d]);
 
   // La lista de dormidos puede ser enorme: se muestran los primeros N (los más
   // dormidos, que ya están ordenados); el CSV exporta TODOS.
@@ -124,10 +126,10 @@ export default function ActividadView() {
       {/* Filtros */}
       <Card className="flex flex-wrap items-center gap-3 p-3">
         <div className="flex flex-wrap gap-1.5">
-          {[["", "Todas"], ["desembarco", "El Desembarco"], ["tasty", "Mr Tasty"], ["mila", "Mila & Go"]].map(([id, label]) => (
+          {marcasChips.map((id) => (
             <button key={id} onClick={() => setMarca(id)}
               className={`rounded-full border px-3 py-1 text-2xs font-medium ${marca === id ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"}`}>
-              {label}
+              {id === "" ? "Todas" : marcaLabel(id)}
             </button>
           ))}
         </div>
