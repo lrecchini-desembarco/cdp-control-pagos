@@ -158,8 +158,8 @@ export default function FacturacionView() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? money(d.total) : "—"} tone="ok" sub={`últimos ${dias} días`} />
-        <Kpi label={d?.exacta ? "Margen bruto" : "Margen bruto estimado"} value={d ? money(d.margenTotal) : "—"} tone={d ? "ok" : undefined}
+        <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? moneyC(d.total) : "—"} title={d ? money(d.total) : undefined} tone="ok" sub={`últimos ${dias} días`} />
+        <Kpi label={d?.exacta ? "Margen bruto" : "Margen bruto estimado"} value={d ? moneyC(d.margenTotal) : "—"} title={d ? money(d.margenTotal) : undefined} tone={d ? "ok" : undefined}
           sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} />
         <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub={d ? `${int(d.unidades)} unidades` : "precio promedio"} />
         <Kpi label="Cobertura precio" value={d ? `${Math.round(d.cobertura * 100)}%` : "—"} tone={d && d.cobertura < 0.9 ? "warn" : undefined} sub="unidades con precio" />
@@ -486,12 +486,12 @@ function TendenciaChart({ dias, metric }: { dias: FactDia[]; metric: "facturacio
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "ok" | "warn" | "bad" }) {
+function Kpi({ label, value, sub, tone, title }: { label: string; value: string; sub?: string; tone?: "ok" | "warn" | "bad"; title?: string }) {
   const c = tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : "text-ink";
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${c}`}>{value}</p>
+      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${c}`} title={title}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );
