@@ -85,47 +85,48 @@ export interface NavItem {
   beta?: boolean;    // true = en construcción (chip "beta")
   section?: string;  // encabezado de sección en el menú (ej. "Costos")
   fresh?: Fresh;     // tag de frescura del dato (default: carga)
+  desc?: string;     // qué podés hacer ahí (para el cartel de bienvenida y la guía)
 }
 // Los `beta: true` dependen de datos externos que aún no están (Raven token / recetas
 // reales / vista de Sistemas). El resto es productivo.
 // Ordenado por secciones (contiguas). El sidebar dibuja el encabezado de cada
 // sección al cambiar. Resumen y Alertas van arriba sin sección (son el "home").
 export const NAV_CATALOG: NavItem[] = [
-  { href: "/", label: "Resumen", icon: "◰", fresh: "vivo" },
-  { href: "/alertas", label: "Alertas", icon: "!", fresh: "vivo" },
+  { href: "/", label: "Resumen", icon: "◰", fresh: "vivo", desc: "El estado general de la operación de un vistazo." },
+  { href: "/alertas", label: "Alertas", icon: "!", fresh: "vivo", desc: "Qué mirar primero: quiebres, sobre-pedidos y puntos ciegos." },
   // CDP vs Ventas — control de abastecimiento
-  { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄", beta: true, section: "CDP vs Ventas", fresh: "vivo" },
-  { href: "/pedidos", label: "CDP vs Ventas (local)", icon: "⇊", section: "CDP vs Ventas", fresh: "vivo" },
+  { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄", beta: true, section: "CDP vs Ventas", fresh: "vivo", desc: "Cruce fino: pedido vs venta traducida a insumo, por sucursal y día." },
+  { href: "/pedidos", label: "CDP vs Ventas (local)", icon: "⇊", section: "CDP vs Ventas", fresh: "vivo", desc: "Local por local: lo que pidió al CDP contra lo que vendió." },
   // Ventas y compras
-  { href: "/ventas", label: "Ventas por turno", icon: "▦", section: "Ventas y compras", fresh: "vivo" },
-  { href: "/precios", label: "Precios", icon: "$", section: "Ventas y compras", fresh: "vivo" },
-  { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉", section: "Ventas y compras", fresh: "carga" },
-  { href: "/compras", label: "Compras vs Ventas", icon: "⇲", section: "Ventas y compras", fresh: "carga" },
-  { href: "/actividad", label: "Actividad de ventas", icon: "◔", section: "Ventas y compras", fresh: "vivo" },
-  { href: "/facturacion", label: "Facturación", icon: "≣", section: "Ventas y compras", fresh: "vivo" },
+  { href: "/ventas", label: "Ventas por turno", icon: "▦", section: "Ventas y compras", fresh: "vivo", desc: "Qué se vendió por artículo y turno (unidades reales de Tango)." },
+  { href: "/precios", label: "Precios", icon: "$", section: "Ventas y compras", fresh: "vivo", desc: "Precio vigente por producto y sucursal (Tango)." },
+  { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉", section: "Ventas y compras", fresh: "carga", desc: "Subís el CSV de remitos y lo cruzás contra las ventas." },
+  { href: "/compras", label: "Compras vs Ventas", icon: "⇲", section: "Ventas y compras", fresh: "carga", desc: "Subís el CSV de compras y lo cruzás contra las ventas." },
+  { href: "/actividad", label: "Actividad de ventas", icon: "◔", section: "Ventas y compras", fresh: "vivo", desc: "Ranking de locales por actividad y productos que se durmieron." },
+  { href: "/facturacion", label: "Facturación", icon: "≣", section: "Ventas y compras", fresh: "vivo", desc: "Cuánta plata mueve cada producto, local y marca (estimada, Tango)." },
   // Costos y precios (módulo Costos) — se cargan a mano (Excel), hoy vigentes
-  { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos", fresh: "carga" },
-  { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos", fresh: "carga" },
-  { href: "/listas", label: "Precios y margen", icon: "▤", section: "Costos", fresh: "carga" },
-  { href: "/apps", label: "Margen apps", icon: "◧", section: "Costos", fresh: "carga" },
-  { href: "/promos", label: "Promociones", icon: "◎", section: "Costos", fresh: "carga" },
-  { href: "/rentabilidad", label: "Rentabilidad", icon: "◉", section: "Costos", fresh: "carga" },
+  { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos", fresh: "carga", desc: "Maestro de insumos con costo por unidad." },
+  { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos", fresh: "carga", desc: "Qué insumos (y cuánto) lleva cada producto." },
+  { href: "/listas", label: "Precios y margen", icon: "▤", section: "Costos", fresh: "carga", desc: "Costo de receta, CMV y margen por lista de precios." },
+  { href: "/apps", label: "Margen apps", icon: "◧", section: "Costos", fresh: "carga", desc: "Margen por app de delivery, según sus comisiones." },
+  { href: "/promos", label: "Promociones", icon: "◎", section: "Costos", fresh: "carga", desc: "Armá promociones y mirá su impacto." },
+  { href: "/rentabilidad", label: "Rentabilidad", icon: "◉", section: "Costos", fresh: "carga", desc: "Margen por producto y simulación de promos." },
   // Clientes — reseñas, CRM y cupones
-  { href: "/resenas", label: "Reseñas", icon: "★", section: "Clientes", fresh: "revisar" }, // reputación Google = snapshot (foto)
-  { href: "/clientes", label: "Clientes", icon: "☺", section: "Clientes", fresh: "carga" },
-  { href: "/cupones", label: "Validar cupón", icon: "◈", section: "Clientes", fresh: "carga" },
+  { href: "/resenas", label: "Reseñas", icon: "★", section: "Clientes", fresh: "revisar", desc: "Reputación de Google y el sistema de cupones por reseña." }, // reputación Google = snapshot (foto)
+  { href: "/clientes", label: "Clientes", icon: "☺", section: "Clientes", fresh: "carga", desc: "El CRM que se arma solo con reseñas y cupones." },
+  { href: "/cupones", label: "Validar cupón", icon: "◈", section: "Clientes", fresh: "carga", desc: "Validar y canjear un cupón en el local." },
   // Locales
-  { href: "/apertura", label: "Apertura de locales", icon: "◱", section: "Locales", fresh: "carga" },
-  { href: "/inventario", label: "Inventario", icon: "▧", section: "Locales", fresh: "carga" },
+  { href: "/apertura", label: "Apertura de locales", icon: "◱", section: "Locales", fresh: "carga", desc: "Estado de apertura de cada local (para gerencia y la TV)." },
+  { href: "/inventario", label: "Inventario", icon: "▧", section: "Locales", fresh: "carga", desc: "Recursos de IT: qué hay, qué falta comprar y aprobaciones." },
   // Empresa — estructura y personas
-  { href: "/organigrama", label: "Organigrama", icon: "⧉", section: "Empresa", fresh: "carga" },
+  { href: "/organigrama", label: "Organigrama", icon: "⧉", section: "Empresa", fresh: "carga", desc: "Quién reporta a quién; ubicás tu casillero." },
   // Sistema — configuración y salud
-  { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema", fresh: "carga" },
-  { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga" },
-  { href: "/estado", label: "Salud y endpoints", icon: "⚙", section: "Sistema", fresh: "vivo" },
+  { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema", fresh: "carga", desc: "Enseñale al sistema las recetas y los códigos de sucursal." },
+  { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga", desc: "Alta de usuarios y qué puede ver cada uno." },
+  { href: "/estado", label: "Salud y endpoints", icon: "⚙", section: "Sistema", fresh: "vivo", desc: "Salud del sistema y de las conexiones, en vivo." },
   // Ayuda y herramientas
-  { href: "/firmas", label: "Firmas", icon: "✎", section: "Ayuda", fresh: "carga" },
-  { href: "/guia", label: "¿Qué puedo hacer?", icon: "?", section: "Ayuda", fresh: "carga" },
+  { href: "/firmas", label: "Firmas", icon: "✎", section: "Ayuda", fresh: "carga", desc: "Generador de firmas de email para el equipo." },
+  { href: "/guia", label: "¿Qué puedo hacer?", icon: "?", section: "Ayuda", fresh: "carga", desc: "La guía completa: qué podés hacer y cómo, paso a paso." },
 ];
 
 // Rutas universales: las ve todo el mundo, no se pueden sacar (evita autobloqueo).

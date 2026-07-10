@@ -4,8 +4,14 @@ import { getMapeos } from "@/lib/mapeos-store";
 import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { pedidosSourceName } from "@/lib/sources";
+import { getSesion } from "@/lib/session";
+import { navDeSesion } from "@/lib/roles-store";
+import { NAV_CATALOG, puedeVerNav } from "@/lib/roles";
 import { Card } from "@/components/ui/primitives";
+import BienvenidaGuia from "@/components/views/BienvenidaGuia";
 import type { CruceRow } from "@/lib/types";
+
+const capitalizar = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : "");
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +26,12 @@ export default async function Page() {
   const mapeos = await getMapeos();
   const alertas = resumenAlertas(detectarAlertas(cruce, mapeos));
   const pedidosMock = pedidosSourceName() === "mock"; // pedidos simulados => desvíos no reales
+
+  // Herramientas que este usuario puede ver (para el cartel de bienvenida).
+  const sesion = await getSesion();
+  const miNav = sesion ? await navDeSesion(sesion) : [];
+  const misHerramientas = NAV_CATALOG.filter((i) => puedeVerNav(miNav, i.href));
+  const nombre = sesion?.email ? capitalizar(sesion.email.split("@")[0].split(/[._-]/)[0]) : undefined;
 
   const ultimaFecha = cruce.map((r) => r.fecha).sort().reverse()[0] ?? "—";
   const hoy = cruce.filter((r) => r.fecha === ultimaFecha);
@@ -46,6 +58,8 @@ export default async function Page() {
           ¿Qué puedo hacer? →
         </Link>
       </div>
+
+      <BienvenidaGuia items={misHerramientas} nombre={nombre} />
 
       {fuenteError && (
         <Card className="border-bad/20 bg-bad/5 p-4">
