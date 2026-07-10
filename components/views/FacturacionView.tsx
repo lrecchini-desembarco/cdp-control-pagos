@@ -4,14 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 
-interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; }
+interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; }
 interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; }
 interface FactMarca { marca: string; unidades: number; facturacion: number; }
+interface FactTurno { turno: string; unidades: number; facturacion: number; }
 interface Datos {
   ok: boolean; source: string; ventasSource?: string; preciosSource?: string; refFecha: string;
   total: number; unidades: number; unidadesConPrecio: number; cobertura: number; ticketProm: number;
-  porProducto: FactProducto[]; porLocal: FactLocal[]; porMarca: FactMarca[];
+  abc: { a: number; b: number; c: number };
+  porProducto: FactProducto[]; porLocal: FactLocal[]; porMarca: FactMarca[]; porTurno: FactTurno[];
 }
+
+const TURNO_LABEL: Record<string, string> = { mediodia: "Mediodía", tarde: "Tarde", noche: "Noche" };
+const claseTone = (c?: string) => (c === "A" ? "bg-ok/10 text-ok" : c === "B" ? "bg-warn/15 text-warn" : "bg-ink/5 text-muted");
 
 const MARCAS: Record<string, string> = { desembarco: "El Desembarco", tasty: "Mr Tasty", mila: "Mila & Go" };
 const marcaLabel = (m: string) => MARCAS[m] ?? m;
@@ -113,6 +118,19 @@ export default function FacturacionView() {
         <Kpi label="Cobertura" value={d ? `${Math.round(d.cobertura * 100)}%` : "—"} tone={d && d.cobertura < 0.9 ? "warn" : undefined} sub="unidades con precio" />
       </div>
 
+      {/* Facturación por turno */}
+      {d && d.porTurno.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {d.porTurno.map((t) => (
+            <Card key={t.turno} className="p-3">
+              <p className="text-2xs uppercase tracking-wide text-faint">{TURNO_LABEL[t.turno] ?? t.turno}</p>
+              <p className="mt-0.5 font-display text-lg font-semibold text-ink">{moneyC(t.facturacion)}</p>
+              <p className="text-2xs text-faint">{int(t.unidades)} u · {d.total ? Math.round((t.facturacion / d.total) * 100) : 0}% del total</p>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1.5">
         {([["productos", "Por producto"], ["locales", "Por local"], ["marcas", "Por marca"]] as const).map(([id, label]) => (
@@ -149,6 +167,12 @@ export default function FacturacionView() {
           <div className="p-4 text-sm text-bad">No se pudo cargar la facturación. {errMsg}</div>
         ) : tab === "productos" ? (
           productos.length === 0 ? <EmptyState title="Sin productos" desc="No hay ventas para ese filtro." /> : (
+            <>
+            <p className="border-b border-line px-4 py-2 text-2xs text-muted">
+              <b className="text-ok">Curva ABC:</b> {productos.filter((p) => p.clase === "A").length} producto(s) <b className="text-ok">A</b> hacen el grueso (hasta 80%) ·{" "}
+              {productos.filter((p) => p.clase === "B").length} <b className="text-warn">B</b> (80–95%) ·{" "}
+              {productos.filter((p) => p.clase === "C").length} <b className="text-muted">C</b> (la cola larga).
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
@@ -160,7 +184,10 @@ export default function FacturacionView() {
                   {productos.slice(0, LIMITE).map((p, i) => (
                     <tr key={p.sku} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
                       <td className="px-4 py-2 text-2xs text-faint tnum">{i + 1}</td>
-                      <td className="px-3 py-2"><span className="font-medium text-ink">{p.nombre}</span><span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(p.marca)}</span></td>
+                      <td className="px-3 py-2">
+                        <span className={`mr-1.5 inline-block rounded px-1 py-px text-[9px] font-bold ${claseTone(p.clase)}`} title={`Clase ${p.clase} · acumulado ${Math.round((p.acumulado ?? 0) * 100)}%`}>{p.clase}</span>
+                        <span className="font-medium text-ink">{p.nombre}</span><span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(p.marca)}</span>
+                      </td>
                       <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(p.unidades)}</td>
                       <td className="px-3 py-2 text-right font-mono tnum text-muted">{p.precio ? money(p.precio) : "—"}</td>
                       <td className="px-3 py-2">
@@ -175,6 +202,7 @@ export default function FacturacionView() {
               </table>
               {productos.length > LIMITE && <p className="border-t border-line px-4 py-2.5 text-2xs text-faint">Mostrando los {LIMITE} de {int(productos.length)}. Exportá para ver todo.</p>}
             </div>
+            </>
           )
         ) : tab === "locales" ? (
           <div className="overflow-x-auto">

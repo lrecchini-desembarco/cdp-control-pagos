@@ -18,7 +18,10 @@ const clave = (sku: string, suc: string) => `${sku}|${suc}`;
 export interface FactProducto {
   sku: string; nombre: string; marca: string;
   unidades: number; precio: number; facturacion: number;
+  acumulado?: number;        // % acumulado de facturación (curva ABC)
+  clase?: "A" | "B" | "C";   // A = hasta 80% · B = 80-95% · C = resto
 }
+export interface FactTurno { turno: string; unidades: number; facturacion: number; }
 export interface FactLocal {
   sucursal: string; marca: string;
   unidades: number; facturacion: number; cobertura: number; // % de sus unidades con precio
@@ -33,9 +36,11 @@ export interface Facturacion {
   unidadesConPrecio: number;
   cobertura: number;        // % de unidades que pudieron valorizarse
   ticketProm: number;       // $ por unidad (no por ticket: no tenemos tickets aún)
+  abc: { a: number; b: number; c: number }; // cantidad de productos por clase
   porProducto: FactProducto[];
   porLocal: FactLocal[];
   porMarca: FactMarca[];
+  porTurno: FactTurno[];
 }
 
 export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<Facturacion> {
@@ -56,6 +61,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
 
   const prod = new Map<string, FactProducto>();
   const local = new Map<string, { sucursal: string; marca: string; unidades: number; facturacion: number; conPrecio: number }>();
+  const turno = new Map<string, FactTurno>();
   let refFecha = "";
   let total = 0, unidades = 0, unidadesConPrecio = 0;
 
@@ -67,6 +73,11 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
 
     unidades += v.unidades;
     if (precio > 0) { unidadesConPrecio += v.unidades; total += fact; }
+
+    const tn = v.turno ?? "noche";
+    let tu = turno.get(tn);
+    if (!tu) { tu = { turno: tn, unidades: 0, facturacion: 0 }; turno.set(tn, tu); }
+    tu.unidades += v.unidades; tu.facturacion += fact;
 
     let pr = prod.get(v.sku);
     if (!pr) { pr = { sku: v.sku, nombre: v.nombre ?? v.sku, marca, unidades: 0, precio, facturacion: 0 }; prod.set(v.sku, pr); }
@@ -82,6 +93,16 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
   }
 
   const porProducto = Array.from(prod.values()).sort((a, b) => b.facturacion - a.facturacion);
+  // Curva ABC: acumulado sobre el total; A = hasta 80%, B = 80-95%, C = resto.
+  const abc = { a: 0, b: 0, c: 0 };
+  let acc = 0;
+  for (const p of porProducto) {
+    const cumAntes = total ? acc / total : 0;
+    acc += p.facturacion;
+    p.acumulado = total ? acc / total : 0;
+    p.clase = cumAntes < 0.8 ? "A" : cumAntes < 0.95 ? "B" : "C";
+    abc[p.clase === "A" ? "a" : p.clase === "B" ? "b" : "c"]++;
+  }
   const porLocal = Array.from(local.values())
     .map((l) => ({ sucursal: l.sucursal, marca: l.marca, unidades: l.unidades, facturacion: l.facturacion, cobertura: l.unidades ? l.conPrecio / l.unidades : 0 }))
     .sort((a, b) => b.facturacion - a.facturacion);
@@ -94,6 +115,9 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
   }
   const porMarca = Array.from(marcaMap.values()).sort((a, b) => b.facturacion - a.facturacion);
 
+  const ordenTurno = ["mediodia", "tarde", "noche"];
+  const porTurno = Array.from(turno.values()).sort((a, b) => ordenTurno.indexOf(a.turno) - ordenTurno.indexOf(b.turno));
+
   return {
     ventana: q,
     refFecha,
@@ -102,8 +126,10 @@ export async function getFacturacion(q: RangoQuery = rangoActividad()): Promise<
     unidadesConPrecio,
     cobertura: unidades ? unidadesConPrecio / unidades : 0,
     ticketProm: unidadesConPrecio ? total / unidadesConPrecio : 0,
+    abc,
     porProducto,
     porLocal,
     porMarca,
+    porTurno,
   };
 }
