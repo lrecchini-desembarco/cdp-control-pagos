@@ -48,6 +48,20 @@ export async function addUsuario(email: string, rol: Rol, password?: string, nav
   return users;
 }
 
+/**
+ * Devuelve el usuario; si no existe lo crea con rol "pendiente" (sin acceso).
+ * Lo usa el login con Google: cualquier @dominio entra, pero arranca sin accesos
+ * hasta que el admin le asigne un rol. Los ya cargados conservan su rol.
+ */
+export async function ensureUsuario(email: string): Promise<Usuario> {
+  const previo = await findUsuario(email);
+  if (previo) return previo;
+  const nuevo: Usuario = { email: norm(email), rol: "pendiente" };
+  const users = [...(await getUsuarios()), nuevo];
+  await writeStore("usuarios", users);
+  return nuevo;
+}
+
 export async function removeUsuario(email: string): Promise<Usuario[]> {
   const e = norm(email);
   const users = (await getUsuarios()).filter((u) => norm(u.email) !== e);

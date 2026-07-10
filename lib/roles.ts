@@ -1,7 +1,7 @@
 // Roles y qué ve cada uno. Es config pura (sin fs), así la puede usar el
 // middleware (edge) y también el server.
 
-export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia" | "apps-gerencia";
+export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia" | "apps-gerencia" | "pendiente";
 
 export interface RolInfo {
   label: string;
@@ -51,12 +51,19 @@ export const ROLES: Record<Rol, RolInfo> = {
     nav: ["/ventas", "/precios", "/compras", "/organigrama", "/guia"],
     gestionaUsuarios: false,
   },
+  pendiente: {
+    label: "Sin acceso",
+    // Auto-provisionado (entró con Google pero el admin todavía no le asignó rol).
+    // Solo ve la ayuda; el admin le cambia el rol desde Usuarios.
+    nav: ["/guia"],
+    gestionaUsuarios: false,
+  },
 };
 
-export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion", "resenas", "gerencia", "apps-gerencia"];
+export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion", "resenas", "gerencia", "apps-gerencia", "pendiente"];
 
 export const esRol = (v: unknown): v is Rol =>
-  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion" || v === "resenas" || v === "gerencia" || v === "apps-gerencia";
+  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion" || v === "resenas" || v === "gerencia" || v === "apps-gerencia" || v === "pendiente";
 
 // Catálogo maestro de items del menú (href + label + ícono). El QUÉ VE cada rol
 // se define eligiendo de acá (editable desde /usuarios, persistido en el store).
