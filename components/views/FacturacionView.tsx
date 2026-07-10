@@ -443,18 +443,28 @@ function TendenciaChart({ dias, metric }: { dias: FactDia[]; metric: "facturacio
   const vals = dias.map((d) => d[metric]);
   const max = Math.max(1, ...vals);
   const avg = vals.reduce((s, v) => s + v, 0) / (N || 1);
-  const W = Math.max(320, N * 20);
-  const H = 128, top = 10, plotH = 88, base = top + plotH;
+  // viewBox con ancho REALISTA (no el mínimo 320): con pocos días (7/15) el SVG se
+  // estiraba al ancho del contenedor y escalaba el texto y las barras ~4-5x (etiquetas
+  // gigantes pisando las barras). Con un ancho base alto el factor de escala queda ~1-2x.
+  const W = Math.max(760, N * 28);
+  // `top` es una banda reservada ARRIBA para la etiqueta del máximo: así nunca se
+  // monta sobre la barra más alta (que llega justo a y=top).
+  const H = 132, top = 22, plotH = 84, base = top + plotH;
   const step = W / N;
-  const barW = Math.min(26, step * 0.62);
+  const barW = Math.min(46, step * 0.5);
   const fmt = (v: number) => (metric === "facturacion" ? moneyC(v) : int(v));
   const yAvg = base - (avg / max) * plotH;
   const labelIdx = new Set([0, N > 2 ? Math.floor(N / 2) : -1, N - 1]);
+  // La etiqueta del promedio va del lado OPUESTO al pico, para no pisar la barra alta.
+  const iMax = vals.indexOf(max);
+  const avgDer = iMax < N / 2; // pico a la izquierda -> "prom" a la derecha
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: N > 16 ? W / 1.6 : undefined }} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`Tendencia diaria de ${metric}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: N > 16 ? W / 1.7 : undefined }} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`Tendencia diaria de ${metric}`}>
+        {/* máximo, en la banda superior reservada */}
+        <text x={2} y={13} fontSize="10" className="fill-faint">{fmt(max)}</text>
         <line x1={0} x2={W} y1={yAvg} y2={yAvg} className="stroke-line" strokeDasharray="3 3" />
-        <text x={W} y={yAvg - 3} textAnchor="end" fontSize="9" className="fill-faint">prom {fmt(avg)}</text>
+        <text x={avgDer ? W - 2 : 2} y={yAvg - 4} textAnchor={avgDer ? "end" : "start"} fontSize="10" className="fill-faint">prom {fmt(avg)}</text>
         <line x1={0} x2={W} y1={base} y2={base} className="stroke-line" />
         <g className="text-action">
           {dias.map((d, i) => {
@@ -469,9 +479,8 @@ function TendenciaChart({ dias, metric }: { dias: FactDia[]; metric: "facturacio
           })}
         </g>
         {dias.map((d, i) => labelIdx.has(i) ? (
-          <text key={d.fecha} x={i * step + step / 2} y={H - 2} textAnchor="middle" fontSize="9" className="fill-faint">{fecha(d.fecha)}</text>
+          <text key={d.fecha} x={i * step + step / 2} y={H - 3} textAnchor="middle" fontSize="10" className="fill-faint">{fecha(d.fecha)}</text>
         ) : null)}
-        <text x={2} y={top + 1} fontSize="9" className="fill-faint">{fmt(max)}</text>
       </svg>
     </div>
   );
