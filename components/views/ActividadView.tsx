@@ -228,7 +228,7 @@ export default function ActividadView() {
                       <span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span>
                     </td>
                     <td className="px-3 py-2 text-2xs text-muted">{p.sucursal}<span className="ml-1.5 text-faint">· {marcaLabel(p.marca)}</span></td>
-                    <td className="px-3 py-2 text-right font-mono tnum text-muted">{p.precio ? money(p.precio) : "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono tnum text-muted monto">{p.precio ? money(p.precio) : "—"}</td>
                     <td className="px-3 py-2 text-2xs text-muted">{fecha(p.ultimaVenta)}</td>
                     <td className="px-3 py-2 text-right">
                       <span className={`font-mono tnum font-semibold ${p.dias >= 60 ? "text-bad" : p.dias >= 30 ? "text-warn" : "text-muted"}`}>{p.dias}</span>

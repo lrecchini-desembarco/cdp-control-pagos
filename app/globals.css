@@ -85,3 +85,28 @@ html, body {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
   animation: shimmer 1.3s infinite;
 }
+
+/* Modo privacidad ("ojo" del Topbar): oculta con blur los montos marcados con
+   .monto cuando data-privacy="on" está en <html>. Preserva el layout (no colapsa)
+   y no se pueden seleccionar/copiar los valores tapados. Ver components/layout/Privacidad. */
+[data-privacy="on"] .monto {
+  filter: blur(0.4em);
+  -webkit-filter: blur(0.4em);
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: zoom-in;
+  display: inline-block;               /* permite el scale del hover (los inline lo ignoran) */
+  transform-box: fill-box;             /* que el scale sea relativo al propio texto (sirve para SVG) */
+  transform-origin: center;
+  transition: filter .12s ease, transform .12s ease;
+}
+/* Espiar un monto puntual: al pasar el mouse se revela y se agranda, sin apagar la privacidad. */
+[data-privacy="on"] .monto:hover {
+  filter: none;
+  -webkit-filter: none;
+  user-select: auto;
+  -webkit-user-select: auto;
+  transform: scale(1.15);
+  position: relative;
+  z-index: 5;
+}

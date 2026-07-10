@@ -79,7 +79,7 @@ export default function PromosView() {
                   </button>
                   <div className="text-right">
                     <p className="text-2xs uppercase tracking-wide text-faint">Margen promo</p>
-                    <p className={`font-mono tnum text-sm font-semibold ${p.margenPromoTotal < 0 ? "text-bad" : "text-ink"}`}>{money(p.margenPromoTotal)}</p>
+                    <p className={`font-mono tnum text-sm font-semibold ${p.margenPromoTotal < 0 ? "text-bad" : "text-ink"} monto`}>{money(p.margenPromoTotal)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => aprobar(p.id, !p.aprobada)} className={`rounded-lg px-2.5 py-1 text-2xs font-medium ${p.aprobada ? "bg-ink/5 text-muted hover:bg-ink/10" : "bg-ok/10 text-ok hover:bg-ok/20"}`}>{p.aprobada ? "Desaprobar" : "Aprobar"}</button>
@@ -106,12 +106,12 @@ export default function PromosView() {
                           {p.productosCosteados.map((c) => (
                             <tr key={c.skuTango} className="border-t border-line/60">
                               <td className="py-1.5 pr-3 text-ink">{c.descripcion}{c.recetaFalta && <span className="ml-1 text-2xs text-warn">· sin receta</span>}</td>
-                              <td className="py-1.5 px-2 text-right font-mono tnum text-muted">{money(c.precioRegular)}</td>
-                              <td className="py-1.5 px-2 text-right font-mono tnum text-ink">{money(c.precioPromo)}</td>
+                              <td className="py-1.5 px-2 text-right font-mono tnum text-muted monto">{money(c.precioRegular)}</td>
+                              <td className="py-1.5 px-2 text-right font-mono tnum text-ink monto">{money(c.precioPromo)}</td>
                               <td className="py-1.5 px-2 text-right font-mono tnum text-faint">{pct(c.descPct)}</td>
                               <td className="py-1.5 px-2 text-right font-mono tnum text-muted">{c.recetaFalta ? "—" : pct(c.cmvPromo)}</td>
-                              <td className="py-1.5 px-2 text-right font-mono tnum text-faint">{c.recetaFalta ? "—" : money(c.margenRegular)}</td>
-                              <td className={`py-1.5 px-2 text-right font-mono tnum font-semibold ${c.recetaFalta ? "text-faint" : c.margenPromo < 0 ? "text-bad" : c.margenPromoPct < 0.15 ? "text-warn" : "text-ok"}`}>{c.recetaFalta ? "—" : money(c.margenPromo)}</td>
+                              <td className="py-1.5 px-2 text-right font-mono tnum text-faint monto">{c.recetaFalta ? "—" : money(c.margenRegular)}</td>
+                              <td className={`py-1.5 px-2 text-right font-mono tnum font-semibold ${c.recetaFalta ? "text-faint" : c.margenPromo < 0 ? "text-bad" : c.margenPromoPct < 0.15 ? "text-warn" : "text-ok"} monto`}>{c.recetaFalta ? "—" : money(c.margenPromo)}</td>
                             </tr>
                           ))}
                         </tbody>

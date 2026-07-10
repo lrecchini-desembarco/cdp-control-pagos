@@ -88,10 +88,10 @@ export default function MercadoPagoView() {
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi label={`Cobrado MP (${dias} días)`} value={money(total)} tone="ok" />
-            <Kpi label="Neto liberado" value={money(neto)} sub="lo que MP acredita" />
+            <Kpi label={`Cobrado MP (${dias} días)`} value={money(total)} tone="ok" monto />
+            <Kpi label="Neto liberado" value={money(neto)} sub="lo que MP acredita" monto />
             <Kpi label="Pagos" value={int(count)} sub="operaciones aprobadas" />
-            <Kpi label="Ticket promedio" value={count ? money(total / count) : "—"} />
+            <Kpi label="Ticket promedio" value={count ? money(total / count) : "—"} monto />
           </div>
 
           {/* Por tipo de pago */}
@@ -104,7 +104,7 @@ export default function MercadoPagoView() {
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink/10">
                     <div className="h-full rounded-full bg-action" style={{ width: `${Math.max(2, (v / maxTipo) * 100)}%` }} />
                   </div>
-                  <span className="w-28 shrink-0 text-right font-mono tnum text-sm text-ink">{money(v)}</span>
+                  <span className="w-28 shrink-0 text-right font-mono tnum text-sm text-ink monto">{money(v)}</span>
                   <span className="w-10 shrink-0 text-right text-2xs text-faint">{total ? Math.round((v / total) * 100) : 0}%</span>
                 </div>
               ))}
@@ -127,8 +127,8 @@ export default function MercadoPagoView() {
                   {[...d.dias].reverse().map((x) => (
                     <tr key={x.fecha} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
                       <td className="px-4 py-2 text-ink">{fechaCorta(x.fecha)}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-ink">{money(x.total)}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-muted">{money(x.neto)}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-ink monto">{money(x.total)}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-muted monto">{money(x.neto)}</td>
                       <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(x.count)}</td>
                     </tr>
                   ))}
@@ -144,7 +144,7 @@ export default function MercadoPagoView() {
               <p className="mb-2 text-2xs text-faint">Los store_id de Mercado Pago. Cuando confirmemos el mapeo store → local, se muestra por local.</p>
               <div className="flex flex-wrap gap-2">
                 {porStore.slice(0, 30).map(([s, v]) => (
-                  <span key={s} className="rounded-full border border-line px-2.5 py-1 text-2xs text-muted">{s}: <b className="text-ink">{money(v)}</b></span>
+                  <span key={s} className="rounded-full border border-line px-2.5 py-1 text-2xs text-muted">{s}: <b className="text-ink monto">{money(v)}</b></span>
                 ))}
               </div>
             </Card>
@@ -165,11 +165,11 @@ export default function MercadoPagoView() {
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "ok" }) {
+function Kpi({ label, value, sub, tone, monto }: { label: string; value: string; sub?: string; tone?: "ok"; monto?: boolean }) {
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${tone === "ok" ? "text-ok" : "text-ink"}`}>{value}</p>
+      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${tone === "ok" ? "text-ok" : "text-ink"} ${monto ? "monto" : ""}`}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );

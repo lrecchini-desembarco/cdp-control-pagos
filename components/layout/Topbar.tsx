@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMobileNav } from "@/components/layout/MobileNav";
+import { OjoPrivacidad } from "@/components/layout/Privacidad";
 
 const LABELS: Record<string, string> = {
   "": "Resumen",
@@ -66,6 +67,7 @@ export default function Topbar({ email, rolLabel }: { email: string; rolLabel: s
           <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
           {txt}
         </span>
+        <OjoPrivacidad />
         <span className="hidden h-4 w-px bg-line sm:inline-block" />
         <span className="hidden text-faint md:inline">
           {email} · <span className="font-medium text-muted">{rolLabel}</span>

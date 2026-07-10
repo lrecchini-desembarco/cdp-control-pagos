@@ -98,7 +98,7 @@ export default function AppsView() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi label="Margen $ ponderado" value={money(kpis.margenPond)} sub="por unidad vendida" tone={kpis.margenPond < 0 ? "bad" : undefined} />
+        <Kpi label="Margen $ ponderado" value={money(kpis.margenPond)} sub="por unidad vendida" tone={kpis.margenPond < 0 ? "bad" : undefined} money />
         <Kpi label="CMV ponderado" value={pct(kpis.cmvPond)} />
         <Kpi label="Margen negativo" value={String(kpis.negativos)} sub="productos que pierden" tone={kpis.negativos ? "bad" : undefined} />
         <Kpi label="Sin receta" value={String(kpis.sinReceta)} tone={kpis.sinReceta ? "warn" : undefined} />
@@ -129,17 +129,17 @@ export default function AppsView() {
                   <tr key={f.skuTango} className="border-b border-line last:border-0 hover:bg-ink/5">
                     <td className="px-4 py-2">
                       <div className="text-ink">{f.descripcion}</div>
-                      <div className="text-2xs text-faint">SKU {f.skuTango}{f.precioSalon ? ` · salón ${money(f.precioSalon)}` : ""}{f.recetaFalta && <span className="ml-1 text-warn">· sin receta</span>}</div>
+                      <div className="text-2xs text-faint">SKU {f.skuTango}{f.precioSalon ? <> · salón <span className="monto">{money(f.precioSalon)}</span></> : ""}{f.recetaFalta && <span className="ml-1 text-warn">· sin receta</span>}</div>
                     </td>
                     <td className="px-3 py-2 text-right">
                       <input type="number" defaultValue={f.precioApps} key={f.precioApps}
                         onBlur={(e) => { const v = Math.round(Number(e.target.value)); if (v && v !== f.precioApps) guardarPrecio(f.skuTango, v); }}
-                        className="w-24 rounded border border-line bg-surface px-2 py-1 text-right font-mono tnum text-sm text-ink focus:border-action" />
+                        className="w-24 rounded border border-line bg-surface px-2 py-1 text-right font-mono tnum text-sm text-ink focus:border-action monto" />
                     </td>
-                    <td className="px-3 py-2 text-right font-mono tnum text-muted">{f.recetaFalta ? "—" : money(f.costo)}</td>
+                    <td className="px-3 py-2 text-right font-mono tnum text-muted monto">{f.recetaFalta ? "—" : money(f.costo)}</td>
                     <td className="px-3 py-2 text-right font-mono tnum text-muted">{f.recetaFalta ? "—" : pct(f.cmvPct)}</td>
-                    <td className="px-3 py-2 text-right font-mono tnum text-faint">{money(f.costoCanal)}</td>
-                    <td className={`px-3 py-2 text-right font-mono tnum font-semibold ${f.recetaFalta ? "text-faint" : toneMargen(f.margenPct)}`}>{f.recetaFalta ? "—" : money(f.margen)}</td>
+                    <td className="px-3 py-2 text-right font-mono tnum text-faint monto">{money(f.costoCanal)}</td>
+                    <td className={`px-3 py-2 text-right font-mono tnum font-semibold ${f.recetaFalta ? "text-faint" : toneMargen(f.margenPct)} monto`}>{f.recetaFalta ? "—" : money(f.margen)}</td>
                     <td className={`px-3 py-2 text-right font-mono tnum ${f.recetaFalta ? "text-faint" : toneMargen(f.margenPct)}`}>{f.recetaFalta ? "—" : pct(f.margenPct)}</td>
                     <td className="px-3 py-2 text-right font-mono tnum text-faint">{f.unidades ? f.unidades.toLocaleString("es-AR") : "—"}</td>
                   </tr>
@@ -156,12 +156,12 @@ export default function AppsView() {
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "warn" | "bad" }) {
+function Kpi({ label, value, sub, tone, money }: { label: string; value: string; sub?: string; tone?: "warn" | "bad"; money?: boolean }) {
   const c = tone === "bad" ? "text-bad" : tone === "warn" ? "text-warn" : "text-ink";
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-lg font-semibold ${c}`}>{value}</p>
+      <p className={`mt-0.5 font-display text-lg font-semibold ${c} ${money ? "monto" : ""}`}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );

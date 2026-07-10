@@ -318,7 +318,7 @@ export default function ComprasView() {
             <Kpi label={tieneProv ? "Proveedores" : "Locales"} value={String(tieneProv ? porProveedor.length : porSucursal.length)} />
             <Kpi label="Insumos" value={String(porInsumo.length)} />
             {tieneImporte
-              ? <Kpi label="$ Total comprado" value={"$" + money(totalImporte)} />
+              ? <Kpi label="$ Total comprado" value={"$" + money(totalImporte)} money />
               : <Kpi label={tieneSuc ? "🔴 Compra sin ventas" : "Comprobantes"} value={tieneSuc ? (cargando ? "…" : String(alertas)) : String(new Set(compras.map((c) => c.comprobante).filter(Boolean)).size)} tone={tieneSuc && alertas ? "bad" : undefined} />}
           </div>
 
@@ -360,7 +360,7 @@ export default function ComprasView() {
                   <span key="v">{c.ventas ? "✅" : "—"}</span>,
                   <Estado key="e" v={c.estado} />,
                   <span key="q" className="font-mono tnum text-muted">{money(c.cantidad)}</span>,
-                  <span key="i" className="font-mono tnum text-muted">{tieneImporte ? "$" + money(c.importe) : "—"}</span>,
+                  <span key="i" className="font-mono tnum text-muted monto">{tieneImporte ? "$" + money(c.importe) : "—"}</span>,
                   <span key="u" className="font-mono tnum text-muted">{money(c.unidades)}</span>,
                 ])} />
             )}
@@ -371,7 +371,7 @@ export default function ComprasView() {
                   <span key="l" className="font-mono tnum text-faint">{p.lineas}</span>,
                   <span key="n" className="font-mono tnum text-faint">{p.insumos.size}</span>,
                   <b key="q" className="font-mono tnum text-ink">{money(p.cantidad)}</b>,
-                  <b key="i" className="font-mono tnum text-ink">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
+                  <b key="i" className="font-mono tnum text-ink monto">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
                 ])} />
             )}
             {tab === "insumo" && (
@@ -380,7 +380,7 @@ export default function ComprasView() {
                   <span key="c" className="font-mono text-2xs text-faint">{p.codigo || "—"}</span>,
                   <span key="d" className="text-sm text-ink">{p.descripcion}</span>,
                   <b key="q" className="font-mono tnum text-ink">{money(p.cantidad)}</b>,
-                  <b key="i" className="font-mono tnum text-ink">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
+                  <b key="i" className="font-mono tnum text-ink monto">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
                   <span key="r" className="text-2xs text-faint">{p.refs.size}</span>,
                 ])} />
             )}
@@ -390,7 +390,7 @@ export default function ComprasView() {
                   <span key="s" className="text-sm text-ink">{p.sucursal}</span>,
                   <span key="l" className="font-mono tnum text-faint">{p.lineas}</span>,
                   <b key="q" className="font-mono tnum text-ink">{money(p.cantidad)}</b>,
-                  <b key="i" className="font-mono tnum text-ink">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
+                  <b key="i" className="font-mono tnum text-ink monto">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
                 ])} />
             )}
           </Card>
@@ -413,11 +413,11 @@ function Estado({ v }: { v: string }) {
   return <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${tono}`}>{v}</span>;
 }
 
-function Kpi({ label, value, tone }: { label: string; value: string; tone?: "bad" }) {
+function Kpi({ label, value, tone, money }: { label: string; value: string; tone?: "bad"; money?: boolean }) {
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-lg font-semibold ${tone === "bad" ? "text-bad" : "text-ink"}`}>{value}</p>
+      <p className={`mt-0.5 font-display text-lg font-semibold ${tone === "bad" ? "text-bad" : "text-ink"} ${money ? "monto" : ""}`}>{value}</p>
     </Card>
   );
 }

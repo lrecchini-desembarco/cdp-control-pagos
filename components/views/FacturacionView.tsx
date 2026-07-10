@@ -158,10 +158,10 @@ export default function FacturacionView() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? moneyC(d.total) : "—"} title={d ? money(d.total) : undefined} tone="ok" sub={`últimos ${dias} días`} />
+        <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? moneyC(d.total) : "—"} title={d ? money(d.total) : undefined} tone="ok" sub={`últimos ${dias} días`} sensible />
         <Kpi label={d?.exacta ? "Margen bruto" : "Margen bruto estimado"} value={d ? moneyC(d.margenTotal) : "—"} title={d ? money(d.margenTotal) : undefined} tone={d ? "ok" : undefined}
-          sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} />
-        <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub={d ? `${int(d.unidades)} unidades` : "precio promedio"} />
+          sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} sensible />
+        <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub={d ? `${int(d.unidades)} unidades` : "precio promedio"} sensible />
         <Kpi label="Cobertura precio" value={d ? `${Math.round(d.cobertura * 100)}%` : "—"} tone={d && d.cobertura < 0.9 ? "warn" : undefined} sub="unidades con precio" />
       </div>
 
@@ -171,7 +171,7 @@ export default function FacturacionView() {
           {d.porTurno.map((t) => (
             <Card key={t.turno} className="p-3">
               <p className="text-2xs uppercase tracking-wide text-faint">{TURNO_LABEL[t.turno] ?? t.turno}</p>
-              <p className="mt-0.5 font-display text-lg font-semibold text-ink">{moneyC(t.facturacion)}</p>
+              <p className="mt-0.5 font-display text-lg font-semibold text-ink monto">{moneyC(t.facturacion)}</p>
               <p className="text-2xs text-faint">{int(t.unidades)} u · {d.total ? Math.round((t.facturacion / d.total) * 100) : 0}% del total</p>
             </Card>
           ))}
@@ -259,16 +259,16 @@ export default function FacturacionView() {
                         <span className="font-medium text-ink">{p.nombre}</span><span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(p.marca)}</span>
                       </td>
                       <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(p.unidades)}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-muted">{p.precio ? money(p.precio) : "—"}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-muted"><span className="monto">{p.precio ? money(p.precio) : "—"}</span></td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="h-1.5 w-28 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-ok/80" style={{ width: `${Math.max(2, (p.facturacion / maxFactProd) * 100)}%` }} /></div>
-                          <span className="font-mono tnum font-medium text-ink">{money(p.facturacion)}</span>
+                          <span className="font-mono tnum font-medium text-ink monto">{money(p.facturacion)}</span>
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right">
                         {p.tieneCosto
-                          ? <span className={`font-mono tnum font-medium ${(p.margen ?? 0) < 0 ? "text-bad" : "text-ok"}`}>{money(p.margen ?? 0)} <span className="text-2xs text-faint">{Math.round((p.margenPct ?? 0) * 100)}%</span></span>
+                          ? <span className={`font-mono tnum font-medium ${(p.margen ?? 0) < 0 ? "text-bad" : "text-ok"}`}><span className="monto">{money(p.margen ?? 0)}</span> <span className="text-2xs text-faint">{Math.round((p.margenPct ?? 0) * 100)}%</span></span>
                           : <span className="text-2xs text-faint" title="No hay receta cargada para costear este producto">sin receta</span>}
                       </td>
                     </tr>
@@ -297,10 +297,10 @@ export default function FacturacionView() {
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-28 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-ok/80" style={{ width: `${Math.max(2, (l.facturacion / maxFactLoc) * 100)}%` }} /></div>
-                        <span className="font-mono tnum font-medium text-ink">{money(l.facturacion)}</span>
+                        <span className="font-mono tnum font-medium text-ink monto">{money(l.facturacion)}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-right font-mono tnum text-ok">{l.margen ? money(l.margen) : "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono tnum text-ok"><span className="monto">{l.margen ? money(l.margen) : "—"}</span></td>
                     <td className="px-3 py-2 text-right"><span className={`text-2xs tnum ${l.cobertura < 0.9 ? "text-warn" : "text-faint"}`}>{Math.round(l.cobertura * 100)}%</span></td>
                   </tr>
                 ))}
@@ -312,7 +312,7 @@ export default function FacturacionView() {
             <>
             <p className="border-b border-line px-4 py-2.5 text-2xs text-muted">
               <b className="text-warn">Falta receta:</b> estos productos facturan pero no se pueden costear (por eso el margen cubre solo una parte).
-              Suman <b>{money(factSinReceta)}</b>{d && d.total ? ` (${Math.round((factSinReceta / d.total) * 100)}% de la facturación)` : ""}. Cargá su receta en{" "}
+              Suman <b className="monto">{money(factSinReceta)}</b>{d && d.total ? ` (${Math.round((factSinReceta / d.total) * 100)}% de la facturación)` : ""}. Cargá su receta en{" "}
               <Link href="/recetas" className="font-medium text-action hover:underline">Recetas</Link> — de arriba hacia abajo, así sumás margen empezando por lo que más factura.
             </p>
             <div className="overflow-x-auto">
@@ -328,11 +328,11 @@ export default function FacturacionView() {
                       <td className="px-4 py-2 text-2xs text-faint tnum">{i + 1}</td>
                       <td className="px-3 py-2"><span className="font-medium text-ink">{p.nombre}</span><span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(p.marca)}</span></td>
                       <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(p.unidades)}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-muted">{p.precio ? money(p.precio) : "—"}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-muted"><span className="monto">{p.precio ? money(p.precio) : "—"}</span></td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="h-1.5 w-28 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-warn/70" style={{ width: `${Math.max(2, (p.facturacion / (sinReceta[0]?.facturacion || 1)) * 100)}%` }} /></div>
-                          <span className="font-mono tnum font-medium text-ink">{money(p.facturacion)}</span>
+                          <span className="font-mono tnum font-medium text-ink monto">{money(p.facturacion)}</span>
                         </div>
                       </td>
                     </tr>
@@ -348,7 +348,7 @@ export default function FacturacionView() {
             {(d?.porMarca ?? []).map((m) => (
               <Card key={m.marca} className="p-4">
                 <p className="text-2xs uppercase tracking-wide text-faint">{marcaLabel(m.marca)}</p>
-                <p className="mt-0.5 font-display text-2xl font-semibold text-ok">{moneyC(m.facturacion)}</p>
+                <p className="mt-0.5 font-display text-2xl font-semibold text-ok monto">{moneyC(m.facturacion)}</p>
                 <p className="text-2xs text-faint">{int(m.unidades)} unidades · {d && d.total ? Math.round((m.facturacion / d.total) * 100) : 0}% del total</p>
               </Card>
             ))}
@@ -385,10 +385,10 @@ function LocalModal({ sucursal, data, loading, dias, onClose }: { sucursal: stri
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <MiniKpi label="Facturación" value={money(data.total)} tone="ok" />
-                <MiniKpi label="Margen bruto" value={money(data.margenTotal)} sub={`${margenPct}%`} tone="ok" />
+                <MiniKpi label="Facturación" value={money(data.total)} tone="ok" sensible />
+                <MiniKpi label="Margen bruto" value={money(data.margenTotal)} sub={`${margenPct}%`} tone="ok" sensible />
                 <MiniKpi label="Unidades" value={int(data.unidades)} />
-                <MiniKpi label="$ por unidad" value={money(data.ticketProm)} />
+                <MiniKpi label="$ por unidad" value={money(data.ticketProm)} sensible />
               </div>
 
               {data.porDia.length > 1 && (
@@ -427,11 +427,11 @@ function LocalModal({ sucursal, data, loading, dias, onClose }: { sucursal: stri
   );
 }
 
-function MiniKpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "ok" }) {
+function MiniKpi({ label, value, sub, tone, sensible }: { label: string; value: string; sub?: string; tone?: "ok"; sensible?: boolean }) {
   return (
     <div className="rounded-lg border border-line bg-ink/[0.02] p-2.5">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum ${tone === "ok" ? "text-ok" : "text-ink"}`}>{value}{sub && <span className="ml-1 text-2xs font-normal text-faint">{sub}</span>}</p>
+      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum ${tone === "ok" ? "text-ok" : "text-ink"}`}><span className={sensible ? "monto" : ""}>{value}</span>{sub && <span className="ml-1 text-2xs font-normal text-faint">{sub}</span>}</p>
     </div>
   );
 }
@@ -461,10 +461,10 @@ function TendenciaChart({ dias, metric }: { dias: FactDia[]; metric: "facturacio
   return (
     <div className="overflow-x-auto">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: N > 16 ? W / 1.7 : undefined }} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`Tendencia diaria de ${metric}`}>
-        {/* máximo, en la banda superior reservada */}
-        <text x={2} y={13} fontSize="10" className="fill-faint">{fmt(max)}</text>
+        {/* máximo, en la banda superior reservada. Se oculta con privacidad si es plata. */}
+        <text x={2} y={13} fontSize="10" className={`fill-faint ${metric === "facturacion" ? "monto" : ""}`}>{fmt(max)}</text>
         <line x1={0} x2={W} y1={yAvg} y2={yAvg} className="stroke-line" strokeDasharray="3 3" />
-        <text x={avgDer ? W - 2 : 2} y={yAvg - 4} textAnchor={avgDer ? "end" : "start"} fontSize="10" className="fill-faint">prom {fmt(avg)}</text>
+        <text x={avgDer ? W - 2 : 2} y={yAvg - 4} textAnchor={avgDer ? "end" : "start"} fontSize="10" className={`fill-faint ${metric === "facturacion" ? "monto" : ""}`}>prom {fmt(avg)}</text>
         <line x1={0} x2={W} y1={base} y2={base} className="stroke-line" />
         <g className="text-action">
           {dias.map((d, i) => {
@@ -486,12 +486,12 @@ function TendenciaChart({ dias, metric }: { dias: FactDia[]; metric: "facturacio
   );
 }
 
-function Kpi({ label, value, sub, tone, title }: { label: string; value: string; sub?: string; tone?: "ok" | "warn" | "bad"; title?: string }) {
+function Kpi({ label, value, sub, tone, title, sensible }: { label: string; value: string; sub?: string; tone?: "ok" | "warn" | "bad"; title?: string; sensible?: boolean }) {
   const c = tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : "text-ink";
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${c}`} title={title}>{value}</p>
+      <p className={`mt-0.5 font-display text-base font-semibold leading-tight tnum sm:text-2xl ${c} ${sensible ? "monto" : ""}`} title={sensible ? undefined : title}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );

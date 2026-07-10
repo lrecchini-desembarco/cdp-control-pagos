@@ -130,10 +130,10 @@ export default function InsumosView() {
                       </td>
                       <td className="px-3 py-2 text-muted">{i.donde}</td>
                       <td className="px-3 py-2 text-muted">{i.presentacion}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-muted">{money(i.precioBulto)}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-muted monto">{money(i.precioBulto)}</td>
                       <td className="px-3 py-2 text-right font-mono tnum text-faint">{i.factor}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum font-semibold text-ink">{money(i.precioUnidad)}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-muted" title={`IVA ${i.ivaPct}%${i.iiPct ? ` · II ${i.iiPct}%` : ""}`}>{money(precioConImpuestos(i))}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum font-semibold text-ink monto">{money(i.precioUnidad)}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-muted monto" title={`IVA ${i.ivaPct}%${i.iiPct ? ` · II ${i.iiPct}%` : ""}`}>{money(precioConImpuestos(i))}</td>
                       <td className="px-3 py-2 text-2xs">
                         <span className="text-muted">{i.actualizado ?? "—"}</span>
                         {viejo && <span className="ml-1"><Badge tone="warn">{dias}d</Badge></span>}
@@ -223,7 +223,7 @@ function Editor({ insumo, marcas, onClose, onGuardar }: {
 
         <div className="mt-4 flex items-center justify-between rounded-lg bg-ink/[0.03] px-4 py-3">
           <span className="text-2xs uppercase tracking-wide text-faint">Precio por unidad de receta</span>
-          <span className="font-mono tnum text-lg font-semibold text-ink">{money(precioUnidad)}<span className="ml-2 text-2xs font-normal text-faint">c/ imp. {money(precioConImpuestos({ precioUnidad, ivaPct: Number(f.ivaPct) || 0, iiPct: Number(f.iiPct) || 0 }))}</span></span>
+          <span className="font-mono tnum text-lg font-semibold text-ink"><span className="monto">{money(precioUnidad)}</span><span className="ml-2 text-2xs font-normal text-faint">c/ imp. <span className="monto">{money(precioConImpuestos({ precioUnidad, ivaPct: Number(f.ivaPct) || 0, iiPct: Number(f.iiPct) || 0 }))}</span></span></span>
         </div>
 
         {error && <p className="mt-3 text-sm text-bad">{error}</p>}

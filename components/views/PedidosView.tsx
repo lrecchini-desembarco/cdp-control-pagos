@@ -274,7 +274,7 @@ export default function PedidosView() {
               )}
             </span>
           </div>
-          <p className="mt-1 font-display text-2xl font-semibold text-bad" title={`$ ${fmt(kpis.dineroRiesgo)}`}>$ {fmtCompacto(kpis.dineroRiesgo)}</p>
+          <p className="mt-1 font-display text-2xl font-semibold text-bad monto" title={`$ ${fmt(kpis.dineroRiesgo)}`}>$ {fmtCompacto(kpis.dineroRiesgo)}</p>
           <p className="text-2xs text-faint">{kpis.sinVenta} {kpis.sinVenta === 1 ? "local pidió" : "locales pidieron"} y no vendió · {fmtCompacto(kpis.pedidoRiesgo)} u de insumo comprometidas</p>
         </Card>
       )}
@@ -446,7 +446,7 @@ function DetalleLocal({ l, insumos, verCostos, onClose }: { l: LocalCmp; insumos
         {/* Desglose por insumo */}
         <div className="mt-4 mb-2 flex items-baseline justify-between">
           <p className="text-2xs font-medium uppercase tracking-wide text-faint">Pedido por insumo</p>
-          {verCostos && <p className="text-2xs text-faint">valorizado ${fmtCompacto(valorPedido)} <span title={`$ ${fmt(valorPedido)}`}>· costo CDP {COSTOS_VIGENCIA}</span></p>}
+          {verCostos && <p className="text-2xs text-faint">valorizado <span className="monto">${fmtCompacto(valorPedido)}</span> <span title={`$ ${fmt(valorPedido)}`}>· costo CDP {COSTOS_VIGENCIA}</span></p>}
         </div>
         <div className="space-y-2">
           {insumos.map((i) => {
@@ -460,7 +460,7 @@ function DetalleLocal({ l, insumos, verCostos, onClose }: { l: LocalCmp; insumos
                 </div>
                 <span className="w-16 shrink-0 text-right font-mono tnum text-sm text-ink">{fmt(v)}</span>
                 {verCostos && (
-                  <span className="w-20 shrink-0 text-right font-mono tnum text-2xs text-muted" title={tieneCosto(i.code) ? `$ ${fmt(monto)}` : "sin costo cargado"}>
+                  <span className="w-20 shrink-0 text-right font-mono tnum text-2xs text-muted monto" title={tieneCosto(i.code) ? `$ ${fmt(monto)}` : "sin costo cargado"}>
                     {tieneCosto(i.code) ? `$${fmtCompacto(monto)}` : "—"}
                   </span>
                 )}

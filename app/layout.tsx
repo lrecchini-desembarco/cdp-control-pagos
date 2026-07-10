@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import EstadoSeccion from "@/components/layout/EstadoSeccion";
 import { MobileNavProvider } from "@/components/layout/MobileNav";
+import { PrivacidadProvider } from "@/components/layout/Privacidad";
 import { getSesion } from "@/lib/session";
 import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav } from "@/lib/roles";
 import { getRolesNav, blindar } from "@/lib/roles-store";
@@ -54,19 +55,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const body = (
     <html lang="es" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body className="font-sans">
+        {/* Anti-flash: aplica el modo privacidad ANTES de pintar (evita mostrar los montos por un frame). */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('cdp_privacy')==='1')document.documentElement.dataset.privacy='on'}catch(e){}` }} />
         {sesion && !esPantallaTv ? (
-          <MobileNavProvider>
-            <div className="flex h-screen overflow-hidden">
-              <Sidebar rol={sesion.rol} items={itemsNav} />
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} />
-                <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
-                  <EstadoSeccion />
-                  {children}
-                </main>
+          <PrivacidadProvider>
+            <MobileNavProvider>
+              <div className="flex h-screen overflow-hidden">
+                <Sidebar rol={sesion.rol} items={itemsNav} />
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} />
+                  <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+                    <EstadoSeccion />
+                    {children}
+                  </main>
+                </div>
               </div>
-            </div>
-          </MobileNavProvider>
+            </MobileNavProvider>
+          </PrivacidadProvider>
         ) : (
           children
         )}

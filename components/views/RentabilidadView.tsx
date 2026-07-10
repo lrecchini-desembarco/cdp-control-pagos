@@ -65,8 +65,8 @@ export default function RentabilidadView() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi label="Margen total" value={miles(total.margen)} sub="período" tone={total.margen < 0 ? "bad" : "ok"} />
-        <Kpi label="Facturación" value={miles(total.facturacion)} />
+        <Kpi label="Margen total" value={miles(total.margen)} sub="período" tone={total.margen < 0 ? "bad" : "ok"} money />
+        <Kpi label="Facturación" value={miles(total.facturacion)} money />
         <Kpi label="Margen %" value={total.facturacion ? pct(total.margen / total.facturacion) : "—"} />
         <Kpi label="Pierden plata" value={String(total.pierden)} sub="productos" tone={total.pierden ? "bad" : undefined} />
       </div>
@@ -86,7 +86,7 @@ export default function RentabilidadView() {
             {sim && (
               <div className="w-full rounded-lg bg-ink/[0.03] px-3 py-2">
                 <p className="text-2xs text-faint">Margen total proyectado</p>
-                <p className={`font-mono tnum text-lg font-semibold ${sim.r.delta < 0 ? "text-bad" : "text-ok"}`}>
+                <p className={`font-mono tnum text-lg font-semibold ${sim.r.delta < 0 ? "text-bad" : "text-ok"} monto`}>
                   {money(sim.r.margenTotalProy)} <span className="text-2xs font-normal">({sim.r.delta >= 0 ? "+" : ""}{money(sim.r.delta)})</span>
                 </p>
               </div>
@@ -95,7 +95,7 @@ export default function RentabilidadView() {
         </div>
         {sim && (
           <p className="mt-2 text-2xs text-faint">
-            {sim.f.descripcion}: precio {money(sim.f.precioVenta)} → {money(sim.r.precioPromo)} · margen unitario {money(sim.r.margenUnitarioReg)} → {money(sim.r.margenUnitarioPromo)} · volumen {sim.f.unidades.toLocaleString("es-AR")} → {sim.r.unidadesProy.toLocaleString("es-AR")} u.
+            {sim.f.descripcion}: precio <span className="monto">{money(sim.f.precioVenta)}</span> → <span className="monto">{money(sim.r.precioPromo)}</span> · margen unitario <span className="monto">{money(sim.r.margenUnitarioReg)}</span> → <span className="monto">{money(sim.r.margenUnitarioPromo)}</span> · volumen {sim.f.unidades.toLocaleString("es-AR")} → {sim.r.unidadesProy.toLocaleString("es-AR")} u.
             {sim.r.delta < 0 ? " ⚠ La promo reduce el margen total con ese volumen." : " ✓ La promo mejora el margen total."}
           </p>
         )}
@@ -129,10 +129,10 @@ export default function RentabilidadView() {
                       <div className="text-2xs text-faint">SKU {f.skuTango}{f.recetaFalta && <span className="ml-1 text-warn">· sin receta</span>}</div>
                     </td>
                     <td className="px-3 py-2 text-right font-mono tnum text-muted">{f.unidades.toLocaleString("es-AR")}</td>
-                    <td className={`px-3 py-2 text-right font-mono tnum ${f.recetaFalta ? "text-faint" : f.margenUnitario < 0 ? "text-bad" : "text-muted"}`}>{f.recetaFalta ? "—" : money(f.margenUnitario)}</td>
-                    <td className={`px-3 py-2 text-right font-mono tnum font-semibold ${f.recetaFalta ? "text-faint" : f.margenTotal < 0 ? "text-bad" : "text-ink"}`}>{f.recetaFalta ? "—" : money(f.margenTotal)}</td>
+                    <td className={`px-3 py-2 text-right font-mono tnum ${f.recetaFalta ? "text-faint" : f.margenUnitario < 0 ? "text-bad" : "text-muted"} monto`}>{f.recetaFalta ? "—" : money(f.margenUnitario)}</td>
+                    <td className={`px-3 py-2 text-right font-mono tnum font-semibold ${f.recetaFalta ? "text-faint" : f.margenTotal < 0 ? "text-bad" : "text-ink"} monto`}>{f.recetaFalta ? "—" : money(f.margenTotal)}</td>
                     <td className="px-3 py-2 text-right font-mono tnum text-faint">{f.recetaFalta ? "—" : pct(f.pctMargen)}</td>
-                    <td className="px-3 py-2 text-right font-mono tnum text-muted">{money(f.facturacion)}</td>
+                    <td className="px-3 py-2 text-right font-mono tnum text-muted monto">{money(f.facturacion)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -145,12 +145,12 @@ export default function RentabilidadView() {
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "ok" | "bad" }) {
+function Kpi({ label, value, sub, tone, money }: { label: string; value: string; sub?: string; tone?: "ok" | "bad"; money?: boolean }) {
   const c = tone === "bad" ? "text-bad" : tone === "ok" ? "text-ok" : "text-ink";
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-lg font-semibold ${c}`}>{value}</p>
+      <p className={`mt-0.5 font-display text-lg font-semibold ${c} ${money ? "monto" : ""}`}>{value}</p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
   );

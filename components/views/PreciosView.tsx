@@ -40,7 +40,7 @@ const money = (n: number) => "$" + Math.round(n || 0).toLocaleString("es-AR");
 const moneyC = (n: number) => "$" + fmtCompacto(n || 0);
 const Money = ({ n, bold, tone }: { n: number; bold?: boolean; tone?: string }) => {
   const Tag = bold ? "b" : "span";
-  return <Tag title={money(n)} className={`font-mono tnum ${tone ?? (bold ? "text-ink" : "text-muted")}`}>{moneyC(n)}</Tag>;
+  return <Tag title={money(n)} className={`font-mono tnum monto ${tone ?? (bold ? "text-ink" : "text-muted")}`}>{moneyC(n)}</Tag>;
 };
 
 // Activo en Tango = con venta en los últimos 30 días (por la fecha de "actualizado").
@@ -226,7 +226,7 @@ export default function PreciosView() {
               <TagTango key="t" actualizado={p.actualizado} />,
               <Money key="pr" n={p.precio} bold />,
               <Money key="n" n={p.precioNeto} />,
-              <span key="r" title={p.min && p.max ? `${money(p.min)} – ${money(p.max)}` : ""} className="text-2xs text-faint">
+              <span key="r" title={p.min && p.max ? `${money(p.min)} – ${money(p.max)}` : ""} className="text-2xs text-faint monto">
                 {p.min && p.max && p.min !== p.max ? `${moneyC(p.min)} – ${moneyC(p.max)}` : "—"}
               </span>,
               <span key="s" className="text-2xs text-faint">{p.sucursales}</span>,

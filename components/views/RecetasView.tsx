@@ -115,8 +115,8 @@ export default function RecetasView() {
                       {r.componentes.length}
                       {r.nFaltantes > 0 && <span className="ml-1"><Badge tone="warn">{r.nFaltantes} falta</Badge></span>}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono tnum font-semibold text-ink">{money(r.costoNeto)}</td>
-                    <td className="px-3 py-2 text-right font-mono tnum text-muted">{money(r.costoConImp)}</td>
+                    <td className="px-3 py-2 text-right font-mono tnum font-semibold text-ink monto">{money(r.costoNeto)}</td>
+                    <td className="px-3 py-2 text-right font-mono tnum text-muted monto">{money(r.costoConImp)}</td>
                     <td className="px-3 py-2 text-center text-2xs text-faint">v{r.version}</td>
                     <td className="px-3 py-2 text-right"><span className="text-2xs text-action">Ver →</span></td>
                   </tr>
@@ -161,8 +161,8 @@ function Detalle({ receta, onClose, onEditar }: { receta: RecetaCosteada; onClos
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <Card className="p-3"><p className="text-2xs uppercase tracking-wide text-faint">Costo receta (neto)</p><p className="mt-0.5 font-display text-xl font-semibold text-ink">{money(receta.costoNeto)}</p></Card>
-          <Card className="p-3"><p className="text-2xs uppercase tracking-wide text-faint">Con impuestos</p><p className="mt-0.5 font-display text-xl font-semibold text-ink">{money(receta.costoConImp)}</p></Card>
+          <Card className="p-3"><p className="text-2xs uppercase tracking-wide text-faint">Costo receta (neto)</p><p className="mt-0.5 font-display text-xl font-semibold text-ink monto">{money(receta.costoNeto)}</p></Card>
+          <Card className="p-3"><p className="text-2xs uppercase tracking-wide text-faint">Con impuestos</p><p className="mt-0.5 font-display text-xl font-semibold text-ink monto">{money(receta.costoConImp)}</p></Card>
         </div>
 
         {receta.nFaltantes > 0 && (
@@ -178,13 +178,13 @@ function Detalle({ receta, onClose, onEditar }: { receta: RecetaCosteada; onClos
               <div key={i} className="flex items-center gap-3">
                 <div className="w-52 shrink-0">
                   <div className={`truncate text-sm ${c.falta ? "text-warn" : "text-ink"}`}>{c.insumoDesc}</div>
-                  <div className="text-2xs text-faint">{c.insumoCod} · {c.cant} × {money(c.precioUnidad)}</div>
+                  <div className="text-2xs text-faint">{c.insumoCod} · {c.cant} × <span className="monto">{money(c.precioUnidad)}</span></div>
                 </div>
                 <div className="relative h-2.5 flex-1 rounded bg-ink/[0.05]">
                   <div className="h-full rounded bg-action" style={{ width: `${Math.min(100, c.pct * 100)}%` }} />
                 </div>
                 <span className="w-12 shrink-0 text-right font-mono tnum text-2xs text-faint">{pct(c.pct)}</span>
-                <span className="w-20 shrink-0 text-right font-mono tnum text-sm text-ink">{money(c.subtotal)}</span>
+                <span className="w-20 shrink-0 text-right font-mono tnum text-sm text-ink monto">{money(c.subtotal)}</span>
               </div>
             ))}
           </div>
@@ -283,7 +283,7 @@ function Editor({ receta, onClose, onGuardado }: { receta: RecetaCosteada; onClo
                     {insumos.map((x) => <option key={x.cod} value={x.cod}>{x.descripcion} ({x.cod})</option>)}
                   </select>
                   <input type="number" className={`${inputClass} w-24`} value={c.cant} onChange={(e) => setComp(i, { cant: Number(e.target.value) })} title="cantidad (unidades o gramos)" />
-                  <span className="w-20 shrink-0 text-right font-mono tnum text-2xs text-muted">{money(sub)}</span>
+                  <span className="w-20 shrink-0 text-right font-mono tnum text-2xs text-muted monto">{money(sub)}</span>
                   <button onClick={() => delComp(i)} className="px-1 text-muted hover:text-bad" title="Quitar">✕</button>
                 </div>
               );
@@ -294,7 +294,7 @@ function Editor({ receta, onClose, onGuardado }: { receta: RecetaCosteada; onClo
 
         <div className="mt-4 flex items-center justify-between rounded-lg bg-ink/[0.03] px-4 py-3">
           <span className="text-2xs uppercase tracking-wide text-faint">Costo de receta (neto)</span>
-          <span className="font-mono tnum text-lg font-semibold text-ink">{money(costo)}</span>
+          <span className="font-mono tnum text-lg font-semibold text-ink monto">{money(costo)}</span>
         </div>
 
         {error && <p className="mt-3 text-sm text-bad">{error}</p>}
