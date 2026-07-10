@@ -9,6 +9,7 @@ import EstadoSeccion from "@/components/layout/EstadoSeccion";
 import { getSesion } from "@/lib/session";
 import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav } from "@/lib/roles";
 import { getRolesNav, blindar } from "@/lib/roles-store";
+import { googlePlacesConfigurado } from "@/lib/google-places";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
@@ -42,8 +43,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (sesion && pathname && !esPantallaTv && !puedeVerNav(miNav, ruta)) {
     redirect(homeDeNav(miNav));
   }
-  // Items del menú que ve este rol (con su ícono/label del catálogo).
-  const itemsNav = NAV_CATALOG.filter((i) => puedeVerNav(miNav, i.href));
+  // Items del menú que ve este rol (con su ícono/label del catálogo). Si Google
+  // Places está configurado, Reseñas deja de ser "revisar" (foto) y pasa a "en vivo".
+  const placesOn = googlePlacesConfigurado();
+  const itemsNav = NAV_CATALOG
+    .filter((i) => puedeVerNav(miNav, i.href))
+    .map((i) => (placesOn && i.href === "/resenas" ? { ...i, fresh: "vivo" as const } : i));
 
   const body = (
     <html lang="es" className={`${sans.variable} ${display.variable} ${mono.variable}`}>

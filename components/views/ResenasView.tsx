@@ -29,6 +29,10 @@ export default function ResenasView() {
   const [cuponActivo, setCuponActivo] = useState(false);   // perilla del sistema de cupones
   const [guardandoCupon, setGuardandoCupon] = useState(false);
   const [puedeConfig, setPuedeConfig] = useState(false);   // solo admin/operaciones prenden el switch
+  // Ratings efectivos de Google: live (si hay API key + refresco) fusionado sobre el
+  // snapshot, o el snapshot solo. undefined = todavía no llegó -> los helpers usan la foto.
+  const [ratingsMap, setRatingsMap] = useState<Record<string, { score: number; reviews: number }> | undefined>(undefined);
+  const [ratingsMeta, setRatingsMeta] = useState<{ live: boolean; at: string | null } | null>(null);
 
   const MARCA_LABEL: Record<string, string> = {
     desembarco: "El Desembarco",
@@ -104,6 +108,10 @@ export default function ResenasView() {
     cargarLocales();
     cargarDerivaciones();
     cargarConfig();
+    fetch("/api/google-ratings")
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) { setRatingsMap(j.ratings); setRatingsMeta({ live: j.live, at: j.at }); } })
+      .catch(() => {});
   }, []);
   useEffect(() => {
     if (reviewUrl) QRCode.toDataURL(reviewUrl, { width: 320, margin: 1 }).then(setQr).catch(() => {});
@@ -129,13 +137,13 @@ export default function ResenasView() {
     if (j.ok) setLocales(j.locales);
   }
 
-  const repuGoogle = useMemo(() => resumenGoogle(locales.map((l) => l.googleUrl)), [locales]);
+  const repuGoogle = useMemo(() => resumenGoogle(locales.map((l) => l.googleUrl), ratingsMap), [locales, ratingsMap]);
 
   // Reputación de Google agrupada por una dimensión (supervisor / región).
   function agrupar(key: (l: Local) => string | undefined) {
     const m = new Map<string, { sumW: number; reviews: number; locales: number }>();
     for (const l of locales) {
-      const r = ratingDeUrl(l.googleUrl);
+      const r = ratingDeUrl(l.googleUrl, ratingsMap);
       if (!r) continue;
       const g = key(l);
       if (!g) continue;
@@ -305,7 +313,15 @@ export default function ResenasView() {
         </div>
       </div>
 
-      {/* Reputación en Google (snapshot del Excel) */}
+      {/* Reputación en Google (live si hay API key + refresco; si no, snapshot/foto) */}
+      <div className="mb-2 mt-1 flex flex-wrap items-center gap-2">
+        <p className="text-2xs font-medium uppercase tracking-wide text-faint">Reputación en Google</p>
+        {ratingsMeta?.live ? (
+          <Badge tone="ok">en vivo{ratingsMeta.at ? ` · actualizado ${new Date(ratingsMeta.at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}` : ""}</Badge>
+        ) : (
+          <Badge tone="warn">foto — reputación de referencia, no en tiempo real</Badge>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Locales en Google" value={String(repuGoogle.locales)} />
         <Kpi
@@ -356,7 +372,7 @@ export default function ResenasView() {
         </div>
         <div className="space-y-2 p-4">
           {locales.map((l) => (
-            <LocalRow key={l.nombre} local={l} onGuardar={guardarLocal} onQuitar={quitar} />
+            <LocalRow key={l.nombre} local={l} ratings={ratingsMap} onGuardar={guardarLocal} onQuitar={quitar} />
           ))}
           {/* Alta */}
           <div className="flex flex-col gap-2 rounded-lg border border-dashed border-line p-3 sm:flex-row">
@@ -422,16 +438,18 @@ export default function ResenasView() {
 
 function LocalRow({
   local,
+  ratings,
   onGuardar,
   onQuitar,
 }: {
   local: Local;
+  ratings?: Record<string, { score: number; reviews: number }>;
   onGuardar: (nombre: string, googleUrl: string) => void;
   onQuitar: (nombre: string) => void;
 }) {
   const [url, setUrl] = useState(local.googleUrl ?? "");
   const dirty = url !== (local.googleUrl ?? "");
-  const rating = ratingDeUrl(local.googleUrl);
+  const rating = ratingDeUrl(local.googleUrl, ratings);
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-line p-3 sm:flex-row sm:items-center">
       <span className="w-52 shrink-0 text-sm font-medium text-ink">
