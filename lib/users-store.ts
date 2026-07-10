@@ -56,7 +56,14 @@ export async function addUsuario(email: string, rol: Rol, password?: string, nav
 export async function ensureUsuario(email: string): Promise<Usuario> {
   const previo = await findUsuario(email);
   if (previo) return previo;
-  const nuevo: Usuario = { email: norm(email), rol: "pendiente" };
+  // Auto-asignación por organigrama: si el email tiene casillero y matchea una regla,
+  // entra con ese rol/pantallas; si no, "pendiente" (el admin le asigna).
+  // Import perezoso para no acoplar el store con el organigrama en el arranque.
+  const { resolverRolAuto } = await import("./auto-roles");
+  const auto = await resolverRolAuto(email).catch(() => null);
+  const nuevo: Usuario = auto
+    ? { email: norm(email), rol: auto.rol, ...(auto.nav ? { nav: auto.nav } : {}) }
+    : { email: norm(email), rol: "pendiente" };
   const users = [...(await getUsuarios()), nuevo];
   await writeStore("usuarios", users);
   return nuevo;

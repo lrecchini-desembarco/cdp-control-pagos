@@ -40,6 +40,11 @@ export default function UsuariosView() {
   const [fijas, setFijas] = useState<string[]>([]);
   const [guardandoRol, setGuardandoRol] = useState("");
 
+  // Reglas de auto-asignación por organigrama (cargo/área -> rol)
+  const [reglas, setReglas] = useState<{ id: string; contiene: string; rol: Rol }[]>([]);
+  const [reglasDirty, setReglasDirty] = useState(false);
+  const [guardandoReglas, setGuardandoReglas] = useState(false);
+
   async function cargar() {
     setStatus("loading");
     try {
@@ -62,10 +67,28 @@ export default function UsuariosView() {
       }
     } catch {}
   }
+  async function cargarReglas() {
+    try {
+      const j = await (await fetch("/api/auto-roles")).json();
+      if (j.ok) setReglas(j.reglas.map((r: any) => ({ id: r.id, contiene: r.contiene, rol: r.rol })));
+    } catch {}
+  }
   useEffect(() => {
     cargar();
     cargarRoles();
+    cargarReglas();
   }, []);
+
+  const nuevaRegla = () => { setReglas((r) => [...r, { id: "r" + Date.now().toString(36), contiene: "", rol: "local" }]); setReglasDirty(true); };
+  const editRegla = (i: number, patch: Partial<{ contiene: string; rol: Rol }>) => { setReglas((r) => r.map((x, k) => (k === i ? { ...x, ...patch } : x))); setReglasDirty(true); };
+  const borrarRegla = (i: number) => { setReglas((r) => r.filter((_, k) => k !== i)); setReglasDirty(true); };
+  async function guardarReglas() {
+    setGuardandoReglas(true);
+    try {
+      const j = await (await fetch("/api/auto-roles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reglas: reglas.filter((r) => r.contiene.trim()) }) })).json();
+      if (j.ok) { setReglas(j.reglas.map((r: any) => ({ id: r.id, contiene: r.contiene, rol: r.rol }))); setReglasDirty(false); }
+    } finally { setGuardandoReglas(false); }
+  }
 
   // Al elegir un rol en un alta nueva, pre-tilda las pantallas base de ese rol.
   useEffect(() => {
@@ -254,6 +277,37 @@ export default function UsuariosView() {
           ))}
         </Card>
       )}
+
+      {/* Auto-asignación por organigrama */}
+      <Card className="space-y-3 p-4">
+        <div>
+          <p className="text-2xs font-medium uppercase tracking-wide text-faint">Auto-asignación por organigrama</p>
+          <p className="mt-0.5 text-2xs text-faint">
+            Cuando alguien entra con Google, se busca su casillero en el <b>Organigrama</b> por email y se le asigna el rol según su
+            cargo/área. Se aplican de arriba hacia abajo: la primera regla que aparezca en su línea de reporte gana. Sin casillero o sin
+            regla, entra como <b>Sin acceso</b>.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {reglas.map((r, i) => (
+            <div key={r.id} className="flex flex-wrap items-center gap-2">
+              <span className="text-2xs text-faint">Si el cargo/área contiene</span>
+              <input className={`${inputClass} max-w-[200px] py-1`} placeholder="ej: finanzas" value={r.contiene} onChange={(e) => editRegla(i, { contiene: e.target.value })} />
+              <span className="text-2xs text-faint">→ rol</span>
+              <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" value={r.rol} onChange={(e) => editRegla(i, { rol: e.target.value as Rol })}>
+                {ROLES_LIST.map((x) => <option key={x} value={x}>{ROLES[x].label}</option>)}
+              </select>
+              <button onClick={() => borrarRegla(i)} className="text-2xs font-medium text-bad hover:underline">Quitar</button>
+            </div>
+          ))}
+          {reglas.length === 0 && <p className="text-2xs text-faint">Sin reglas. Agregá una para auto-asignar accesos.</p>}
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={nuevaRegla}>+ Agregar regla</Button>
+          <Button onClick={guardarReglas} disabled={!reglasDirty || guardandoReglas}>{guardandoReglas ? "Guardando…" : "Guardar reglas"}</Button>
+          {reglasDirty && <span className="text-2xs text-warn">cambios sin guardar</span>}
+        </div>
+      </Card>
 
       {/* Lista */}
       {status === "loading" ? (
