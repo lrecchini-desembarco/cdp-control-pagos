@@ -38,18 +38,19 @@ export default function FacturacionView() {
   const [tab, setTab] = useState<"productos" | "locales" | "marcas">("productos");
   const [marca, setMarca] = useState("");
   const [q, setQ] = useState("");
+  const [dias, setDias] = useState(30);
 
-  async function cargar() {
+  async function cargar(d = dias) {
     setEstado("loading");
     try {
-      const j: Datos = await (await fetch("/api/facturacion")).json();
+      const j: Datos = await (await fetch(`/api/facturacion?dias=${d}`)).json();
       if (!j.ok) throw new Error((j as any).error || "No se pudo cargar.");
       setD(j); setEstado("ok");
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : "Error"); setEstado("error");
     }
   }
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); /* eslint-disable-next-line */ }, []);
 
   // Lo real acá es ventas+precios (Tango), no el DATA_SOURCE global.
   const esMock = d?.ventasSource === "mock" || d?.preciosSource === "mock";
@@ -97,8 +98,15 @@ export default function FacturacionView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 text-2xs text-muted">
+            Período
+            <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink"
+              value={dias} onChange={(e) => { const v = Number(e.target.value); setDias(v); cargar(v); }}>
+              {[7, 15, 30, 60].map((n) => <option key={n} value={n}>{n} días</option>)}
+            </select>
+          </label>
           {esMock ? <Badge tone="warn">datos de ejemplo</Badge> : <Badge tone="ok">en vivo</Badge>}
-          {d && <span className="text-2xs text-faint">últimos 30 días · al {fecha(d.refFecha)}</span>}
+          {d && <span className="text-2xs text-faint">al {fecha(d.refFecha)}</span>}
         </div>
       </div>
 
@@ -114,7 +122,7 @@ export default function FacturacionView() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Facturación estimada" value={d ? money(d.total) : "—"} tone="ok" sub="últimos 30 días" />
+        <Kpi label="Facturación estimada" value={d ? money(d.total) : "—"} tone="ok" sub={`últimos ${dias} días`} />
         <Kpi label="Margen bruto estimado" value={d ? money(d.margenTotal) : "—"} tone={d ? "ok" : undefined}
           sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} />
         <Kpi label="$ por unidad" value={d ? money(d.ticketProm) : "—"} sub={d ? `${int(d.unidades)} unidades` : "precio promedio"} />
