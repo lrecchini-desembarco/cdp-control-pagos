@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCruce } from "@/lib/cruce";
 import { getMapeos } from "@/lib/mapeos-store";
 import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
+import { getRankingLocales } from "@/lib/actividad";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { pedidosSourceName } from "@/lib/sources";
 import { getSesion } from "@/lib/session";
@@ -24,7 +25,9 @@ export default async function Page() {
     fuenteError = e instanceof Error ? e.message : "No se pudo leer la fuente de datos.";
   }
   const mapeos = await getMapeos();
-  const alertas = resumenAlertas(detectarAlertas(cruce, mapeos));
+  const ranking = await getRankingLocales().catch(() => null);
+  const sinMov = (ranking?.locales ?? []).filter((l) => l.estado === "sin-movimiento");
+  const alertas = resumenAlertas(detectarAlertas(cruce, mapeos, sinMov));
   const pedidosMock = pedidosSourceName() === "mock"; // pedidos simulados => desvíos no reales
 
   // Herramientas que este usuario puede ver (para el cartel de bienvenida).

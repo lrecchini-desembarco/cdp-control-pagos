@@ -1,9 +1,11 @@
 import { PRODUCTS } from "./catalogo";
 import { getCruce } from "./cruce";
 import { getMapeos } from "./mapeos-store";
+import { getRankingLocales } from "./actividad";
 import { idsSilenciados } from "./silencios";
 import { fmtInt, fmtPct } from "./brands";
 import type { MapeosData } from "./mapeos-store";
+import type { LocalActividad } from "./actividad";
 import type { Alerta, CruceRow, ResumenAlertas, Severidad } from "./types";
 
 // Umbrales del control. Centralizados acá para que ajustar la sensibilidad
@@ -25,7 +27,7 @@ const desvio = (r: CruceRow) =>
  * para que sumar o ajustar una sea local. Es una función pura: mismas entradas,
  * mismas salidas (clave para testear y, más adelante, para deduplicar/silenciar).
  */
-export function detectarAlertas(cruce: CruceRow[], mapeos: MapeosData): Alerta[] {
+export function detectarAlertas(cruce: CruceRow[], mapeos: MapeosData, sinMovimiento: LocalActividad[] = []): Alerta[] {
   const fechas = Array.from(new Set(cruce.map((r) => r.fecha))).sort().reverse();
   const ultima = fechas[0];
   const alertas: Alerta[] = [];
@@ -156,6 +158,27 @@ export function detectarAlertas(cruce: CruceRow[], mapeos: MapeosData): Alerta[]
     }
   }
 
+  // ── Regla 6 · Local sin movimiento ──────────────────────────────────────
+  // Un local que dejó de registrar ventas en Tango mientras el resto vende. Es
+  // el problema que arrancó todo esto (Mrt San Miguel): plata que se pierde sin
+  // avisar. Se mide con ventas reales (independiente de que pedidos sea mock).
+  for (const l of sinMovimiento) {
+    const critica = l.diasDesde >= 5;
+    alertas.push({
+      id: `local-sin-movimiento:${l.sucursal}`,
+      tipo: "local-sin-movimiento",
+      severidad: critica ? "critica" : "alta",
+      titulo: `${l.sucursal} sin ventas hace ${l.diasDesde} día${l.diasDesde === 1 ? "" : "s"}`,
+      detalle: `No registra ventas desde el ${l.ultimaVenta} (hace ${l.diasDesde} días) mientras el resto de los locales está al día. Vendió ${fmtInt(l.unidades)} unidades en la ventana previa.`,
+      porque:
+        "Un local que dejó de vender es plata que se pierde y no avisa solo: puede ser un cierre no informado, un problema de caja/Tango, o el local realmente frenado. Es de lo más urgente de chequear.",
+      accion: { label: "Ver actividad de locales", href: "/actividad" },
+      sucursal: l.sucursal,
+      brand: l.marca === "tasty" ? "tasty" : l.marca === "mila" ? "mila" : "desembarco",
+      metrica: `hace ${l.diasDesde}d`,
+    });
+  }
+
   return alertas.sort((a, b) => PESO[b.severidad] - PESO[a.severidad]);
 }
 
@@ -175,8 +198,9 @@ export async function getAlertas(): Promise<{
   silenciadas: Alerta[];
   resumen: ResumenAlertas;
 }> {
-  const cruce = await getCruce();
-  const todas = detectarAlertas(cruce, await getMapeos());
+  const [cruce, mapeos, ranking] = await Promise.all([getCruce(), getMapeos(), getRankingLocales().catch(() => null)]);
+  const sinMov = (ranking?.locales ?? []).filter((l) => l.estado === "sin-movimiento");
+  const todas = detectarAlertas(cruce, mapeos, sinMov);
   const silenciados = await idsSilenciados();
   const alertas = todas.filter((a) => !silenciados.has(a.id));
   const silenciadas = todas.filter((a) => silenciados.has(a.id));
