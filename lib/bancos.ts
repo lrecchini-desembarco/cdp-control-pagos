@@ -247,11 +247,29 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
   return { movs, descartados: desconf };
 }
 
+// ¿Es un CUIT/CUIL con forma real? 11 dígitos, prefijo válido (persona/empresa) y
+// no todos el mismo dígito -> descarta placeholders tipo 11111111111 / 00000000000
+// que ensucian las bases (aparecerían como una contraparte fantasma en el cruce).
+export function cuitValido(cuit: string): boolean {
+  const d = String(cuit).replace(/[^0-9]/g, "");
+  if (d.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false; // todos iguales (11111111111, 00000000000…)
+  return /^(20|23|24|27|30|33|34)/.test(d); // prefijos reales de CUIT/CUIL
+}
+
+export interface ResultadoBase {
+  entries: { cuit: string; nombre: string; tipo: TipoContraparte }[];
+  filas: number;       // filas de datos con contenido
+  invalidas: number;   // descartadas por CUIT inválido (placeholder/prefijo/longitud) o sin nombre
+  duplicadas: number;  // filas con un CUIT ya visto en este archivo
+  error?: string;
+}
+
 // Parsea una planilla de clientes/proveedores (export de Tango u otra) -> entradas
-// CUIT+nombre. Auto-detecta las columnas CUIT y Razón Social/Nombre.
-export function parseBaseArchivo(nombre: string, data: ArrayBuffer | Uint8Array, tipo: TipoContraparte): { entries: { cuit: string; nombre: string; tipo: TipoContraparte }[]; error?: string } {
+// CUIT+nombre (deduplicadas por CUIT). Auto-detecta las columnas CUIT y Razón Social/Nombre.
+export function parseBaseArchivo(nombre: string, data: ArrayBuffer | Uint8Array, tipo: TipoContraparte): ResultadoBase {
   let rows: string[][];
-  try { rows = filasDeArchivo(nombre, data); } catch { return { entries: [], error: "no se pudo leer el archivo" }; }
+  try { rows = filasDeArchivo(nombre, data); } catch { return { entries: [], filas: 0, invalidas: 0, duplicadas: 0, error: "no se pudo leer el archivo" }; }
   let hi = -1, iCuit = -1, iNom = -1;
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const h = rows[i].map(norm);
@@ -259,14 +277,23 @@ export function parseBaseArchivo(nombre: string, data: ArrayBuffer | Uint8Array,
     const n = h.findIndex((x) => /raz[oó]?n social|nombre|denominaci|apellido|cliente|proveedor/.test(x));
     if (c >= 0 && n >= 0) { hi = i; iCuit = c; iNom = n; break; }
   }
-  if (hi < 0) return { entries: [], error: "no encontré columnas de CUIT y Nombre/Razón Social. Revisá los encabezados." };
+  if (hi < 0) return { entries: [], filas: 0, invalidas: 0, duplicadas: 0, error: "no encontré columnas de CUIT y Nombre/Razón Social. Revisá los encabezados." };
   const entries: { cuit: string; nombre: string; tipo: TipoContraparte }[] = [];
+  const vistos = new Set<string>();
+  let filas = 0, invalidas = 0, duplicadas = 0;
   for (let r = hi + 1; r < rows.length; r++) {
     const cuit = String(rows[r]?.[iCuit] ?? "").replace(/[^0-9]/g, "");
     const nom = String(rows[r]?.[iNom] ?? "").trim();
-    if (cuit.length === 11 && nom) entries.push({ cuit, nombre: nom, tipo });
+    if (!cuit && !nom) continue; // fila vacía: no la cuento
+    filas++;
+    if (!cuitValido(cuit) || !nom) { invalidas++; continue; }
+    if (vistos.has(cuit)) { duplicadas++; continue; }
+    vistos.add(cuit);
+    entries.push({ cuit, nombre: nom, tipo });
   }
-  return entries.length ? { entries } : { entries: [], error: "encontré las columnas pero ninguna fila con CUIT (11 díg) + nombre" };
+  return entries.length
+    ? { entries, filas, invalidas, duplicadas }
+    : { entries: [], filas, invalidas, duplicadas, error: "encontré las columnas pero ninguna fila con CUIT válido (11 díg) + nombre" };
 }
 
 // Clave de origen: re-subir un (banco+local+mes) reemplaza esos movimientos.

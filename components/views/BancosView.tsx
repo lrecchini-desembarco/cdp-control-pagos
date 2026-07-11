@@ -53,6 +53,7 @@ export default function BancosView() {
   const [porCuitIng, setPorCuitIng] = useState<GrupoCuit[]>([]);
   const [porCuitEgr, setPorCuitEgr] = useState<GrupoCuit[]>([]);
   const [basesConteo, setBasesConteo] = useState<{ cliente: number; proveedor: number; propias: number }>({ cliente: 0, proveedor: 0, propias: 0 });
+  const [avisoBase, setAvisoBase] = useState<{ texto: string; huboDescartes: boolean } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function cargarBases() {
@@ -60,13 +61,19 @@ export default function BancosView() {
   }
   async function subirBase(files: FileList | null, tipo: "cliente" | "proveedor") {
     const f = files?.[0]; if (!f) return;
-    setError(""); setEstado("saving"); setProgreso(`Leyendo ${tipo === "cliente" ? "clientes" : "proveedores"}…`);
+    setError(""); setAvisoBase(null); setEstado("saving"); setProgreso(`Leyendo ${tipo === "cliente" ? "clientes" : "proveedores"}…`);
     try {
-      const { entries, error } = parseBaseArchivo(f.name, await f.arrayBuffer(), tipo);
+      const { entries, filas, invalidas, duplicadas, error } = parseBaseArchivo(f.name, await f.arrayBuffer(), tipo);
       if (error || !entries.length) { setError(error || "no encontré datos"); return; }
       const j = await (await fetch("/api/bancos/bases", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entries, reemplazarTipo: tipo }) })).json();
       if (!j.ok) throw new Error(j.error);
       setBasesConteo(j.conteo); await cargar();
+      // Visibilidad del estado (Nielsen #1): decir exactamente qué pasó, no dejar
+      // que el conteo baje "en silencio" respecto de las filas del archivo.
+      const partes = [`${entries.length} ${tipo === "cliente" ? "clientes" : "proveedores"} cargados`];
+      if (duplicadas) partes.push(`${duplicadas} CUIT repetido${duplicadas === 1 ? "" : "s"} en el archivo`);
+      if (invalidas) partes.push(`${invalidas} descartado${invalidas === 1 ? "" : "s"} por CUIT inválido`);
+      setAvisoBase({ texto: `${f.name}: leí ${filas} fila${filas === 1 ? "" : "s"} → ${partes.join(" · ")}.`, huboDescartes: duplicadas + invalidas > 0 });
     } catch (e) { setError(e instanceof Error ? e.message : "no se pudo cargar la base"); }
     finally { setEstado("idle"); setProgreso(""); }
   }
@@ -247,6 +254,12 @@ export default function BancosView() {
                   <label className="cursor-pointer font-medium text-action hover:underline">Cargar clientes<input type="file" accept=".csv,.xls,.xlsx" className="hidden" onChange={(e) => subirBase(e.target.files, "cliente")} /></label>
                   <label className="cursor-pointer font-medium text-action hover:underline">Cargar proveedores<input type="file" accept=".csv,.xls,.xlsx" className="hidden" onChange={(e) => subirBase(e.target.files, "proveedor")} /></label>
                 </span>
+              </div>
+            )}
+            {esCuit && avisoBase && (
+              <div className={`flex items-start justify-between gap-3 border-b border-line px-3 py-2 text-2xs ${avisoBase.huboDescartes ? "bg-warn/[0.08] text-warn" : "bg-ok/[0.08] text-ok"}`}>
+                <span><b>{avisoBase.huboDescartes ? "Cargado con avisos" : "✓ Cargado"}:</b> {avisoBase.texto}</span>
+                <button onClick={() => setAvisoBase(null)} className="shrink-0 font-medium opacity-70 hover:opacity-100">cerrar</button>
               </div>
             )}
             {esCuit && basesConteo.cliente === 0 && basesConteo.proveedor === 0 && (

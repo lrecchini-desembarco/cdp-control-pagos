@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { PROPIAS, type BaseEntry } from "@/lib/bancos";
+import { PROPIAS, cuitValido, type BaseEntry } from "@/lib/bancos";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (body.reemplazarTipo) base = Object.fromEntries(Object.entries(base).filter(([, e]) => e.tipo !== body.reemplazarTipo));
     for (const e of entries) {
       const cuit = String(e.cuit || "").replace(/[^0-9]/g, "");
-      if (cuit.length !== 11 || !e.nombre) continue;
+      if (!cuitValido(cuit) || !e.nombre) continue;
       const prev = base[cuit];
       // Si el CUIT ya estaba como el OTRO tipo (cliente y proveedor) -> "ambos".
       const tipo: BaseEntry["tipo"] = prev && prev.tipo !== "propia" && prev.tipo !== e.tipo ? "ambos" : e.tipo;
