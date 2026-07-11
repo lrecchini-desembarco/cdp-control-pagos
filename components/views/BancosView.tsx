@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import { parseArchivoBanco, parsePdfItems, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem, type GrupoCuit } from "@/lib/bancos";
+import { parseArchivoBanco, parsePdfItems, parseBaseArchivo, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem, type GrupoCuit } from "@/lib/bancos";
 
 // pdfjs se carga on-demand (recién al procesar un PDF) para no pesar el bundle.
 let pdfjsMod: any = null;
@@ -51,7 +51,24 @@ export default function BancosView() {
   const [bancos, setBancos] = useState<string[]>([]);
   const [porCuitIng, setPorCuitIng] = useState<GrupoCuit[]>([]);
   const [porCuitEgr, setPorCuitEgr] = useState<GrupoCuit[]>([]);
+  const [basesConteo, setBasesConteo] = useState<{ cliente: number; proveedor: number; propias: number }>({ cliente: 0, proveedor: 0, propias: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function cargarBases() {
+    try { const j = await (await fetch("/api/bancos/bases", { cache: "no-store" })).json(); if (j.ok) setBasesConteo(j.conteo); } catch { /* */ }
+  }
+  async function subirBase(files: FileList | null, tipo: "cliente" | "proveedor") {
+    const f = files?.[0]; if (!f) return;
+    setError(""); setEstado("saving"); setProgreso(`Leyendo ${tipo === "cliente" ? "clientes" : "proveedores"}…`);
+    try {
+      const { entries, error } = parseBaseArchivo(f.name, await f.arrayBuffer(), tipo);
+      if (error || !entries.length) { setError(error || "no encontré datos"); return; }
+      const j = await (await fetch("/api/bancos/bases", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entries, reemplazarTipo: tipo }) })).json();
+      if (!j.ok) throw new Error(j.error);
+      setBasesConteo(j.conteo); await cargar();
+    } catch (e) { setError(e instanceof Error ? e.message : "no se pudo cargar la base"); }
+    finally { setEstado("idle"); setProgreso(""); }
+  }
 
   async function cargar(mes = mesSel, banco = bancoSel) {
     try {
@@ -64,7 +81,7 @@ export default function BancosView() {
       }
     } catch { /* vacío */ } finally { setEstado("idle"); }
   }
-  useEffect(() => { cargar("", ""); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar("", ""); cargarBases(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   function filtrar(mes: string, banco: string) { setMesSel(mes); setBancoSel(banco); cargar(mes, banco); }
 
   async function onArchivos(files: FileList | null) {
@@ -222,6 +239,15 @@ export default function BancosView() {
                 <button onClick={exportar} className="text-2xs font-medium text-action hover:underline">Exportar CSV</button>
               </div>
             </div>
+            {esCuit && (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-3 py-1.5 text-2xs text-muted">
+                <span>Cruce con bases: <b className="text-ink">{basesConteo.cliente}</b> clientes · <b className="text-ink">{basesConteo.proveedor}</b> proveedores · <b className="text-ink">{basesConteo.propias}</b> propias</span>
+                <span className="flex gap-3">
+                  <label className="cursor-pointer font-medium text-action hover:underline">Cargar clientes<input type="file" accept=".csv,.xls,.xlsx" className="hidden" onChange={(e) => subirBase(e.target.files, "cliente")} /></label>
+                  <label className="cursor-pointer font-medium text-action hover:underline">Cargar proveedores<input type="file" accept=".csv,.xls,.xlsx" className="hidden" onChange={(e) => subirBase(e.target.files, "proveedor")} /></label>
+                </span>
+              </div>
+            )}
             <div className="overflow-x-auto">
               {esCuit ? (
                 <table className="w-full text-left text-sm">

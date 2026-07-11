@@ -217,6 +217,28 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
   return { movs, descartados: desconf };
 }
 
+// Parsea una planilla de clientes/proveedores (export de Tango u otra) -> entradas
+// CUIT+nombre. Auto-detecta las columnas CUIT y Razón Social/Nombre.
+export function parseBaseArchivo(nombre: string, data: ArrayBuffer | Uint8Array, tipo: TipoContraparte): { entries: { cuit: string; nombre: string; tipo: TipoContraparte }[]; error?: string } {
+  let rows: string[][];
+  try { rows = filasDeArchivo(nombre, data); } catch { return { entries: [], error: "no se pudo leer el archivo" }; }
+  let hi = -1, iCuit = -1, iNom = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const h = rows[i].map(norm);
+    const c = h.findIndex((x) => /cuit|c\.?u\.?i\.?t|cuil/.test(x));
+    const n = h.findIndex((x) => /raz[oó]?n social|nombre|denominaci|apellido|cliente|proveedor/.test(x));
+    if (c >= 0 && n >= 0) { hi = i; iCuit = c; iNom = n; break; }
+  }
+  if (hi < 0) return { entries: [], error: "no encontré columnas de CUIT y Nombre/Razón Social. Revisá los encabezados." };
+  const entries: { cuit: string; nombre: string; tipo: TipoContraparte }[] = [];
+  for (let r = hi + 1; r < rows.length; r++) {
+    const cuit = String(rows[r]?.[iCuit] ?? "").replace(/[^0-9]/g, "");
+    const nom = String(rows[r]?.[iNom] ?? "").trim();
+    if (cuit.length === 11 && nom) entries.push({ cuit, nombre: nom, tipo });
+  }
+  return entries.length ? { entries } : { entries: [], error: "encontré las columnas pero ninguna fila con CUIT (11 díg) + nombre" };
+}
+
 // Clave de origen: re-subir un (banco+local+mes) reemplaza esos movimientos.
 export const claveOrigen = (m: MovBanco) => `${m.banco}|${m.local}|${m.mes}`;
 
@@ -227,6 +249,37 @@ export interface ResumenBancos {
 }
 export interface GrupoBanco { k: string; n: number; ingresos: number; egresos: number }
 export interface GrupoCuit { cuit: string; n: number; monto: number; nombre?: string; tipo?: string }
+
+// CUITs PROPIOS del grupo (razón social) — de "Locales por sociedad". Los movimientos
+// hacia/desde estos CUIT son traspasos INTERNOS, no proveedores/clientes.
+export const PROPIAS: Record<string, string> = {
+  "30719082579": "Desembarco Nuñez S.A.",
+  "30719043948": "Desembarco Mataderos S.A.",
+  "30717136795": "Desembarco del Rey S.R.L.",
+  "30719051630": "Desembarco Ramos Mejía S.A.",
+  "33719043769": "Desembarco Laferrere S.A.",
+  "30719071348": "Desembarco Villa Urquiza S.A.",
+  "30719071356": "Desembarco Colegiales S.A.",
+  "30717521958": "Daga Gourmet S.R.L.",
+  "30718981421": "Desembarco Donado S.A.",
+  "30716747200": "Burconi SAS",
+  "30718511034": "Cloud Management Capital S.R.L.",
+  "30719201012": "Wiñaypaq S.R.L.",
+};
+export type TipoContraparte = "propia" | "cliente" | "proveedor";
+export interface BaseEntry { nombre: string; tipo: TipoContraparte }
+
+/** Base completa CUIT→{nombre,tipo}: propias (seed) + lo cargado (clientes/proveedores). */
+export function baseCompleta(cargadas: Record<string, BaseEntry> = {}): Record<string, BaseEntry> {
+  const base: Record<string, BaseEntry> = {};
+  for (const [cuit, nombre] of Object.entries(PROPIAS)) base[cuit] = { nombre, tipo: "propia" };
+  for (const [cuit, e] of Object.entries(cargadas)) base[cuit] = e; // lo cargado pisa
+  return base;
+}
+/** Enriquece los grupos por CUIT con nombre y tipo desde la base. */
+export function aplicarBase(grupos: GrupoCuit[], base: Record<string, BaseEntry>): GrupoCuit[] {
+  return grupos.map((g) => { const b = base[g.cuit]; return b ? { ...g, nombre: b.nombre, tipo: b.tipo } : g; });
+}
 
 // Desglose por CUIT de contraparte (solo movimientos que traen CUIT), para ingresos
 // o egresos. Base para cruzar con proveedores/clientes.

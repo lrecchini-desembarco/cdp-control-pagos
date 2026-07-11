@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { resumirBancos, porCuit, claveOrigen, type MovBanco } from "@/lib/bancos";
+import { resumirBancos, porCuit, aplicarBase, baseCompleta, claveOrigen, type MovBanco, type BaseEntry } from "@/lib/bancos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -36,12 +36,13 @@ export async function GET(req: NextRequest) {
   const banco = req.nextUrl.searchParams.get("banco") || "";
   const movs = all.filter((m) => (!mes || m.mes === mes) && (!banco || m.banco === banco));
   const meta = await readStore<{ actualizado?: string } | null>(META, null);
+  const base = baseCompleta((await readStore<Record<string, BaseEntry> | null>("bancos-bases", null)) ?? {});
   return NextResponse.json({
     ok: true,
     resumen: resumirBancos(movs),
     cobertura: cobertura(movs),
-    porCuitIngreso: porCuit(movs, "ingreso"),
-    porCuitEgreso: porCuit(movs, "egreso"),
+    porCuitIngreso: aplicarBase(porCuit(movs, "ingreso"), base),
+    porCuitEgreso: aplicarBase(porCuit(movs, "egreso"), base),
     meses: Array.from(new Set(all.map((m) => m.mes))).sort().reverse(),
     bancos: Array.from(new Set(all.map((m) => m.banco))).sort(),
     meta,
