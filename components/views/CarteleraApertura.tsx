@@ -17,14 +17,15 @@ const W = 1920, H = 1080;  // stage fijo 16:9 (Full HD). La captura sale de acá
 
 // Logo real del header con fallback en cadena: /logos/<name>.svg -> .png -> texto.
 // Los archivos van en public/logos/. Si no están, se ve el texto (como antes).
-function Logo({ name, alt, fallback }: { name: string; alt: string; fallback: React.ReactNode }) {
-  const [step, setStep] = useState(0);
+function Logo({ name, fallback }: { name: string; fallback: React.ReactNode }) {
+  const [step, setStep] = useState(0); // 0=.svg · 1=.png · 2=texto
   if (step >= 2) return <>{fallback}</>;
   const src = step === 0 ? `/logos/${name}.svg` : `/logos/${name}.png`;
   return (
+    // key -> remonta al cambiar de src para que onError vuelva a dispararse.
+    // alt="" -> si falla no muestra texto roto (cae al fallback estilado).
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} onError={() => setStep((s) => s + 1)}
-      crossOrigin="anonymous"
+    <img key={src} src={src} alt="" onError={() => setStep((s) => s + 1)}
       style={{ height: "100%", width: "auto", maxWidth: "100%", objectFit: "contain" }} />
   );
 }
@@ -136,7 +137,7 @@ export default function CarteleraApertura() {
   };
 
   return (
-    <div className="fixed inset-0 grid place-items-center overflow-hidden bg-black">
+    <div className="fixed inset-0 overflow-hidden bg-black">
       {/* Controles: FUERA del stage, así nunca salen en la captura. Ocultos en modo limpio. */}
       {!limpio && (
         <div className="fixed right-3 top-3 z-50 flex items-center gap-2 print:hidden">
@@ -157,8 +158,9 @@ export default function CarteleraApertura() {
         </div>
       )}
 
-      {/* Escalador: encaja el stage en el viewport. La escala NO afecta la captura. */}
-      <div style={{ transform: `scale(${scale})`, transformOrigin: "center" }}>
+      {/* Escalador: centra y encaja el stage 1920×1080 en el viewport (translate+scale,
+          robusto en cualquier tamaño). La escala NO afecta la captura del stage. */}
+      <div style={{ position: "absolute", top: "50%", left: "50%", width: W, height: H, transform: `translate(-50%,-50%) scale(${scale})`, transformOrigin: "center" }}>
         {/* STAGE fijo 1920×1080 — esto es lo que se captura */}
         <div ref={stageRef} style={{ width: W, height: H }} className="flex flex-col overflow-hidden bg-white text-[#181818]">
           {/* Banda superior */}
@@ -167,15 +169,15 @@ export default function CarteleraApertura() {
           {/* Marcas (logos reales; fallback a texto) */}
           <div className="flex shrink-0 items-center justify-around px-20" style={{ height: 104, paddingTop: 16, paddingBottom: 16 }}>
             <div className="flex h-full items-center justify-center" style={{ flex: 1 }}>
-              <Logo name="mr-tasty" alt="Mr. Tasty"
+              <Logo name="mr-tasty"
                 fallback={<span className="font-display text-4xl font-extrabold tracking-tight" style={{ color: "#E0A024" }}>Mr. <span className="italic">Tasty</span></span>} />
             </div>
             <div className="flex h-full items-center justify-center" style={{ flex: 1 }}>
-              <Logo name="el-desembarco" alt="El Desembarco"
+              <Logo name="el-desembarco"
                 fallback={<span className="font-display text-4xl font-black tracking-tight text-[#181818]">EL DESEMBARCO</span>} />
             </div>
             <div className="flex h-full items-center justify-center" style={{ flex: 1 }}>
-              <Logo name="mila-go" alt="Mila & Go"
+              <Logo name="mila-go"
                 fallback={<span className="font-display text-4xl font-black leading-none" style={{ color: "#B5472E" }}>MILA <span className="text-2xl align-middle">&</span> GO</span>} />
             </div>
           </div>
