@@ -130,7 +130,7 @@ export default function FacturacionView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-2xs text-muted">
+          <label data-tour="fact-periodo" className="flex items-center gap-1.5 text-2xs text-muted">
             Período
             <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink"
               value={dias} onChange={(e) => { const v = Number(e.target.value); setDias(v); cargar(v); }}>
@@ -160,7 +160,7 @@ export default function FacturacionView() {
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div data-tour="fact-kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label={d?.exacta ? "Facturación" : "Facturación estimada"} value={d ? moneyC(d.total) : "—"} full={d ? money(d.total) : undefined} tone="ok" sub={`últimos ${dias} días`} sensible />
         <Kpi label={d?.exacta ? "Margen bruto" : "Margen bruto estimado"} value={d ? moneyC(d.margenTotal) : "—"} full={d ? money(d.margenTotal) : undefined} tone={d ? "ok" : undefined}
           sub={d ? `${d.facturacionConCosto ? Math.round((d.margenTotal / d.facturacionConCosto) * 100) : 0}% · ${Math.round(d.coberturaCosto * 100)}% con receta` : "facturación − costo"} sensible />
@@ -200,7 +200,7 @@ export default function FacturacionView() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1.5">
+      <div data-tour="fact-tabs" className="flex gap-1.5">
         {([
           ["productos", "Por producto"],
           ["locales", "Por local"],

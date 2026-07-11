@@ -216,7 +216,7 @@ export default function CruceView() {
 
       {/* Filtros — reconocer mejor que recordar (Nielsen #6) */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div data-tour="cruce-filtros" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Field label="Desde">
             <input
               type="date"
@@ -304,7 +304,7 @@ export default function CruceView() {
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div data-tour="cruce-kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Pedido al CDP" value={fmtInt(kpis.pedido)} sub={unDia ? desde : "en el período"} />
         <Kpi label="Venta equivalente" value={fmtInt(kpis.venta)} sub="traducida a insumo" />
         <Kpi label="Desvío neto" value={fmtPct(kpis.neto)} tone={severidad(kpis.neto)} sub="pedido vs venta" />
@@ -318,7 +318,7 @@ export default function CruceView() {
 
       {/* Tabla */}
       <Card className="overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+        <div data-tour="cruce-tabla" className="flex items-center justify-between border-b border-line px-4 py-2.5">
           <span className="text-2xs font-medium uppercase tracking-wide text-faint">
             {status === "ok"
               ? `${rows.length} líneas · ${unDia ? periodo : `consolidado ${periodo}`} · tocá una para el detalle`

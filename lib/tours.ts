@@ -28,4 +28,22 @@ export const TOURS_PANTALLA: Record<string, { nombre: string; pasos: PasoTour[] 
       { element: '[data-tour="bancos-como-cargar"]', popover: { title: "5 · ¿Dudas al cargar?", description: "Este botón abre la guía de carga paso a paso, cuando la necesites.", side: "bottom" } },
     ],
   },
+  "/facturacion": {
+    nombre: "Facturación",
+    pasos: [
+      { popover: { title: "🧾 Cómo leer Facturación", description: "Lo que <b>facturaste de verdad</b> (IMPORTE_NETO de Tango, renglón por renglón). Te muestro las 4 zonas." } },
+      { element: '[data-tour="fact-periodo"]', popover: { title: "1 · Elegí el período", description: "Cambiá el rango (hoy, semana, mes…). Todo lo de abajo se recalcula para ese período.", side: "bottom" } },
+      { element: '[data-tour="fact-kpis"]', popover: { title: "2 · Los números grandes", description: "Facturación total, ticket promedio y comparación. Los montos en <b>«mil M»</b> — pasá el mouse por la card para ver la cifra completa.", side: "bottom" } },
+      { element: '[data-tour="fact-tabs"]', popover: { title: "3 · Abrí el detalle", description: "Desglosá por <b>marca</b>, por <b>local</b>, por <b>tendencia</b> en el tiempo y por <b>receta</b> (qué se facturó sin costo/receta cargada).", side: "bottom" } },
+    ],
+  },
+  "/cruce": {
+    nombre: "el Cruce",
+    pasos: [
+      { popover: { title: "🔀 Cómo usar el Cruce", description: "Compara lo que cada local <b>pidió al CDP</b> contra lo que <b>vendió</b> (traducido a insumo). Sirve para cazar sobre-pedidos y faltantes." } },
+      { element: '[data-tour="cruce-filtros"]', popover: { title: "1 · Acotá qué mirás", description: "Elegí el rango de fechas, el local y el insumo. El cruce se arma sobre eso.", side: "bottom" } },
+      { element: '[data-tour="cruce-kpis"]', popover: { title: "2 · El resumen", description: "Pedido vs venta equivalente, el <b>desvío neto</b> y cuántas líneas quedan <b>fuera de tolerancia</b> (las que hay que revisar).", side: "bottom" } },
+      { element: '[data-tour="cruce-tabla"]', popover: { title: "3 · Línea por línea", description: "El detalle de cada combinación local × insumo, ordenable, para ver dónde se pidió de más o de menos.", side: "bottom" } },
+    ],
+  },
 };
