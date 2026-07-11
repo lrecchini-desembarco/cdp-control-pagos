@@ -138,6 +138,77 @@ export function parseArchivoBanco(nombre: string, ruta: string, data: ArrayBuffe
   return { movs, descartados };
 }
 
+// ── PDFs ────────────────────────────────────────────────────────────────────
+// El texto del PDF lo extrae el cliente con pdfjs (así pdfjs no entra al bundle
+// del server) y nos pasa los items {s,x,y} por página. Acá parseamos por DELTA DE
+// SALDO: cada fila trae su saldo; el movimiento es (saldo − saldo anterior). Es
+// header-independiente (funciona aunque el encabezado venga fragmentado) y se
+// auto-valida. Verificado contra Galicia/Macro/Ciudad: |delta| == monto de la fila.
+export interface PdfItem { s: string; x: number; y: number }
+
+const esNum = (s: string) => /^-?[\d.]+,\d{2}-?$/.test(s.trim());
+const MES3: Record<string, string> = { ene: "01", feb: "02", mar: "03", abr: "04", may: "05", jun: "06", jul: "07", ago: "08", sep: "09", oct: "10", nov: "11", dic: "12" };
+function fechaPdf(s: string): string {
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+  if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2]}-${m[1]}`; }
+  m = s.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+  if (m) { const mo = MES3[m[2].toLowerCase()]; return mo ? `${m[3]}-${mo}-${m[1]}` : ""; }
+  return "";
+}
+function detectarBancoPdf(texto: string, ruta: string): string {
+  const t = norm(texto);
+  if (/mercado ?pago|release_date/.test(t + " " + norm(ruta))) return "Mercado Pago";
+  if (/banco galicia|resumen de cuenta corriente|galicia/.test(t)) return "Galicia";
+  if (/banco macro|macro/.test(t + " " + norm(ruta))) return "Macro";
+  if (/banco ciudad|ciudad|cid campeador/.test(t + " " + norm(ruta))) return "Ciudad";
+  if (/santander/.test(t + " " + norm(ruta))) return "Santander";
+  if (/provincia/.test(t + " " + norm(ruta))) return "Provincia";
+  return "Otro";
+}
+
+/** Parsea los items de texto de un PDF (por página) a movimientos, por delta de saldo. */
+export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): { movs: MovBanco[]; descartados: number; error?: string } {
+  const lineasTxt: string[] = [];
+  const movs: MovBanco[] = [];
+  let saldoPrev: number | null = null;
+  let desconf = 0; // filas donde |delta| no coincide con el monto mostrado
+  for (const items of pags) {
+    // agrupar por Y en líneas, ordenadas por X
+    const byY = new Map<number, PdfItem[]>();
+    for (const i of items) { if (!i.s.trim()) continue; const a = byY.get(i.y) ?? []; a.push(i); byY.set(i.y, a); }
+    const ys = Array.from(byY.keys()).sort((a, b) => b - a);
+    for (const y of ys) {
+      const ln = (byY.get(y) as PdfItem[]).sort((a, b) => a.x - b.x);
+      const txt = ln.map((i) => i.s).join(" ");
+      lineasTxt.push(txt);
+      // ancla de saldo (inicio de cuenta / saldo anterior) -> reinicia la referencia
+      const ant = txt.match(/SALDO\s+(?:ANTERIOR|ULTIMO EXTRACTO)[^0-9-]*(-?[\d.]+,\d{2}-?)/i);
+      if (ant) { saldoPrev = parseNumBanco(ant[1]); continue; }
+      const fecha = fechaPdf(ln[0]?.s || "");
+      if (!fecha) continue;
+      const nums = ln.filter((i) => esNum(i.s));
+      if (!nums.length) continue;
+      const saldo = parseNumBanco(nums[nums.length - 1].s); // el más a la derecha = saldo
+      const mostrado = nums.length >= 2 ? Math.abs(parseNumBanco(nums[nums.length - 2].s)) : null;
+      if (saldoPrev == null) { saldoPrev = saldo; continue; } // primera sin ancla: solo fija la referencia
+      const delta = saldo - saldoPrev; saldoPrev = saldo;
+      if (Math.abs(delta) < 0.005) continue;
+      if (mostrado != null && Math.abs(Math.abs(delta) - mostrado) >= 2) desconf++;
+      const concepto = ln.slice(1).filter((i) => !esNum(i.s) && !fechaPdf(i.s)).map((i) => i.s).join(" ").trim().slice(0, 80);
+      movs.push({ fecha, mes: fecha.slice(0, 7), banco: "", local: "", concepto, ingreso: delta > 0 ? delta : 0, egreso: delta < 0 ? -delta : 0, categoria: categoriaDe(concepto) });
+    }
+  }
+  if (!movs.length) return { movs: [], descartados: 0, error: "no reconocí movimientos (¿PDF escaneado o formato nuevo?)" };
+  // Guard de confianza: si en muchas filas el importe mostrado NO cuadra con el
+  // delta del saldo, no es un extracto de cuenta con saldo corrido (p.ej. resumen
+  // de tarjeta o formato raro) -> no importar datos dudosos.
+  if (desconf / movs.length > 0.3) return { movs: [], descartados: desconf, error: "formato no reconocido (los importes no cuadran con el saldo — ¿resumen de tarjeta o escaneado?)" };
+  const banco = detectarBancoPdf(lineasTxt.slice(0, 40).join(" "), ruta);
+  const local = entidadDeRuta(ruta || nombre);
+  for (const m of movs) { m.banco = banco; m.local = local; }
+  return { movs, descartados: desconf };
+}
+
 // Clave de origen: re-subir un (banco+local+mes) reemplaza esos movimientos.
 export const claveOrigen = (m: MovBanco) => `${m.banco}|${m.local}|${m.mes}`;
 

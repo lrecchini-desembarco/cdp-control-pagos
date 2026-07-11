@@ -3,7 +3,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import { parseArchivoBanco, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos } from "@/lib/bancos";
+import { parseArchivoBanco, parsePdfItems, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem } from "@/lib/bancos";
+
+// pdfjs se carga on-demand (recién al procesar un PDF) para no pesar el bundle.
+let pdfjsMod: any = null;
+async function extraerItemsPdf(buf: ArrayBuffer): Promise<PdfItem[][]> {
+  if (!pdfjsMod) { pdfjsMod = await import("pdfjs-dist"); pdfjsMod.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"; }
+  const doc = await pdfjsMod.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise;
+  const pags: PdfItem[][] = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const tc = await (await doc.getPage(p)).getTextContent();
+    pags.push(tc.items.map((i: any) => ({ s: String(i.str || "").trim(), x: i.transform?.[4] ?? 0, y: Math.round(i.transform?.[5] ?? 0) })).filter((i: PdfItem) => i.s));
+  }
+  return pags;
+}
 
 // Bancos: importador de extractos. Subís la carpeta (o varios archivos) tal cual salen
 // del homebanking de cada banco; la app los consolida sola (lib/bancos), los guarda en
@@ -48,16 +61,17 @@ export default function BancosView() {
     const movs: MovBanco[] = []; const errores: string[] = []; let descartados = 0; let ok = 0;
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      if (!/\.(csv|xlsx?)$/i.test(f.name)) continue;
+      if (!/\.(csv|xlsx?|pdf)$/i.test(f.name)) continue;
       setProgreso(`Procesando ${i + 1}/${files.length}: ${f.name}`);
       try {
-        const buf = await f.arrayBuffer();
         const rel = (f as any).webkitRelativePath || f.name;
-        const r = parseArchivoBanco(f.name, rel, buf);
+        const r = /\.pdf$/i.test(f.name)
+          ? parsePdfItems(await extraerItemsPdf(await f.arrayBuffer()), f.name, rel)
+          : parseArchivoBanco(f.name, rel, await f.arrayBuffer());
         if (r.error) errores.push(`${f.name}: ${r.error}`);
         else { movs.push(...r.movs); descartados += r.descartados; ok++; }
       } catch (e) { errores.push(`${f.name}: ${e instanceof Error ? e.message : "error"}`); }
-      if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0)); // no congelar la UI
+      await new Promise((r) => setTimeout(r, 0)); // no congelar la UI (los PDF tardan)
     }
     if (!movs.length) { setEstado("idle"); setError("No pude extraer movimientos. ¿Son extractos de banco (CSV/Excel)? " + (errores[0] || "")); return; }
     setPreview({ movs, resumen: resumirBancos(movs), descartados, errores, archivos: ok });
@@ -123,7 +137,7 @@ export default function BancosView() {
           </label>
           <label className={`cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/[0.03] ${cargando ? "pointer-events-none opacity-50" : ""}`}>
             Archivos
-            <input type="file" accept=".csv,.xls,.xlsx" multiple className="hidden" onChange={(e) => onArchivos(e.target.files)} />
+            <input type="file" accept=".csv,.xls,.xlsx,.pdf" multiple className="hidden" onChange={(e) => onArchivos(e.target.files)} />
           </label>
         </div>
       </div>
@@ -232,7 +246,7 @@ function Kpi({ label, value, sub, tone, full, plain }: { label: string; value: s
 
 function Tutorial({ vacio, onCerrar }: { vacio: boolean; onCerrar: () => void }) {
   const pasos: { n: string; t: string; d: React.ReactNode }[] = [
-    { n: "1", t: "Bajá los extractos", d: <>Entrá al homebanking de cada banco (Galicia, Banco Ciudad, Macro, Provincia, Santander, Mercado Pago) y descargá los <b>movimientos</b> del período en <b>Excel o CSV</b> — el botón suele decir “Exportar”, “Descargar movimientos” o “Extracto”. Guardá todos los archivos en <b>una carpeta</b> en tu compu.</> },
+    { n: "1", t: "Bajá los extractos", d: <>Entrá al homebanking de cada banco (Galicia, Banco Ciudad, Macro, Provincia, Santander, Mercado Pago) y descargá los <b>movimientos</b> del período en <b>Excel, CSV o PDF</b> — el botón suele decir “Exportar”, “Descargar movimientos” o “Extracto”. Guardá todos los archivos en <b>una carpeta</b> en tu compu.</> },
     { n: "2", t: "Subí la carpeta", d: <>Acá arriba tocá <b>“Subir carpeta”</b> y elegí esa carpeta. La app reconoce cada banco sola y junta todo. (También podés arrastrar archivos sueltos con <b>“Archivos”</b>.)</> },
     { n: "3", t: "Revisá y guardá", d: <>Te muestra cuántos movimientos encontró. Tocá <b>“Guardar”</b> y listo: queda guardado y la próxima vez que entres aparece solo.</> },
   ];
@@ -258,7 +272,7 @@ function Tutorial({ vacio, onCerrar }: { vacio: boolean; onCerrar: () => void })
       </div>
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-2xs text-faint">
         <span>🔁 Re-subir un mes ya cargado lo <b className="text-muted">reemplaza</b> (no duplica).</span>
-        <span>📄 Los <b className="text-muted">PDF</b> todavía no — por ahora <b className="text-muted">CSV o Excel</b>.</span>
+        <span>📄 Lee <b className="text-muted">CSV, Excel y PDF</b> (Galicia, Ciudad, Macro y más).</span>
         <span>🔒 Con el <b className="text-muted">ojo</b> del menú de arriba ocultás los montos.</span>
       </div>
     </Card>
