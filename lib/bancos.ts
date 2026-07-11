@@ -266,7 +266,7 @@ export const PROPIAS: Record<string, string> = {
   "30718511034": "Cloud Management Capital S.R.L.",
   "30719201012": "Wiñaypaq S.R.L.",
 };
-export type TipoContraparte = "propia" | "cliente" | "proveedor";
+export type TipoContraparte = "propia" | "cliente" | "proveedor" | "ambos";
 export interface BaseEntry { nombre: string; tipo: TipoContraparte }
 
 /** Base completa CUIT→{nombre,tipo}: propias (seed) + lo cargado (clientes/proveedores). */

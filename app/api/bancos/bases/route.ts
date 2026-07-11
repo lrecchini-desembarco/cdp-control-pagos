@@ -14,7 +14,10 @@ async function leer(): Promise<Record<string, BaseEntry>> {
 }
 function conteo(b: Record<string, BaseEntry>) {
   let cliente = 0, proveedor = 0;
-  for (const e of Object.values(b)) { if (e.tipo === "cliente") cliente++; else if (e.tipo === "proveedor") proveedor++; }
+  for (const e of Object.values(b)) {
+    if (e.tipo === "cliente" || e.tipo === "ambos") cliente++;
+    if (e.tipo === "proveedor" || e.tipo === "ambos") proveedor++;
+  }
   return { cliente, proveedor, propias: Object.keys(PROPIAS).length };
 }
 
@@ -39,7 +42,10 @@ export async function POST(req: NextRequest) {
     for (const e of entries) {
       const cuit = String(e.cuit || "").replace(/[^0-9]/g, "");
       if (cuit.length !== 11 || !e.nombre) continue;
-      base[cuit] = { nombre: String(e.nombre).slice(0, 80), tipo: e.tipo };
+      const prev = base[cuit];
+      // Si el CUIT ya estaba como el OTRO tipo (cliente y proveedor) -> "ambos".
+      const tipo: BaseEntry["tipo"] = prev && prev.tipo !== "propia" && prev.tipo !== e.tipo ? "ambos" : e.tipo;
+      base[cuit] = { nombre: prev?.nombre || String(e.nombre).slice(0, 80), tipo };
     }
     await writeStore(KEY, base);
     return NextResponse.json({ ok: true, conteo: conteo(base) });

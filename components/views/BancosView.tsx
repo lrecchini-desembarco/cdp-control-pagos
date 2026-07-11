@@ -30,6 +30,7 @@ const moneyC = (n: number) => {
   return "$" + s;
 };
 const int = (n: number) => Math.round(n).toLocaleString("es-AR");
+const tipoLabel = (t?: string) => (t === "propia" ? "interno" : t === "ambos" ? "cliente y prov." : t);
 const mesLabel = (m: string) => { const [y, mo] = m.split("-"); return `${["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][+mo] || mo}-${(y || "").slice(2)}`; };
 
 interface Preview { movs: MovBanco[]; resumen: ResumenBancos; descartados: number; errores: string[]; archivos: number }
@@ -248,6 +249,11 @@ export default function BancosView() {
                 </span>
               </div>
             )}
+            {esCuit && basesConteo.cliente === 0 && basesConteo.proveedor === 0 && (
+              <div className="border-b border-line bg-action/[0.06] px-3 py-2 text-2xs text-action">
+                💡 Todavía no cargaste las bases. Subí <b>clientes</b> y <b>proveedores</b> (los exportás de Tango) con los botones de acá arriba, y cada CUIT va a mostrar el <b>nombre</b> en vez del número.
+              </div>
+            )}
             <div className="overflow-x-auto">
               {esCuit ? (
                 <table className="w-full text-left text-sm">
@@ -261,7 +267,7 @@ export default function BancosView() {
                       <tr><td colSpan={3} className="px-4 py-6 text-center text-2xs text-faint">Ningún movimiento con CUIT de contraparte en este filtro (ventas con tarjeta, impuestos y comisiones no traen CUIT).</td></tr>
                     ) : filasCuit.map((f) => (
                       <tr key={f.cuit} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
-                        <td className="px-4 py-2 text-ink"><span className="font-mono">{f.cuit}</span>{f.nombre && <span className="ml-2 font-medium">{f.nombre}</span>}{f.tipo && <span className="ml-1.5 rounded bg-ink/[0.06] px-1 py-px text-2xs text-muted">{f.tipo}</span>}</td>
+                        <td className="px-4 py-2 text-ink"><span className="font-mono">{f.cuit}</span>{f.nombre && <span className="ml-2 font-medium">{f.nombre}</span>}{f.tipo && <span className="ml-1.5 rounded bg-ink/[0.06] px-1 py-px text-2xs text-muted">{tipoLabel(f.tipo)}</span>}</td>
                         <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(f.n)}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
