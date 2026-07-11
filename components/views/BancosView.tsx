@@ -31,6 +31,7 @@ export default function BancosView() {
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"banco" | "local" | "mes" | "categoria">("banco");
   const [verCobertura, setVerCobertura] = useState(false);
+  const [ayuda, setAyuda] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function cargarGuardado() {
@@ -88,6 +89,7 @@ export default function BancosView() {
   }
 
   const r = preview?.resumen ?? resumen;
+  const vacio = !r || r.total === 0;
   const filas = useMemo(() => {
     if (!r) return [] as { k: string; n: number; ingresos: number; egresos: number }[];
     return tab === "banco" ? r.porBanco : tab === "local" ? r.porLocal : tab === "mes" ? r.porMes : r.porCategoria;
@@ -113,6 +115,7 @@ export default function BancosView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setAyuda((a) => !a)} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-ink/[0.03]">¿Cómo funciona?</button>
           {meta?.actualizado && <span className="text-2xs text-faint">actualizado {new Date(meta.actualizado).toLocaleDateString("es-AR")}</span>}
           <label className={`cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/[0.03] ${cargando ? "pointer-events-none opacity-50" : ""}`}>
             Subir carpeta
@@ -147,12 +150,9 @@ export default function BancosView() {
         </Card>
       )}
 
-      {!r || r.total === 0 ? (
-        !cargando && <Card className="p-6 text-sm text-muted">
-          Todavía no hay extractos cargados. Tocá <b>Subir carpeta</b> y elegí la carpeta con los extractos (CSV/Excel de Galicia, Ciudad, Macro, Provincia, Santander, Mercado Pago). Detecto el banco solo y consolido todo.
-          <span className="block mt-1 text-2xs text-faint">Los PDF todavía no se leen (fase 2). Por ahora, CSV/Excel.</span>
-        </Card>
-      ) : (
+      {(vacio || ayuda) && !cargando && <Tutorial vacio={vacio} onCerrar={() => setAyuda(false)} />}
+
+      {!vacio && (
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -226,6 +226,41 @@ function Kpi({ label, value, sub, tone, full, plain }: { label: string; value: s
         {plain ? value : <span className="monto"><span className="group-hover:hidden">{value}</span>{full && <span className="hidden whitespace-nowrap text-[0.7em] group-hover:inline">{full}</span>}</span>}
       </p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
+    </Card>
+  );
+}
+
+function Tutorial({ vacio, onCerrar }: { vacio: boolean; onCerrar: () => void }) {
+  const pasos: { n: string; t: string; d: React.ReactNode }[] = [
+    { n: "1", t: "Bajá los extractos", d: <>Entrá al homebanking de cada banco (Galicia, Banco Ciudad, Macro, Provincia, Santander, Mercado Pago) y descargá los <b>movimientos</b> del período en <b>Excel o CSV</b> — el botón suele decir “Exportar”, “Descargar movimientos” o “Extracto”. Guardá todos los archivos en <b>una carpeta</b> en tu compu.</> },
+    { n: "2", t: "Subí la carpeta", d: <>Acá arriba tocá <b>“Subir carpeta”</b> y elegí esa carpeta. La app reconoce cada banco sola y junta todo. (También podés arrastrar archivos sueltos con <b>“Archivos”</b>.)</> },
+    { n: "3", t: "Revisá y guardá", d: <>Te muestra cuántos movimientos encontró. Tocá <b>“Guardar”</b> y listo: queda guardado y la próxima vez que entres aparece solo.</> },
+  ];
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-base font-semibold text-ink">Cómo cargar los extractos</h2>
+          <p className="mt-0.5 text-sm text-muted">Todos los bancos en un solo lugar, en 3 pasos. No hace falta saber de sistemas.</p>
+        </div>
+        {!vacio && <button onClick={onCerrar} className="shrink-0 rounded-md px-2 py-1 text-2xs font-medium text-muted hover:bg-ink/5">Cerrar</button>}
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {pasos.map((p) => (
+          <div key={p.n} className="rounded-lg border border-line bg-ink/[0.015] p-3">
+            <div className="flex items-center gap-2">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-action/15 font-display text-sm font-bold text-action">{p.n}</span>
+              <span className="font-medium text-ink">{p.t}</span>
+            </div>
+            <p className="mt-1.5 text-2xs leading-relaxed text-muted">{p.d}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-2xs text-faint">
+        <span>🔁 Re-subir un mes ya cargado lo <b className="text-muted">reemplaza</b> (no duplica).</span>
+        <span>📄 Los <b className="text-muted">PDF</b> todavía no — por ahora <b className="text-muted">CSV o Excel</b>.</span>
+        <span>🔒 Con el <b className="text-muted">ojo</b> del menú de arriba ocultás los montos.</span>
+      </div>
     </Card>
   );
 }
