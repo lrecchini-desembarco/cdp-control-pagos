@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { resumirBancos, claveOrigen, type MovBanco } from "@/lib/bancos";
+import { resumirBancos, porCuit, claveOrigen, type MovBanco } from "@/lib/bancos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -26,13 +26,26 @@ function cobertura(movs: MovBanco[]) {
     .sort((a, b) => a.banco.localeCompare(b.banco) || a.local.localeCompare(b.local) || a.mes.localeCompare(b.mes));
 }
 
-// GET -> resumen + cobertura de lo guardado.
-export async function GET() {
+// GET ?mes=&banco= -> resumen + desglose por CUIT (ingresos/egresos) del filtro,
+// más las listas de meses/bancos para los selectores.
+export async function GET(req: NextRequest) {
   const g = await guard("/bancos");
   if ("res" in g) return g.res;
-  const movs = await leer();
+  const all = await leer();
+  const mes = req.nextUrl.searchParams.get("mes") || "";
+  const banco = req.nextUrl.searchParams.get("banco") || "";
+  const movs = all.filter((m) => (!mes || m.mes === mes) && (!banco || m.banco === banco));
   const meta = await readStore<{ actualizado?: string } | null>(META, null);
-  return NextResponse.json({ ok: true, resumen: resumirBancos(movs), cobertura: cobertura(movs), meta });
+  return NextResponse.json({
+    ok: true,
+    resumen: resumirBancos(movs),
+    cobertura: cobertura(movs),
+    porCuitIngreso: porCuit(movs, "ingreso"),
+    porCuitEgreso: porCuit(movs, "egreso"),
+    meses: Array.from(new Set(all.map((m) => m.mes))).sort().reverse(),
+    bancos: Array.from(new Set(all.map((m) => m.banco))).sort(),
+    meta,
+  });
 }
 
 // POST { movs, fecha? } -> mergea un lote (reemplaza los banco+local+mes que trae).

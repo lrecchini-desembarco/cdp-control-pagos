@@ -15,6 +15,14 @@ export interface MovBanco {
   ingreso: number;
   egreso: number;
   categoria: string;
+  cuit?: string;    // CUIT de la contraparte si aparece en el concepto (11 díg)
+}
+
+// CUIT de la contraparte: primer CUIT válido en el texto (formato 30-12345678-9 o
+// 30123456789). Sirve para cruzar con las bases de proveedores/clientes.
+export function extraerCuit(s: string): string | undefined {
+  const m = String(s || "").match(/\b(20|23|24|27|30|33|34)[-.]?\d{8}[-.]?\d\b/);
+  return m ? m[0].replace(/[-.]/g, "") : undefined;
 }
 
 const CAP = 5e10; // ningún movimiento real supera ~50 mil M -> arriba = lectura corrupta
@@ -101,8 +109,8 @@ function mapear(rows: string[][]): { start: number; fecha: number; imp: number; 
 const CATS: [string, RegExp][] = [
   ["Acreditación tarjeta", /acredit|vta con tarj|venta con tarj|nave|liquidacion de diner|cobranza|com fv/i],
   ["Transferencia", /transferencia|debin|transf/i],
-  ["Impuestos", /impuesto|iibb|ing.*bruto|ley 25413|sircreb|sellos/i],
-  ["Comisiones/gastos", /comision|arancel|gasto|mantenim|cargo/i],
+  ["Impuestos", /impuesto|iibb|ing.*bruto|ley 25413|sircreb|sellos|percep|retenc|iva/i],
+  ["Gastos bancarios", /comision|arancel|gasto|mantenim|cargo|servicio de cuenta/i],
   ["Préstamo/Echeq", /prestamo|cuota|echeq|cheque/i],
   ["Rendimientos", /rendimiento/i],
 ];
@@ -133,7 +141,7 @@ export function parseArchivoBanco(nombre: string, ruta: string, data: ArrayBuffe
     if (ingreso === 0 && egreso === 0) continue;
     if (ingreso > CAP || egreso > CAP) { descartados++; continue; }
     const concepto = String(m.concepto >= 0 ? row[m.concepto] : "").trim().slice(0, 80);
-    movs.push({ fecha, mes: fecha.slice(0, 7), banco, local, concepto, ingreso, egreso, categoria: categoriaDe(concepto) });
+    movs.push({ fecha, mes: fecha.slice(0, 7), banco, local, concepto, ingreso, egreso, categoria: categoriaDe(concepto), cuit: extraerCuit(concepto) });
   }
   return { movs, descartados };
 }
@@ -195,7 +203,7 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
       if (Math.abs(delta) < 0.005) continue;
       if (mostrado != null && Math.abs(Math.abs(delta) - mostrado) >= 2) desconf++;
       const concepto = ln.slice(1).filter((i) => !esNum(i.s) && !fechaPdf(i.s)).map((i) => i.s).join(" ").trim().slice(0, 80);
-      movs.push({ fecha, mes: fecha.slice(0, 7), banco: "", local: "", concepto, ingreso: delta > 0 ? delta : 0, egreso: delta < 0 ? -delta : 0, categoria: categoriaDe(concepto) });
+      movs.push({ fecha, mes: fecha.slice(0, 7), banco: "", local: "", concepto, ingreso: delta > 0 ? delta : 0, egreso: delta < 0 ? -delta : 0, categoria: categoriaDe(concepto), cuit: extraerCuit(concepto) });
     }
   }
   if (!movs.length) return { movs: [], descartados: 0, error: "no reconocí movimientos (¿PDF escaneado o formato nuevo?)" };
@@ -218,6 +226,20 @@ export interface ResumenBancos {
   porBanco: GrupoBanco[]; porLocal: GrupoBanco[]; porMes: GrupoBanco[]; porCategoria: GrupoBanco[];
 }
 export interface GrupoBanco { k: string; n: number; ingresos: number; egresos: number }
+export interface GrupoCuit { cuit: string; n: number; monto: number; nombre?: string; tipo?: string }
+
+// Desglose por CUIT de contraparte (solo movimientos que traen CUIT), para ingresos
+// o egresos. Base para cruzar con proveedores/clientes.
+export function porCuit(movs: MovBanco[], tipo: "ingreso" | "egreso"): GrupoCuit[] {
+  const mp = new Map<string, GrupoCuit>();
+  for (const m of movs) {
+    const v = tipo === "ingreso" ? m.ingreso : m.egreso;
+    if (v <= 0 || !m.cuit) continue;
+    const a = mp.get(m.cuit) ?? { cuit: m.cuit, n: 0, monto: 0 };
+    a.n++; a.monto += v; mp.set(m.cuit, a);
+  }
+  return Array.from(mp.values()).sort((a, b) => b.monto - a.monto);
+}
 
 export function resumirBancos(movs: MovBanco[]): ResumenBancos {
   const grp = (key: (m: MovBanco) => string): GrupoBanco[] => {

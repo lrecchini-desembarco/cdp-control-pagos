@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import { parseArchivoBanco, parsePdfItems, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem } from "@/lib/bancos";
+import { parseArchivoBanco, parsePdfItems, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem, type GrupoCuit } from "@/lib/bancos";
 
 // pdfjs se carga on-demand (recién al procesar un PDF) para no pesar el bundle.
 let pdfjsMod: any = null;
@@ -42,18 +42,30 @@ export default function BancosView() {
   const [estado, setEstado] = useState<"loading" | "idle" | "parsing" | "saving">("loading");
   const [progreso, setProgreso] = useState("");
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"banco" | "local" | "mes" | "categoria">("banco");
+  const [tab, setTab] = useState<"banco" | "local" | "mes" | "categoria" | "cuit-ing" | "cuit-egr">("banco");
   const [verCobertura, setVerCobertura] = useState(false);
   const [ayuda, setAyuda] = useState(false);
+  const [mesSel, setMesSel] = useState("");
+  const [bancoSel, setBancoSel] = useState("");
+  const [meses, setMeses] = useState<string[]>([]);
+  const [bancos, setBancos] = useState<string[]>([]);
+  const [porCuitIng, setPorCuitIng] = useState<GrupoCuit[]>([]);
+  const [porCuitEgr, setPorCuitEgr] = useState<GrupoCuit[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function cargarGuardado() {
+  async function cargar(mes = mesSel, banco = bancoSel) {
     try {
-      const j = await (await fetch("/api/bancos", { cache: "no-store" })).json();
-      if (j.ok) { setResumen(j.resumen); setCobertura(j.cobertura ?? []); setMeta(j.meta ?? null); }
+      const qs = new URLSearchParams(); if (mes) qs.set("mes", mes); if (banco) qs.set("banco", banco);
+      const j = await (await fetch("/api/bancos?" + qs.toString(), { cache: "no-store" })).json();
+      if (j.ok) {
+        setResumen(j.resumen); setCobertura(j.cobertura ?? []); setMeta(j.meta ?? null);
+        setMeses(j.meses ?? []); setBancos(j.bancos ?? []);
+        setPorCuitIng(j.porCuitIngreso ?? []); setPorCuitEgr(j.porCuitEgreso ?? []);
+      }
     } catch { /* vacío */ } finally { setEstado("idle"); }
   }
-  useEffect(() => { cargarGuardado(); }, []);
+  useEffect(() => { cargar("", ""); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  function filtrar(mes: string, banco: string) { setMesSel(mes); setBancoSel(banco); cargar(mes, banco); }
 
   async function onArchivos(files: FileList | null) {
     if (!files || !files.length) return;
@@ -96,24 +108,28 @@ export default function BancosView() {
         if (!r.ok) throw new Error(r.error || "falló al guardar");
         ultima = r;
       }
-      if (ultima) { setResumen(ultima.resumen); setCobertura(ultima.cobertura ?? []); setMeta({ actualizado: new Date().toISOString() }); }
-      setPreview(null);
+      void ultima;
+      setPreview(null); setMesSel(""); setBancoSel(""); await cargar("", "");
     } catch (e) { setError(e instanceof Error ? e.message : "no se pudo guardar"); }
     finally { setEstado("idle"); setProgreso(""); }
   }
 
-  const r = preview?.resumen ?? resumen;
-  const vacio = !r || r.total === 0;
+  const r = resumen;
+  const hayDatos = meses.length > 0;
+  const esCuit = tab === "cuit-ing" || tab === "cuit-egr";
   const filas = useMemo(() => {
     if (!r) return [] as { k: string; n: number; ingresos: number; egresos: number }[];
-    return tab === "banco" ? r.porBanco : tab === "local" ? r.porLocal : tab === "mes" ? r.porMes : r.porCategoria;
+    return tab === "banco" ? r.porBanco : tab === "local" ? r.porLocal : tab === "mes" ? r.porMes : tab === "categoria" ? r.porCategoria : [];
   }, [r, tab]);
+  const filasCuit = tab === "cuit-egr" ? porCuitEgr : porCuitIng;
   const maxV = Math.max(1, ...filas.map((f) => Math.abs(f.ingresos - f.egresos)));
+  const maxCuit = Math.max(1, ...filasCuit.map((f) => f.monto));
 
   function exportar() {
+    if (esCuit) return descargarCSV(`bancos-${tab}.csv`, ["cuit", "movimientos", "monto"], filasCuit.map((f) => [f.cuit, f.n, Math.round(f.monto)]));
     if (!r) return;
     descargarCSV(`bancos-${tab}.csv`, [tab, "movimientos", "ingresos", "egresos", "neto"],
-      filas.map((f) => [tab === "mes" ? f.k : f.k, f.n, Math.round(f.ingresos), Math.round(f.egresos), Math.round(f.ingresos - f.egresos)]));
+      filas.map((f) => [f.k, f.n, Math.round(f.ingresos), Math.round(f.egresos), Math.round(f.ingresos - f.egresos)]));
   }
 
   const cargando = estado === "parsing" || estado === "saving";
@@ -164,10 +180,27 @@ export default function BancosView() {
         </Card>
       )}
 
-      {(vacio || ayuda) && !cargando && <Tutorial vacio={vacio} onCerrar={() => setAyuda(false)} />}
+      {(!hayDatos || ayuda) && !cargando && <Tutorial vacio={!hayDatos} onCerrar={() => setAyuda(false)} />}
 
-      {!vacio && (
+      {hayDatos && r && (
         <>
+          {/* Filtros */}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 text-2xs text-muted">Mes
+              <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" value={mesSel} onChange={(e) => filtrar(e.target.value, bancoSel)}>
+                <option value="">todos</option>
+                {meses.map((m) => <option key={m} value={m}>{mesLabel(m)}</option>)}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 text-2xs text-muted">Banco
+              <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" value={bancoSel} onChange={(e) => filtrar(mesSel, e.target.value)}>
+                <option value="">todos</option>
+                {bancos.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </label>
+            {(mesSel || bancoSel) && <button onClick={() => filtrar("", "")} className="text-2xs font-medium text-action hover:underline">limpiar</button>}
+          </div>
+
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi label="Ingresos" value={moneyC(r.ingresos)} full={money(r.ingresos)} tone="ok" sub={`${int(r.total)} movimientos`} />
@@ -180,7 +213,7 @@ export default function BancosView() {
           <Card className="overflow-hidden p-0">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
               <div className="flex flex-wrap gap-1">
-                {([["banco", "Por banco"], ["local", "Por local"], ["mes", "Por mes"], ["categoria", "Por categoría"]] as const).map(([k, l]) => (
+                {([["banco", "Por banco"], ["local", "Por local"], ["mes", "Por mes"], ["categoria", "Por categoría"], ["cuit-ing", "Ingresos × CUIT"], ["cuit-egr", "Egresos × CUIT"]] as const).map(([k, l]) => (
                   <button key={k} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
                 ))}
               </div>
@@ -190,31 +223,57 @@ export default function BancosView() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
-                  <th className="px-4 py-2 font-medium">{tab === "banco" ? "Banco" : tab === "local" ? "Local" : tab === "mes" ? "Mes" : "Categoría"}</th>
-                  <th className="px-3 py-2 text-right font-medium">Mov</th>
-                  <th className="px-3 py-2 text-right font-medium">Ingresos</th>
-                  <th className="px-3 py-2 text-right font-medium">Egresos</th>
-                  <th className="px-3 py-2 font-medium">Neto</th>
-                </tr></thead>
-                <tbody>
-                  {filas.map((f) => { const neto = f.ingresos - f.egresos; return (
-                    <tr key={f.k} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
-                      <td className="px-4 py-2 font-medium text-ink">{tab === "mes" ? mesLabel(f.k) : f.k}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(f.n)}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-ok monto">{f.ingresos ? money(f.ingresos) : "—"}</td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-bad monto">{f.egresos ? money(f.egresos) : "—"}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-ink/10"><div className={`h-full rounded-full ${neto < 0 ? "bg-bad/70" : "bg-ok/80"}`} style={{ width: `${Math.max(2, (Math.abs(neto) / maxV) * 100)}%` }} /></div>
-                          <span className="font-mono tnum font-medium text-ink monto">{money(neto)}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ); })}
-                </tbody>
-              </table>
+              {esCuit ? (
+                <table className="w-full text-left text-sm">
+                  <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                    <th className="px-4 py-2 font-medium">CUIT contraparte</th>
+                    <th className="px-3 py-2 text-right font-medium">Mov</th>
+                    <th className="px-3 py-2 font-medium">{tab === "cuit-egr" ? "Pagado" : "Ingresado"}</th>
+                  </tr></thead>
+                  <tbody>
+                    {filasCuit.length === 0 ? (
+                      <tr><td colSpan={3} className="px-4 py-6 text-center text-2xs text-faint">Ningún movimiento con CUIT de contraparte en este filtro (ventas con tarjeta, impuestos y comisiones no traen CUIT).</td></tr>
+                    ) : filasCuit.map((f) => (
+                      <tr key={f.cuit} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                        <td className="px-4 py-2 text-ink"><span className="font-mono">{f.cuit}</span>{f.nombre && <span className="ml-2 font-medium">{f.nombre}</span>}{f.tipo && <span className="ml-1.5 rounded bg-ink/[0.06] px-1 py-px text-2xs text-muted">{f.tipo}</span>}</td>
+                        <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(f.n)}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-ink/10"><div className={`h-full rounded-full ${tab === "cuit-egr" ? "bg-bad/70" : "bg-ok/80"}`} style={{ width: `${Math.max(2, (f.monto / maxCuit) * 100)}%` }} /></div>
+                            <span className="font-mono tnum font-medium text-ink monto">{money(f.monto)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                    <th className="px-4 py-2 font-medium">{tab === "banco" ? "Banco" : tab === "local" ? "Local" : tab === "mes" ? "Mes" : "Categoría"}</th>
+                    <th className="px-3 py-2 text-right font-medium">Mov</th>
+                    <th className="px-3 py-2 text-right font-medium">Ingresos</th>
+                    <th className="px-3 py-2 text-right font-medium">Egresos</th>
+                    <th className="px-3 py-2 font-medium">Neto</th>
+                  </tr></thead>
+                  <tbody>
+                    {filas.map((f) => { const neto = f.ingresos - f.egresos; return (
+                      <tr key={f.k} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                        <td className="px-4 py-2 font-medium text-ink">{tab === "mes" ? mesLabel(f.k) : f.k}</td>
+                        <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(f.n)}</td>
+                        <td className="px-3 py-2 text-right font-mono tnum text-ok monto">{f.ingresos ? money(f.ingresos) : "—"}</td>
+                        <td className="px-3 py-2 text-right font-mono tnum text-bad monto">{f.egresos ? money(f.egresos) : "—"}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-ink/10"><div className={`h-full rounded-full ${neto < 0 ? "bg-bad/70" : "bg-ok/80"}`} style={{ width: `${Math.max(2, (Math.abs(neto) / maxV) * 100)}%` }} /></div>
+                            <span className="font-mono tnum font-medium text-ink monto">{money(neto)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ); })}
+                  </tbody>
+                </table>
+              )}
             </div>
             {verCobertura && (
               <div className="border-t border-line bg-ink/[0.015] px-4 py-3">
