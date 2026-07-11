@@ -225,7 +225,7 @@ export function parseBaseArchivo(nombre: string, data: ArrayBuffer | Uint8Array,
   let hi = -1, iCuit = -1, iNom = -1;
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const h = rows[i].map(norm);
-    const c = h.findIndex((x) => /cuit|c\.?u\.?i\.?t|cuil/.test(x));
+    const c = h.findIndex((x) => /cuit|c\.?u\.?i\.?t|cuil|documento|nro.*doc|n.*documento/.test(x));
     const n = h.findIndex((x) => /raz[oó]?n social|nombre|denominaci|apellido|cliente|proveedor/.test(x));
     if (c >= 0 && n >= 0) { hi = i; iCuit = c; iNom = n; break; }
   }
@@ -272,8 +272,8 @@ export interface BaseEntry { nombre: string; tipo: TipoContraparte }
 /** Base completa CUIT→{nombre,tipo}: propias (seed) + lo cargado (clientes/proveedores). */
 export function baseCompleta(cargadas: Record<string, BaseEntry> = {}): Record<string, BaseEntry> {
   const base: Record<string, BaseEntry> = {};
-  for (const [cuit, nombre] of Object.entries(PROPIAS)) base[cuit] = { nombre, tipo: "propia" };
-  for (const [cuit, e] of Object.entries(cargadas)) base[cuit] = e; // lo cargado pisa
+  for (const [cuit, e] of Object.entries(cargadas)) base[cuit] = e;                       // clientes/proveedores cargados
+  for (const [cuit, nombre] of Object.entries(PROPIAS)) base[cuit] = { nombre, tipo: "propia" }; // los PROPIOS siempre ganan (inter-empresa = interno)
   return base;
 }
 /** Enriquece los grupos por CUIT con nombre y tipo desde la base. */
