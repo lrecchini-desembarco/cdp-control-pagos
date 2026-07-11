@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -105,6 +105,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/actividad", label: "Actividad de ventas", icon: "◔", section: "Ventas y compras", fresh: "vivo", desc: "Ranking de locales por actividad y productos que se durmieron." },
   { href: "/facturacion", label: "Facturación", icon: "≣", section: "Ventas y compras", fresh: "vivo", desc: "Cuánta plata mueve cada producto, local y marca (estimada, Tango)." },
   { href: "/mercadopago", label: "Cobros · Mercado Pago", icon: "◐", section: "Ventas y compras", fresh: "vivo", desc: "Lo que cobró Mercado Pago, por medio de pago y día; para conciliar." },
+  { href: "/bancos", label: "Bancos", icon: "◫", section: "Ventas y compras", fresh: "carga", desc: "Liquidaciones de tarjetas y bancos: bruto, comisiones y neto acreditado (subís el CSV)." },
   // Costos y precios (módulo Costos) — se cargan a mano (Excel), hoy vigentes
   { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos", fresh: "carga", desc: "Maestro de insumos con costo por unidad." },
   { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos", fresh: "carga", desc: "Qué insumos (y cuánto) lleva cada producto." },
