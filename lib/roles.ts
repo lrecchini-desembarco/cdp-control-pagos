@@ -17,7 +17,7 @@ export const ROLES: Record<Rol, RolInfo> = {
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -122,6 +122,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/inventario", label: "Inventario", icon: "▧", section: "Locales", fresh: "carga", desc: "Recursos de IT: qué hay, qué falta comprar y aprobaciones." },
   // Empresa — estructura y personas
   { href: "/organigrama", label: "Organigrama", icon: "⧉", section: "Empresa", fresh: "carga", desc: "Quién reporta a quién; ubicás tu casillero." },
+  { href: "/contactos", label: "Contactos", icon: "☏", section: "Empresa", fresh: "carga", desc: "Contactos clave para resolver temas urgentes (Tango, sistemas, proveedores, bancos): teléfono, mail y con qué verlo, con botón directo de WhatsApp y email." },
   // Sistema — configuración y salud
   { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema", fresh: "carga", desc: "Enseñale al sistema las recetas y los códigos de sucursal." },
   { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga", desc: "Alta de usuarios y qué puede ver cada uno." },
