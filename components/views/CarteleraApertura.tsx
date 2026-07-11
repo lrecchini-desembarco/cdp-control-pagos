@@ -117,6 +117,7 @@ export default function CarteleraApertura() {
     const per = Math.ceil(items.length / n) || 1;
     return Array.from({ length: n }, (_, c) => items.slice(c * per, (c + 1) * per));
   }, [items]);
+  const maxLen = Math.max(1, ...cols.map((c) => c.length)); // filas por columna, para repartir el alto
 
   const tot = useMemo(() => {
     const by = (m: string) => items.filter((i) => i.marca === m).length;
@@ -187,22 +188,26 @@ export default function CarteleraApertura() {
             <h1 className="font-display text-2xl font-bold uppercase tracking-[0.35em] text-white">Apertura de Locales</h1>
           </div>
 
-          {/* Grilla — px generoso para overscan de TV */}
-          <div className="flex flex-1 items-stretch gap-4 px-14 py-4">
+          {/* Grilla — las filas se REPARTEN para llenar todo el alto (sin huecos). px
+              generoso para overscan de TV. Columnas cortas se rellenan con filas vacías
+              para que las alturas queden alineadas entre columnas. */}
+          <div className="flex min-h-0 flex-1 items-stretch gap-4 px-14 py-4">
             {cols.map((col, ci) => (
-              <div key={ci} className="flex-1">
-                <div className="grid grid-cols-[1fr_2.6rem_2.6rem_6rem] items-center rounded-t bg-[#E0A024] px-2.5 py-1.5 text-sm font-bold uppercase tracking-wide text-white">
+              <div key={ci} className="flex min-h-0 flex-1 flex-col">
+                <div className="grid shrink-0 grid-cols-[1fr_2.8rem_2.8rem_6.5rem] items-center rounded-t bg-[#E0A024] px-3 py-2 text-base font-bold uppercase tracking-wide text-white">
                   <span>Sucursal</span><span className="text-center">L</span><span className="text-center">F</span><span className="text-center">Marca</span>
                 </div>
-                <div>
-                  {col.map((it) => {
+                <div className="flex min-h-0 flex-1 flex-col">
+                  {Array.from({ length: maxLen }).map((_, ri) => {
+                    const it = col[ri];
+                    if (!it) return <div key={`e${ri}`} className="flex-1 border-b border-white/50 bg-[#FBF9F4]" />;
                     const m = marcaAp(it.marca);
                     return (
-                      <div key={it.id} className="grid grid-cols-[1fr_2.6rem_2.6rem_6rem] items-center border-b border-white text-lg leading-tight">
-                        <span className="truncate px-2.5 py-1 font-semibold uppercase" style={{ backgroundColor: m.filaBg }}>{it.nombre}</span>
-                        <span className="grid place-items-center bg-[#F3F0E9] py-1"><Icono estado={it.local} /></span>
-                        <span className="grid place-items-center bg-[#F3F0E9] py-1"><Icono estado={it.firma} /></span>
-                        <span className="truncate px-1 py-1 text-center text-sm font-bold" style={{ backgroundColor: m.filaBg, color: m.color }}>{m.corto}</span>
+                      <div key={it.id} className="grid flex-1 grid-cols-[1fr_2.8rem_2.8rem_6.5rem] border-b border-white text-xl leading-none">
+                        <span className="flex items-center truncate px-3 font-semibold uppercase" style={{ backgroundColor: m.filaBg }}>{it.nombre}</span>
+                        <span className="grid place-items-center bg-[#F3F0E9]"><Icono estado={it.local} /></span>
+                        <span className="grid place-items-center bg-[#F3F0E9]"><Icono estado={it.firma} /></span>
+                        <span className="flex items-center justify-center truncate px-1 text-center text-base font-bold" style={{ backgroundColor: m.filaBg, color: m.color }}>{m.corto}</span>
                       </div>
                     );
                   })}
