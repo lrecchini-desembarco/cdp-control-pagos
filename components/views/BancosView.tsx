@@ -161,8 +161,8 @@ export default function BancosView() {
             Subís la carpeta o los archivos y se consolida y guarda solo.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setAyuda((a) => !a)} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-ink/[0.03]">Cómo cargar</button>
+        <div data-tour="bancos-subir" className="flex items-center gap-2">
+          <button data-tour="bancos-como-cargar" onClick={() => setAyuda((a) => !a)} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-ink/[0.03]">Cómo cargar</button>
           {meta?.actualizado && <span className="text-2xs text-faint">actualizado {new Date(meta.actualizado).toLocaleDateString("es-AR")}</span>}
           <label className={`cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/[0.03] ${cargando ? "pointer-events-none opacity-50" : ""}`}>
             Subir carpeta
@@ -202,7 +202,7 @@ export default function BancosView() {
       {hayDatos && r && (
         <>
           {/* Filtros */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div data-tour="bancos-filtros" className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1.5 text-2xs text-muted">Mes
               <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" value={mesSel} onChange={(e) => filtrar(e.target.value, bancoSel)}>
                 <option value="">todos</option>
@@ -229,9 +229,9 @@ export default function BancosView() {
           {/* Desglose */}
           <Card className="overflow-hidden p-0">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-              <div className="flex flex-wrap gap-1">
+              <div data-tour="bancos-tabs" className="flex flex-wrap gap-1">
                 {([["banco", "Por banco"], ["local", "Por local"], ["mes", "Por mes"], ["categoria", "Por categoría"], ["cuit-ing", "Ingresos × CUIT"], ["cuit-egr", "Egresos × CUIT"]] as const).map(([k, l]) => (
-                  <button key={k} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
+                  <button key={k} {...(k === "cuit-ing" ? { "data-tour": "bancos-tab-cuit" } : {})} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
                 ))}
               </div>
               <div className="flex items-center gap-3">

@@ -1,50 +1,72 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import "driver.js/dist/driver.css";
+import { TOUR_GENERAL, TOURS_PANTALLA, type PasoTour } from "@/lib/tours";
 
-// Tour guiado ("coach marks") que explica las herramientas del tablero. Arranca solo
-// la primera vez y se puede relanzar con el botón "¿Cómo funciona?". Usa driver.js
-// (import dinámico, para no pesar el bundle) y los anclas data-tour del layout.
+// Tour guiado ("coach marks"). Arranca solo la primera vez y se relanza con el botón.
+// Si estás en una pantalla compleja con tour propio (ej. Bancos), el botón ofrece
+// elegir: recorrido general o el de esa pantalla.
 const KEY = "cdp_tour_v1";
 
-const PASOS = [
-  { popover: { title: "👋 Bienvenido a CDP · Control", description: "Te muestro en 30 segundos dónde está cada cosa. Podés cerrarlo cuando quieras y volver a verlo con el botón «¿Cómo funciona?»." } },
-  { element: '[data-tour="nav"]', popover: { title: "🧭 Todas las herramientas", description: "Acá están, agrupadas por tema: Alertas, Ventas, Facturación, Bancos, Costos, Clientes y más. <b>Pasá el mouse por cada una</b> y te dice qué hace.", side: "right" as const } },
-  { element: '[data-tour="fresh"]', popover: { title: "🟢 De dónde sale el dato", description: "El punto <b>verde</b> = dato en vivo (tiempo real). El <b>gris</b> = se carga a mano. Así sabés qué tan fresco es cada número.", side: "right" as const } },
-  { element: '[data-tour="privacy"]', popover: { title: "🔒 Ocultar los montos", description: "Este ojo tapa toda la plata de la pantalla — ideal si estás mostrando el tablero o compartiendo pantalla.", side: "bottom" as const } },
-  { element: '[data-tour="ayuda"]', popover: { title: "❓ ¿Dudas más adelante?", description: "Cuando quieras repetir este paseo, tocá este botón. Y en <b>«¿Qué puedo hacer?»</b> (abajo del menú) tenés la guía completa, paso a paso.", side: "bottom" as const } },
-];
-
 export default function TourGuiado() {
-  const iniciar = useCallback(async () => {
+  const path = usePathname();
+  const ruta = "/" + (path.split("/").filter(Boolean)[0] ?? "");
+  const pantalla = TOURS_PANTALLA[ruta];
+  const [menu, setMenu] = useState(false);
+
+  const correr = useCallback(async (pasos: PasoTour[]) => {
+    setMenu(false);
     const { driver } = await import("driver.js");
-    const d = driver({
+    driver({
       showProgress: true,
       nextBtnText: "Siguiente",
       prevBtnText: "Atrás",
       doneBtnText: "Listo",
       progressText: "{{current}} de {{total}}",
-      steps: PASOS,
-    });
-    d.drive();
+      steps: pasos,
+    }).drive();
   }, []);
 
+  // Primera visita -> recorrido general automático.
   useEffect(() => {
     try {
-      if (!localStorage.getItem(KEY)) { localStorage.setItem(KEY, "1"); const t = setTimeout(iniciar, 900); return () => clearTimeout(t); }
+      if (!localStorage.getItem(KEY)) { localStorage.setItem(KEY, "1"); const t = setTimeout(() => correr(TOUR_GENERAL), 900); return () => clearTimeout(t); }
     } catch { /* incógnito */ }
-  }, [iniciar]);
+  }, [correr]);
+
+  function onClick() {
+    if (pantalla) setMenu((m) => !m); // hay tour de pantalla -> ofrecer opción
+    else correr(TOUR_GENERAL);
+  }
 
   return (
-    <button
-      data-tour="ayuda"
-      onClick={iniciar}
-      title="Ver cómo usar el tablero"
-      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-2xs font-medium text-muted hover:bg-ink/5 hover:text-ink"
-    >
-      <span className="grid h-4 w-4 place-items-center rounded-full border border-current text-[10px] font-bold leading-none">?</span>
-      <span className="hidden sm:inline">¿Cómo funciona?</span>
-    </button>
+    <div className="relative">
+      <button
+        data-tour="ayuda"
+        onClick={onClick}
+        title="Ver cómo usar el tablero"
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-2xs font-medium text-muted hover:bg-ink/5 hover:text-ink"
+      >
+        <span className="grid h-4 w-4 place-items-center rounded-full border border-current text-[10px] font-bold leading-none">?</span>
+        <span className="hidden sm:inline">¿Cómo funciona?</span>
+      </button>
+
+      {menu && pantalla && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} aria-hidden />
+          <div className="absolute right-0 top-full z-50 mt-1 w-60 overflow-hidden rounded-lg border border-line bg-surface py-1 text-sm shadow-lg">
+            <p className="px-3 py-1 text-2xs uppercase tracking-wide text-faint">¿Qué querés ver?</p>
+            <button onClick={() => correr(pantalla.pasos)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-ink hover:bg-ink/[0.04]">
+              <span>📍</span> Cómo usar <b>{pantalla.nombre}</b>
+            </button>
+            <button onClick={() => correr(TOUR_GENERAL)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-muted hover:bg-ink/[0.04]">
+              <span>🧭</span> Recorrido general del tablero
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
