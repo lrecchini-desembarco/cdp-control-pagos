@@ -32,6 +32,7 @@ const moneyC = (n: number) => {
 const int = (n: number) => Math.round(n).toLocaleString("es-AR");
 const tipoLabel = (t?: string) => (t === "propia" ? "interno" : t === "ambos" ? "cliente y prov." : t);
 const mesLabel = (m: string) => { const [y, mo] = m.split("-"); return `${["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][+mo] || mo}-${(y || "").slice(2)}`; };
+const normTxt = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 interface Preview { movs: MovBanco[]; resumen: ResumenBancos; descartados: number; errores: string[]; archivos: number }
 
@@ -54,6 +55,8 @@ export default function BancosView() {
   const [porCuitEgr, setPorCuitEgr] = useState<GrupoCuit[]>([]);
   const [basesConteo, setBasesConteo] = useState<{ cliente: number; proveedor: number; propias: number }>({ cliente: 0, proveedor: 0, propias: 0 });
   const [avisoBase, setAvisoBase] = useState<{ texto: string; huboDescartes: boolean } | null>(null);
+  const [buscarCuit, setBuscarCuit] = useState("");
+  const [tipoCuit, setTipoCuit] = useState<"" | "cliente" | "proveedor" | "propia">("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function cargarBases() {
@@ -146,7 +149,20 @@ export default function BancosView() {
     if (!r) return [] as { k: string; n: number; ingresos: number; egresos: number }[];
     return tab === "banco" ? r.porBanco : tab === "local" ? r.porLocal : tab === "mes" ? r.porMes : tab === "categoria" ? r.porCategoria : [];
   }, [r, tab]);
-  const filasCuit = tab === "cuit-egr" ? porCuitEgr : porCuitIng;
+  const filasCuit = useMemo(() => {
+    const base = tab === "cuit-egr" ? porCuitEgr : porCuitIng;
+    const q = normTxt(buscarCuit.trim());
+    return base.filter((f) => {
+      // Filtro por tipo: "ambos" (cliente y proveedor) cuenta para cliente y proveedor.
+      if (tipoCuit) {
+        const t = f.tipo ?? "";
+        const ok = t === tipoCuit || (t === "ambos" && (tipoCuit === "cliente" || tipoCuit === "proveedor"));
+        if (!ok) return false;
+      }
+      if (!q) return true;
+      return normTxt((f.nombre ?? "") + " " + f.cuit).includes(q);
+    });
+  }, [tab, porCuitIng, porCuitEgr, buscarCuit, tipoCuit]);
   const maxV = Math.max(1, ...filas.map((f) => Math.abs(f.ingresos - f.egresos)));
   const maxCuit = Math.max(1, ...filasCuit.map((f) => f.monto));
 
@@ -289,6 +305,27 @@ export default function BancosView() {
                 💡 Todavía no cargaste las bases. Subí <b>clientes</b> y <b>proveedores</b> (los exportás de Tango) con los botones de acá arriba, y cada CUIT va a mostrar el <b>nombre</b> en vez del número.
               </div>
             )}
+            {esCuit && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
+                <div className="relative min-w-0 flex-1">
+                  <input
+                    value={buscarCuit}
+                    onChange={(e) => setBuscarCuit(e.target.value)}
+                    placeholder="Buscar por razón social o CUIT…"
+                    className="w-full rounded-md border border-line bg-surface px-2.5 py-1 pr-6 text-2xs text-ink placeholder:text-faint focus:border-action"
+                  />
+                  {buscarCuit && <button onClick={() => setBuscarCuit("")} title="Limpiar" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-faint hover:text-ink">×</button>}
+                </div>
+                {(basesConteo.cliente > 0 || basesConteo.proveedor > 0) && (
+                  <div className="flex gap-1">
+                    {([["", "Todos"], ["cliente", "Clientes"], ["proveedor", "Proveedores"], ["propia", "Internos"]] as const).map(([k, l]) => (
+                      <button key={k || "todos"} onClick={() => setTipoCuit(k)} className={`rounded-md px-2 py-1 text-2xs font-medium ${tipoCuit === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
+                    ))}
+                  </div>
+                )}
+                <span className="text-2xs text-faint">{int(filasCuit.length)} {filasCuit.length === 1 ? "contraparte" : "contrapartes"}</span>
+              </div>
+            )}
             <div className="overflow-x-auto">
               {esCuit ? (
                 <table className="w-full text-left text-sm">
@@ -299,7 +336,7 @@ export default function BancosView() {
                   </tr></thead>
                   <tbody>
                     {filasCuit.length === 0 ? (
-                      <tr><td colSpan={3} className="px-4 py-6 text-center text-2xs text-faint">Ningún movimiento con CUIT de contraparte en este filtro (ventas con tarjeta, impuestos y comisiones no traen CUIT).</td></tr>
+                      <tr><td colSpan={3} className="px-4 py-6 text-center text-2xs text-faint">{buscarCuit || tipoCuit ? "Ninguna contraparte coincide con la búsqueda." : "Ningún movimiento con CUIT de contraparte en este filtro (ventas con tarjeta, impuestos y comisiones no traen CUIT)."}</td></tr>
                     ) : filasCuit.map((f) => (
                       <tr key={f.cuit} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
                         <td className="px-4 py-2 text-ink"><span className="font-mono">{f.cuit}</span>{f.nombre && <span className="ml-2 font-medium">{f.nombre}</span>}{f.tipo && <span className="ml-1.5 rounded bg-ink/[0.06] px-1 py-px text-2xs text-muted">{tipoLabel(f.tipo)}</span>}</td>
