@@ -37,6 +37,7 @@ export function OjoPrivacidad() {
   const { oculto, toggle } = usePrivacidad();
   return (
     <button
+      data-tour="privacy"
       onClick={toggle}
       title={oculto ? "Mostrar montos" : "Ocultar montos (modo privacidad)"}
       aria-label={oculto ? "Mostrar montos" : "Ocultar montos"}

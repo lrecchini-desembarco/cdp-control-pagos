@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMobileNav } from "@/components/layout/MobileNav";
 import { OjoPrivacidad } from "@/components/layout/Privacidad";
+import TourGuiado from "@/components/layout/TourGuiado";
 
 const LABELS: Record<string, string> = {
   "": "Resumen",
@@ -63,6 +64,7 @@ export default function Topbar({ email, rolLabel }: { email: string; rolLabel: s
         <span className="font-medium text-ink">{LABELS[seg]}</span>
       </nav>
       <div className="flex items-center gap-3 text-2xs text-muted sm:gap-4">
+        <TourGuiado />
         <span className="hidden items-center gap-1.5 sm:inline-flex">
           <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
           {txt}
