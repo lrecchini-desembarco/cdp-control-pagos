@@ -150,6 +150,28 @@ export default function BancosView() {
   const maxV = Math.max(1, ...filas.map((f) => Math.abs(f.ingresos - f.egresos)));
   const maxCuit = Math.max(1, ...filasCuit.map((f) => f.monto));
 
+  // Matriz de cobertura: filas = banco·local, columnas = mes. Deja ver de un vistazo
+  // qué extractos cargaste y —lo importante— qué mes FALTA (hueco entre meses cargados).
+  const matrizCob = useMemo(() => {
+    if (!cobertura.length) return null;
+    const mesesU = Array.from(new Set(cobertura.map((c) => c.mes))).sort();
+    const mapa = new Map<string, Cobertura[]>();
+    for (const c of cobertura) {
+      const k = `${c.banco}|~|${c.local}`;
+      const arr = mapa.get(k); if (arr) arr.push(c); else mapa.set(k, [c]);
+    }
+    const filasCob = Array.from(mapa.entries()).map(([k, items]) => {
+      const [banco, local] = k.split("|~|");
+      const porMes = new Map(items.map((i) => [i.mes, i.n]));
+      const cargados = items.map((i) => i.mes).sort();
+      const primero = cargados[0], ultimo = cargados[cargados.length - 1];
+      const huecos = new Set(mesesU.filter((m) => m > primero && m < ultimo && !porMes.has(m)));
+      return { banco, local, porMes, total: items.reduce((s, i) => s + i.n, 0), huecos };
+    }).sort((a, b) => a.banco.localeCompare(b.banco) || a.local.localeCompare(b.local));
+    const totalHuecos = filasCob.reduce((s, f) => s + f.huecos.size, 0);
+    return { meses: mesesU, filas: filasCob, totalHuecos };
+  }, [cobertura]);
+
   function exportar() {
     if (esCuit) return descargarCSV(`bancos-${tab}.csv`, ["cuit", "movimientos", "monto"], filasCuit.map((f) => [f.cuit, f.n, Math.round(f.monto)]));
     if (!r) return;
@@ -243,7 +265,7 @@ export default function BancosView() {
                 ))}
               </div>
               <div className="flex items-center gap-3">
-                <button onClick={() => setVerCobertura((v) => !v)} className="text-2xs font-medium text-muted hover:text-ink">{verCobertura ? "ocultar" : "ver"} cobertura</button>
+                <button onClick={() => setVerCobertura((v) => !v)} className="text-2xs font-medium text-muted hover:text-ink" title="Ver qué extractos ya cargaste, por banco y mes, y detectar meses faltantes">{verCobertura ? "ocultar" : "¿qué cargué?"}</button>
                 <button onClick={exportar} className="text-2xs font-medium text-action hover:underline">Exportar CSV</button>
               </div>
             </div>
@@ -320,11 +342,42 @@ export default function BancosView() {
                 </table>
               )}
             </div>
-            {verCobertura && (
+            {verCobertura && matrizCob && (
               <div className="border-t border-line bg-ink/[0.015] px-4 py-3">
-                <p className="mb-1.5 text-2xs uppercase tracking-wide text-faint">Cobertura cargada (banco · local · mes · movimientos)</p>
-                <div className="grid max-h-48 grid-cols-1 gap-x-6 gap-y-0.5 overflow-y-auto text-2xs text-muted sm:grid-cols-2 lg:grid-cols-3">
-                  {cobertura.map((c) => <span key={`${c.banco}|${c.local}|${c.mes}`}>{c.banco} · {c.local} · {mesLabel(c.mes)} · <b className="text-ink">{c.n}</b></span>)}
+                <p className="text-2xs font-semibold text-ink">¿Qué extractos tengo cargados?</p>
+                <p className="mb-2 mt-0.5 text-2xs leading-snug text-muted">
+                  Cada fila es un <b>banco · local</b> y cada columna un <b>mes</b>; el número es cuántos movimientos cargaste.
+                  {matrizCob.totalHuecos > 0
+                    ? <> Hay <b className="text-warn">{matrizCob.totalHuecos} mes{matrizCob.totalHuecos === 1 ? "" : "es"} en rojo</b> entre medio que te falta subir.</>
+                    : <> No hay huecos: cada banco tiene todos sus meses seguidos. ✓</>}
+                </p>
+                <div className="max-h-64 overflow-auto rounded-md border border-line">
+                  <table className="border-collapse text-2xs">
+                    <thead className="sticky top-0 z-20 bg-surface">
+                      <tr className="border-b border-line">
+                        <th className="sticky left-0 z-30 bg-surface px-2 py-1.5 text-left font-medium text-muted">Banco · Local</th>
+                        {matrizCob.meses.map((m) => <th key={m} className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-faint">{mesLabel(m)}</th>)}
+                        <th className="px-2 py-1.5 text-right font-medium text-muted">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matrizCob.filas.map((f) => (
+                        <tr key={`${f.banco}|${f.local}`} className="border-b border-line/50 last:border-0">
+                          <th className="sticky left-0 z-10 whitespace-nowrap bg-surface px-2 py-1 text-left font-normal text-ink">{f.banco} · <span className="text-muted">{f.local}</span></th>
+                          {matrizCob.meses.map((m) => {
+                            const n = f.porMes.get(m);
+                            const hueco = f.huecos.has(m);
+                            return (
+                              <td key={m} className={`px-2 py-1 text-right tabular-nums ${n ? "text-ink" : hueco ? "bg-warn/15 font-medium text-warn" : "text-faint/40"}`}>
+                                {n ? int(n) : hueco ? "falta" : "·"}
+                              </td>
+                            );
+                          })}
+                          <td className="px-2 py-1 text-right font-semibold tabular-nums text-ink">{int(f.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
