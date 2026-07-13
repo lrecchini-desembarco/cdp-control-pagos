@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
 import { sesionPuedeVer } from "@/lib/roles-store";
 import { readStore, writeStore } from "@/lib/store";
-import { getVentasHoras } from "@/lib/sources/tango";
+import { getVentasHoras, getSucursalesMap } from "@/lib/sources/tango";
 import { resumirHoras, type ResumenHoras } from "@/lib/horas";
 import { rangoActividad } from "@/lib/actividad";
 import { recentDates } from "@/lib/catalogo";
@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
   const cache = await readStore<Cacheado | null>(key, null);
   if (cache && Date.now() - cache.ts < TTL_MS) return NextResponse.json({ ok: true, cacheado: true, ...cache.resumen });
   try {
-    const rows = await getVentasHoras({ desde, hasta });
-    const resumen = resumirHoras(rows, desde, hasta);
+    const [rows, nombres] = await Promise.all([getVentasHoras({ desde, hasta }), getSucursalesMap()]);
+    const resumen = resumirHoras(rows, desde, hasta, nombres);
     await writeStore(key, { ts: Date.now(), resumen } as Cacheado);
     return NextResponse.json({ ok: true, cacheado: false, ...resumen });
   } catch (e) {

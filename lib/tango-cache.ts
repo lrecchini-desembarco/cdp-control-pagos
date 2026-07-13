@@ -61,3 +61,9 @@ async function rangoDesdeCache(prefijo: string, q: RangoQuery): Promise<any[] | 
 }
 export const cobrosDesdeCache = (q: RangoQuery) => rangoDesdeCache("tango-cobros", q);
 export const horasDesdeCache = (q: RangoQuery) => rangoDesdeCache("tango-horas", q);
+
+/** Mapa ID_SUCURSAL -> nombre (vw_Sucursales), desde el cache KV. null si no está. */
+export async function sucursalesDesdeCache(): Promise<{ id: number; nombre: string }[] | null> {
+  const packed = await readStore<string | null>("tango-sucursales", null);
+  return packed ? unpack<{ id: number; nombre: string }[]>(packed) : null;
+}

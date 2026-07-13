@@ -55,10 +55,6 @@ export default function HorasView() {
         </div>
       </div>
 
-      <div className="rounded-md border border-warn/25 bg-warn/[0.06] px-3 py-2 text-2xs text-warn" data-tour="horas-nota">
-        📊 Por ahora es el ritmo del <b>grupo</b>. El desglose <b>por local</b> se enciende cuando Sistemas agregue el nombre de la sucursal a la vista.
-      </div>
-
       {estado === "cargando" && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {estado === "error" && <ErrorState msg={err} onRetry={() => cargar()} />}
 
@@ -70,6 +66,39 @@ export default function HorasView() {
             <Kpi label="Facturación" value={moneyC(data.totalImporte)} full={money(data.totalImporte)} sub="del período" />
             <Kpi label="Hora pico" value={hh(data.horaPico)} sub="más facturación" />
           </div>
+
+          {!data.conNombres && (
+            <div className="rounded-md border border-warn/25 bg-warn/[0.06] px-3 py-2 text-2xs text-warn">
+              📊 Mostrando el ritmo del <b>grupo</b>. El desglose por local aparece apenas el próximo push cargue el nombre de las sucursales al cache.
+            </div>
+          )}
+
+          {/* Por local */}
+          {data.conNombres && data.porLocal.length > 0 && (
+            <div data-tour="horas-local"><Card className="overflow-hidden">
+              <p className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">Ticket promedio por local ({data.porLocal.length})</p>
+              <div className="max-h-96 overflow-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                    <th className="px-4 py-2 font-medium">Local</th>
+                    <th className="px-3 py-2 text-right font-medium">Tickets</th>
+                    <th className="px-3 py-2 text-right font-medium">Ticket prom.</th>
+                    <th className="px-3 py-2 text-right font-medium">Facturación</th>
+                  </tr></thead>
+                  <tbody>
+                    {data.porLocal.map((l) => (
+                      <tr key={l.idSucursal} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                        <td className="px-4 py-2 text-ink">{l.nombre}</td>
+                        <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{int(l.tickets)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-xs font-medium text-ink">{money(l.ticketProm)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{moneyC(l.importe)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card></div>
+          )}
 
           {/* Ritmo por hora */}
           <div data-tour="horas-ritmo"><Card className="p-4">

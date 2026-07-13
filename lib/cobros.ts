@@ -6,6 +6,7 @@ import type { CobroDia } from "./sources/types";
 export interface CobroMedio { medio: string; importe: number; n: number; pct: number; familia: string }
 export interface CobroFamilia { familia: string; importe: number; pct: number }
 export interface CobroDiaSerie { fecha: string; importe: number }
+export interface CobroLocal { idSucursal: number; nombre: string; importe: number; pct: number }
 export interface ResumenCobros {
   total: number;
   desde: string;
@@ -15,6 +16,8 @@ export interface ResumenCobros {
   porMedio: CobroMedio[];      // ordenado por importe desc
   porFamilia: CobroFamilia[];  // agrupado (efectivo / tarjetas / delivery / digital…)
   porDia: CobroDiaSerie[];     // serie temporal
+  porLocal: CobroLocal[];      // desglose por local (si hay nombres)
+  conNombres: boolean;         // true = tenemos el nombre de las sucursales (vw_Sucursales)
 }
 
 // Familia del medio de pago, para el resumen grande. Orden importa (primero el más específico).
@@ -30,10 +33,11 @@ export function familiaDe(medio: string): string {
 
 const ORDEN_FAMILIA = ["Efectivo", "Tarjetas", "MercadoPago / QR", "PedidosYa", "Rappi", "Otros"];
 
-export function resumirCobros(cobros: CobroDia[], desde: string, hasta: string): ResumenCobros {
+export function resumirCobros(cobros: CobroDia[], desde: string, hasta: string, nombres: Record<number, string> = {}): ResumenCobros {
   const porMedioMap = new Map<string, { importe: number; n: number }>();
   const porFamiliaMap = new Map<string, number>();
   const porDiaMap = new Map<string, number>();
+  const porLocalMap = new Map<number, number>();
   const locales = new Set<number>();
   let total = 0;
   for (const c of cobros) {
@@ -44,8 +48,13 @@ export function resumirCobros(cobros: CobroDia[], desde: string, hasta: string):
     const fam = familiaDe(c.medioPago);
     porFamiliaMap.set(fam, (porFamiliaMap.get(fam) ?? 0) + c.importe);
     porDiaMap.set(c.fecha, (porDiaMap.get(c.fecha) ?? 0) + c.importe);
+    porLocalMap.set(c.idSucursal, (porLocalMap.get(c.idSucursal) ?? 0) + c.importe);
   }
   const den = total || 1;
+  const conNombres = Object.keys(nombres).length > 0;
+  const porLocal = Array.from(porLocalMap.entries())
+    .map(([idSucursal, importe]) => ({ idSucursal, nombre: nombres[idSucursal] ?? `Local ${idSucursal}`, importe, pct: importe / den }))
+    .sort((a, b) => b.importe - a.importe);
   const porMedio = Array.from(porMedioMap.entries())
     .map(([medio, v]) => ({ medio, importe: v.importe, n: v.n, pct: v.importe / den, familia: familiaDe(medio) }))
     .sort((a, b) => b.importe - a.importe);
@@ -55,5 +64,5 @@ export function resumirCobros(cobros: CobroDia[], desde: string, hasta: string):
   const porDia = Array.from(porDiaMap.entries())
     .map(([fecha, importe]) => ({ fecha, importe }))
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
-  return { total, desde, hasta, medios: porMedioMap.size, locales: locales.size, porMedio, porFamilia, porDia };
+  return { total, desde, hasta, medios: porMedioMap.size, locales: locales.size, porMedio, porFamilia, porDia, porLocal, conNombres };
 }

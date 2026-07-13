@@ -78,6 +78,7 @@ const SQL_Q = {
   precios: `SELECT sku, nombre, sucursal, CONVERT(varchar(10),actualizado,23) actualizado, precio, precio_neto FROM dbo.vw_PreciosProducto`,
   cobros: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, MEDIO_PAGO medio_pago, IMPORTE importe FROM dbo.vw_CobrosDiarios WHERE FECHA BETWEEN @desde AND @hasta`,
   horas: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, HORA hora, IMPORTE importe, TICKETS tickets FROM dbo.vw_VentasPorHora WHERE FECHA BETWEEN @desde AND @hasta`,
+  sucursales: `SELECT ID_SUCURSAL id, DESC_SUCURSAL nombre FROM dbo.vw_Sucursales`,
 };
 async function sqlQuery(kind, desde, hasta) {
   const { default: sql } = await import("mssql");
@@ -121,6 +122,12 @@ async function ciclo() {
 
   const precios = await traer("precios", `/precios`);
   await push({ tipo: "precios", data: pack(precios) });
+
+  // Mapa ID_SUCURSAL -> nombre (para Cobros/Horas por local). Tolerante.
+  try {
+    const sucs = await traer("sucursales", `/sucursales-map`);
+    await push({ tipo: "sucursales", data: pack(sucs) });
+  } catch (e) { log(`sucursales no empujadas: ${e instanceof Error ? e.message : e}`); }
 
   // Cobros (medios de pago) y ventas-por-hora: mismo esquema por-día. Tolerante:
   // si una vista falla, no rompe el push de ventas/precios.

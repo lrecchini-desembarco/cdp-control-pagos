@@ -1,6 +1,6 @@
 import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora } from "./types";
 import { getBridgeUrl } from "../bridge-url";
-import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache } from "../tango-cache";
+import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache, sucursalesDesdeCache } from "../tango-cache";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -240,3 +240,26 @@ export const VENTAS_HORAS_QUERY = `
   WHERE FECHA BETWEEN @desde AND @hasta
   ORDER BY FECHA, ID_SUCURSAL, HORA;
 `;
+
+export const SUCURSALES_MAP_QUERY = `SELECT ID_SUCURSAL AS id, DESC_SUCURSAL AS nombre FROM dbo.vw_Sucursales;`;
+
+// Mapa ID_SUCURSAL -> nombre (vw_Sucursales). Cache-first; en dev cae a SQL directo.
+// Si no hay ninguno (prod sin cache aún), devuelve {} y las secciones muestran el número.
+export async function getSucursalesMap(): Promise<Record<number, string>> {
+  let rows: { id: number; nombre: string }[] | null = await sucursalesDesdeCache();
+  if (!rows) {
+    const base = await getBridgeUrl();
+    if (base) {
+      try { rows = (await rangoViaBridge("/sucursales-map", { desde: "", hasta: "" }, base)) as any; }
+      catch { rows = null; }
+    }
+    if (!rows && process.env.TANGO_DB_HOST) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const pool = await getPool();
+      rows = (await pool.request().query(SUCURSALES_MAP_QUERY)).recordset as any;
+    }
+  }
+  const map: Record<number, string> = {};
+  for (const r of rows ?? []) map[Number(r.id)] = String(r.nombre);
+  return map;
+}

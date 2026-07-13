@@ -38,6 +38,7 @@ export default function CobrosView() {
 
   const maxMedio = Math.max(1, ...(data?.porMedio.map((m) => m.importe) ?? [1]));
   const maxDia = Math.max(1, ...(data?.porDia.map((d) => d.importe) ?? [1]));
+  const maxLocal = Math.max(1, ...(data?.porLocal.map((l) => l.importe) ?? [1]));
 
   return (
     <div className="space-y-4">
@@ -53,10 +54,6 @@ export default function CobrosView() {
         </div>
       </div>
 
-      <div className="rounded-md border border-warn/25 bg-warn/[0.06] px-3 py-2 text-2xs text-warn" data-tour="cobros-nota">
-        📊 Por ahora es el total del <b>grupo</b>. El desglose <b>por local</b> se enciende cuando Sistemas agregue el nombre de la sucursal a la vista (hoy Tango solo manda el número).
-      </div>
-
       {estado === "cargando" && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {estado === "error" && <ErrorState msg={err} onRetry={() => cargar()} />}
 
@@ -68,6 +65,42 @@ export default function CobrosView() {
             <Kpi label="Locales" value={String(data.locales)} sub="con cobros" />
             <Kpi label="Efectivo" value={pct(famPct(data, "Efectivo"))} sub="del total" />
           </div>
+
+          {!data.conNombres && (
+            <div className="rounded-md border border-warn/25 bg-warn/[0.06] px-3 py-2 text-2xs text-warn">
+              📊 Mostrando el total del <b>grupo</b>. El desglose por local aparece apenas el próximo push cargue el nombre de las sucursales al cache.
+            </div>
+          )}
+
+          {/* Por local */}
+          {data.conNombres && data.porLocal.length > 0 && (
+            <div data-tour="cobros-local"><Card className="overflow-hidden">
+              <p className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">Cobros por local ({data.porLocal.length})</p>
+              <div className="max-h-96 overflow-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                    <th className="px-4 py-2 font-medium">Local</th>
+                    <th className="px-3 py-2 text-right font-medium">%</th>
+                    <th className="px-3 py-2 font-medium">Cobrado</th>
+                  </tr></thead>
+                  <tbody>
+                    {data.porLocal.map((l) => (
+                      <tr key={l.idSucursal} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                        <td className="px-4 py-2 text-ink">{l.nombre}</td>
+                        <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{pct(l.pct)}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-action/70" style={{ width: `${Math.max(2, (l.importe / maxLocal) * 100)}%` }} /></div>
+                            <span className="font-mono text-xs font-medium text-ink">{moneyC(l.importe)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card></div>
+          )}
 
           {/* Por familia */}
           <div data-tour="cobros-familias"><Card className="p-4">
