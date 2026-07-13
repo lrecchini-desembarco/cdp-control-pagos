@@ -50,6 +50,15 @@ export interface VentaHora {
   tickets: number;     // cantidad de comprobantes (para ticket promedio)
 }
 
+/** Ventas por mozo: importe y tickets de un mozo, en un local, un día (vw_VentasPorMozo). */
+export interface VentaMozo {
+  fecha: string;
+  idSucursal: number;
+  mozo: string;        // nombre del mozo (CTA_MOZO.NOMBRE); puede ser genérico ("CAJA")
+  tickets: number;     // comandas distintas
+  importe: number;
+}
+
 /** Rango de consulta común a todas las fuentes. */
 export interface RangoQuery {
   desde: string; // ISO

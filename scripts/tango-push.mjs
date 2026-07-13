@@ -78,6 +78,7 @@ const SQL_Q = {
   precios: `SELECT sku, nombre, sucursal, CONVERT(varchar(10),actualizado,23) actualizado, precio, precio_neto FROM dbo.vw_PreciosProducto`,
   cobros: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, MEDIO_PAGO medio_pago, IMPORTE importe FROM dbo.vw_CobrosDiarios WHERE FECHA BETWEEN @desde AND @hasta`,
   horas: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, HORA hora, IMPORTE importe, TICKETS tickets FROM dbo.vw_VentasPorHora WHERE FECHA BETWEEN @desde AND @hasta`,
+  mozos: `SELECT CONVERT(varchar(10),fecha,23) fecha, id_sucursal, mozo, tickets, importe FROM dbo.vw_VentasPorMozo WHERE fecha BETWEEN @desde AND @hasta`,
   sucursales: `SELECT ID_SUCURSAL id, DESC_SUCURSAL nombre FROM dbo.vw_Sucursales`,
 };
 async function sqlQuery(kind, desde, hasta) {
@@ -142,10 +143,16 @@ async function ciclo() {
     const pd = agrupar(horas); for (const dia of dias) await push({ tipo: "horas", dia, data: pack(pd[dia] || []) });
     nHoras = horas.length;
   } catch (e) { log(`horas no empujadas: ${e instanceof Error ? e.message : e}`); }
+  let nMozos = 0;
+  try {
+    const mozos = await traer("mozos", `/mozos?desde=${desde}&hasta=${hasta}`, desde, hasta);
+    const pd = agrupar(mozos); for (const dia of dias) await push({ tipo: "mozos", dia, data: pack(pd[dia] || []) });
+    nMozos = mozos.length;
+  } catch (e) { log(`mozos no empujados: ${e instanceof Error ? e.message : e}`); }
 
   await push({ tipo: "fresh", dias: ultimosDias(DIAS) });
 
-  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} ventas + ${precios.length} precios + ${nCobros} cobros + ${nHoras} horas`);
+  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} ventas + ${precios.length} precios + ${nCobros} cobros + ${nHoras} horas + ${nMozos} mozos`);
   ciclos++;
 }
 

@@ -1,6 +1,6 @@
-import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora } from "./types";
+import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora, VentaMozo } from "./types";
 import { getBridgeUrl } from "../bridge-url";
-import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache, sucursalesDesdeCache } from "../tango-cache";
+import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache, sucursalesDesdeCache, mozosDesdeCache } from "../tango-cache";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -222,6 +222,23 @@ export async function getVentasHoras(q: RangoQuery): Promise<VentaHora[]> {
   const rows = base ? await rangoViaBridge("/ventas-horas", q, base) : await rangoViaSql(VENTAS_HORAS_QUERY, q);
   return rows.map(filaAHora);
 }
+
+const filaAMozo = (r: any): VentaMozo => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, mozo: String(r.mozo ?? "").trim() || "Sin mozo", tickets: Number(r.tickets) || 0, importe: Number(r.importe) || 0 });
+
+export async function getMozos(q: RangoQuery): Promise<VentaMozo[]> {
+  const cache = await mozosDesdeCache(q);
+  if (cache) return cache.map(filaAMozo);
+  const base = await getBridgeUrl();
+  const rows = base ? await rangoViaBridge("/mozos", q, base) : await rangoViaSql(MOZOS_QUERY, q);
+  return rows.map(filaAMozo);
+}
+
+export const MOZOS_QUERY = `
+  SELECT CONVERT(varchar(10), fecha, 23) AS fecha, id_sucursal, mozo, tickets, importe
+  FROM dbo.vw_VentasPorMozo
+  WHERE fecha BETWEEN @desde AND @hasta
+  ORDER BY fecha, id_sucursal, mozo;
+`;
 
 // En SQL directo el bridge devuelve claves snake_case (id_sucursal, medio_pago…) para
 // que el mapeo de arriba funcione igual venga de donde venga.

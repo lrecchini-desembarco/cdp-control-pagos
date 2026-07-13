@@ -59,6 +59,16 @@ export const TOURS_PANTALLA: Record<string, { nombre: string; pasos: PasoTour[] 
       { element: '[data-tour="horas-local"]', popover: { title: "5 · Por local", description: "Ticket promedio, tickets y facturación de cada restaurante. Comparás locales de un vistazo.", side: "top" } },
     ],
   },
+  "/mozos": {
+    nombre: "Mozos",
+    pasos: [
+      { popover: { title: "🧑‍🍳 Cómo leer Mozos", description: "Ventas y ticket promedio por mozo, de las comandas de Tango. Ojo: algunos locales cargan el mozo genérico ('CAJA'), así que conviene mirarlo por local." } },
+      { element: '[data-tour="mozos-periodo"]', popover: { title: "1 · Elegí el período", description: "Últimos 7, 15, 30 o 60 días.", side: "bottom" } },
+      { element: '[data-tour="mozos-kpis"]', popover: { title: "2 · Los números grandes", description: "Ticket promedio, cuántos mozos distintos, en cuántos locales y la facturación del período.", side: "bottom" } },
+      { element: '[data-tour="mozos-ranking"]', popover: { title: "3 · Ranking de mozos", description: "Los mozos ordenados por ventas, con su ticket promedio y en cuántos locales aparecen.", side: "top" } },
+      { element: '[data-tour="mozos-detalle"]', popover: { title: "4 · Detalle por local", description: "Cada combinación local + mozo. Usá el buscador para encontrar un mozo o un restaurante puntual.", side: "top" } },
+    ],
+  },
   "/cruce": {
     nombre: "el Cruce",
     pasos: [
