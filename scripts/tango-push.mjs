@@ -55,6 +55,47 @@ async function push(body) {
   });
   if (!r.ok) throw new Error(`push ${body.tipo}${body.dia ? " " + body.dia : ""} -> ${r.status}`);
 }
+
+// --- Fallback SQL directo: si el bridge local no responde (túnel/bridge caído),
+// consultamos Tango directo (la PC de carga llega a SRVTANGO). Así el push NUNCA
+// depende del bridge ni del túnel. Requiere TANGO_DB_* en .env.local + paquete mssql.
+let poolPromise = null;
+async function getPool() {
+  const { default: sql } = await import("mssql");
+  if (!poolPromise) {
+    poolPromise = new sql.ConnectionPool({
+      server: env.TANGO_DB_HOST,
+      port: Number(env.TANGO_DB_PORT || 1433),
+      database: env.TANGO_DB_NAME, user: env.TANGO_DB_USER, password: env.TANGO_DB_PASSWORD,
+      options: { encrypt: env.TANGO_DB_ENCRYPT === "true", trustServerCertificate: env.TANGO_DB_TRUST_CERT !== "false" },
+      connectionTimeout: 10000, requestTimeout: 180000,
+    }).connect();
+  }
+  return poolPromise;
+}
+const SQL_Q = {
+  ventas: `SELECT CONVERT(varchar(10),fecha,23) fecha, sucursal_canonico, sku, nombre, turno, unidades, importe FROM dbo.vw_VentasArticuloDiaria WHERE fecha BETWEEN @desde AND @hasta`,
+  precios: `SELECT sku, nombre, sucursal, CONVERT(varchar(10),actualizado,23) actualizado, precio, precio_neto FROM dbo.vw_PreciosProducto`,
+  cobros: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, MEDIO_PAGO medio_pago, IMPORTE importe FROM dbo.vw_CobrosDiarios WHERE FECHA BETWEEN @desde AND @hasta`,
+  horas: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, HORA hora, IMPORTE importe, TICKETS tickets FROM dbo.vw_VentasPorHora WHERE FECHA BETWEEN @desde AND @hasta`,
+};
+async function sqlQuery(kind, desde, hasta) {
+  const { default: sql } = await import("mssql");
+  const pool = await getPool();
+  const req = pool.request();
+  if (desde) req.input("desde", sql.Date, desde);
+  if (hasta) req.input("hasta", sql.Date, hasta);
+  return (await req.query(SQL_Q[kind])).recordset;
+}
+// Trae del bridge; si el bridge falla y hay Tango configurado, cae a SQL directo.
+async function traer(kind, bridgePath, desde, hasta) {
+  try { return await bridgeGet(bridgePath); }
+  catch (e) {
+    if (!env.TANGO_DB_HOST) throw e;
+    log(`bridge ${bridgePath} falló (${e.message}); voy por SQL directo`);
+    return await sqlQuery(kind, desde, hasta);
+  }
+}
 function ultimosDias(n) {
   const out = [];
   const hoy = new Date();
@@ -73,30 +114,25 @@ async function ciclo() {
   const dias = ultimosDias(full ? DIAS : 2);
   const desde = dias[0], hasta = dias[dias.length - 1];
 
-  const ventas = await bridgeGet(`/ventas?desde=${desde}&hasta=${hasta}`);
-  const porDia = {};
-  for (const d of dias) porDia[d] = [];
-  for (const v of ventas) (porDia[String(v.fecha)] ||= []).push(v);
-  for (const dia of dias) await push({ tipo: "ventas", dia, data: pack(porDia[dia] || []) });
+  const agrupar = (rows) => { const m = {}; for (const d of dias) m[d] = []; for (const r of rows) (m[String(r.fecha)] ||= []).push(r); return m; };
 
-  const precios = await bridgeGet(`/precios`);
+  const ventas = await traer("ventas", `/ventas?desde=${desde}&hasta=${hasta}`, desde, hasta);
+  { const pd = agrupar(ventas); for (const dia of dias) await push({ tipo: "ventas", dia, data: pack(pd[dia] || []) }); }
+
+  const precios = await traer("precios", `/precios`);
   await push({ tipo: "precios", data: pack(precios) });
 
   // Cobros (medios de pago) y ventas-por-hora: mismo esquema por-día. Tolerante:
-  // si una vista falla (o no está), no rompe el push de ventas/precios.
+  // si una vista falla, no rompe el push de ventas/precios.
   let nCobros = 0, nHoras = 0;
   try {
-    const cobros = await bridgeGet(`/cobros?desde=${desde}&hasta=${hasta}`);
-    const porDiaC = {}; for (const d of dias) porDiaC[d] = [];
-    for (const c of cobros) (porDiaC[String(c.fecha)] ||= []).push(c);
-    for (const dia of dias) await push({ tipo: "cobros", dia, data: pack(porDiaC[dia] || []) });
+    const cobros = await traer("cobros", `/cobros?desde=${desde}&hasta=${hasta}`, desde, hasta);
+    const pd = agrupar(cobros); for (const dia of dias) await push({ tipo: "cobros", dia, data: pack(pd[dia] || []) });
     nCobros = cobros.length;
   } catch (e) { log(`cobros no empujados: ${e instanceof Error ? e.message : e}`); }
   try {
-    const horas = await bridgeGet(`/ventas-horas?desde=${desde}&hasta=${hasta}`);
-    const porDiaH = {}; for (const d of dias) porDiaH[d] = [];
-    for (const h of horas) (porDiaH[String(h.fecha)] ||= []).push(h);
-    for (const dia of dias) await push({ tipo: "horas", dia, data: pack(porDiaH[dia] || []) });
+    const horas = await traer("horas", `/ventas-horas?desde=${desde}&hasta=${hasta}`, desde, hasta);
+    const pd = agrupar(horas); for (const dia of dias) await push({ tipo: "horas", dia, data: pack(pd[dia] || []) });
     nHoras = horas.length;
   } catch (e) { log(`horas no empujadas: ${e instanceof Error ? e.message : e}`); }
 
