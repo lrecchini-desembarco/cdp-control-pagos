@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { resumirBancos, porCuit, aplicarBase, baseCompleta, listaContrapartes, claveOrigen, type MovBanco, type BaseEntry } from "@/lib/bancos";
+import { resumirBancos, porCuit, aplicarBase, baseCompleta, listaContrapartes, resumirIntercompany, claveOrigen, type MovBanco, type BaseEntry } from "@/lib/bancos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -48,6 +48,8 @@ export async function GET(req: NextRequest) {
     porCuitIngreso: aplicarBase(porCuit(movs, "ingreso"), base),
     porCuitEgreso: aplicarBase(porCuit(movs, "egreso"), base),
     contrapartes: listaContrapartes(movsMB, base),
+    // Intercompany: plata entre cuentas propias (independiente del filtro de contraparte).
+    intercompany: resumirIntercompany(movsMB, base),
     // Cobertura de CUIT: cuántos movimientos traen CUIT de contraparte (tarjetas,
     // impuestos y MP no lo traen) -> para ser honestos sobre qué cubre el filtro.
     cuitStats: { conCuit: movsMB.filter((m) => m.cuit).length, total: movsMB.length },

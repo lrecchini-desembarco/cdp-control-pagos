@@ -382,6 +382,28 @@ export function listaContrapartes(movs: MovBanco[], base: Record<string, BaseEnt
     .sort((a, b) => b.monto - a.monto);
 }
 
+// Intercompany: movimientos cuya CONTRAPARTE es una empresa PROPIA del grupo (cuit en
+// PROPIAS / tipo "propia"). Es la plata que se mueve entre tus propias cuentas — sin
+// terceros (Rappi, PedidosYa, clientes, proveedores). Agrupado por empresa propia.
+export interface EmpresaIntercompany { cuit: string; nombre: string; ingreso: number; egreso: number; neto: number; n: number }
+export interface ResumenIntercompany { total: number; ingresos: number; egresos: number; n: number; porEmpresa: EmpresaIntercompany[] }
+export function resumirIntercompany(movs: MovBanco[], base: Record<string, BaseEntry>): ResumenIntercompany {
+  const mp = new Map<string, { ingreso: number; egreso: number; n: number; nombre: string }>();
+  let ingresos = 0, egresos = 0, n = 0;
+  for (const m of movs) {
+    if (!m.cuit) continue;
+    const e = base[m.cuit];
+    if (!e || e.tipo !== "propia") continue; // solo contrapartes propias
+    const a = mp.get(m.cuit) ?? { ingreso: 0, egreso: 0, n: 0, nombre: e.nombre };
+    a.ingreso += m.ingreso; a.egreso += m.egreso; a.n += 1; mp.set(m.cuit, a);
+    ingresos += m.ingreso; egresos += m.egreso; n += 1;
+  }
+  const porEmpresa = Array.from(mp.entries())
+    .map(([cuit, v]) => ({ cuit, nombre: v.nombre, ingreso: v.ingreso, egreso: v.egreso, neto: v.ingreso - v.egreso, n: v.n }))
+    .sort((a, b) => (b.ingreso + b.egreso) - (a.ingreso + a.egreso));
+  return { total: ingresos + egresos, ingresos, egresos, n, porEmpresa };
+}
+
 export function resumirBancos(movs: MovBanco[]): ResumenBancos {
   const grp = (key: (m: MovBanco) => string): GrupoBanco[] => {
     const mp = new Map<string, GrupoBanco>();

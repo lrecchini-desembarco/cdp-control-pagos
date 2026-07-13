@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import { parseArchivoBanco, parsePdfItems, parseBaseArchivo, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem, type GrupoCuit, type Contraparte } from "@/lib/bancos";
+import { parseArchivoBanco, parsePdfItems, parseBaseArchivo, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem, type GrupoCuit, type Contraparte, type ResumenIntercompany } from "@/lib/bancos";
 
 // pdfjs se carga on-demand (recién al procesar un PDF) para no pesar el bundle.
 let pdfjsMod: any = null;
@@ -44,7 +44,7 @@ export default function BancosView() {
   const [estado, setEstado] = useState<"loading" | "idle" | "parsing" | "saving">("loading");
   const [progreso, setProgreso] = useState("");
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"banco" | "local" | "mes" | "categoria" | "cuit-ing" | "cuit-egr">("banco");
+  const [tab, setTab] = useState<"banco" | "local" | "mes" | "categoria" | "cuit-ing" | "cuit-egr" | "intercompany">("banco");
   const [verCobertura, setVerCobertura] = useState(false);
   const [ayuda, setAyuda] = useState(false);
   const [mesSel, setMesSel] = useState("");
@@ -52,6 +52,7 @@ export default function BancosView() {
   const [cuitSel, setCuitSel] = useState("");           // filtro general por contraparte
   const [contrapartes, setContrapartes] = useState<Contraparte[]>([]);
   const [cuitStats, setCuitStats] = useState<{ conCuit: number; total: number } | null>(null);
+  const [intercompany, setIntercompany] = useState<ResumenIntercompany | null>(null);
   const [qRazon, setQRazon] = useState("");             // texto tipeado en el autocompletar
   const [abierto, setAbierto] = useState(false);        // dropdown del autocompletar
   const [meses, setMeses] = useState<string[]>([]);
@@ -96,6 +97,7 @@ export default function BancosView() {
         setPorCuitIng(j.porCuitIngreso ?? []); setPorCuitEgr(j.porCuitEgreso ?? []);
         setContrapartes(j.contrapartes ?? []);
         setCuitStats(j.cuitStats ?? null);
+        setIntercompany(j.intercompany ?? null);
       }
     } catch { /* vacío */ } finally { setEstado("idle"); }
   }
@@ -167,6 +169,7 @@ export default function BancosView() {
   const r = resumen;
   const hayDatos = meses.length > 0;
   const esCuit = tab === "cuit-ing" || tab === "cuit-egr";
+  const esInter = tab === "intercompany";
   const filas = useMemo(() => {
     if (!r) return [] as { k: string; n: number; ingresos: number; egresos: number }[];
     return tab === "banco" ? r.porBanco : tab === "local" ? r.porLocal : tab === "mes" ? r.porMes : tab === "categoria" ? r.porCategoria : [];
@@ -187,6 +190,7 @@ export default function BancosView() {
   }, [tab, porCuitIng, porCuitEgr, buscarCuit, tipoCuit]);
   const maxV = Math.max(1, ...filas.map((f) => Math.abs(f.ingresos - f.egresos)));
   const maxCuit = Math.max(1, ...filasCuit.map((f) => f.monto));
+  const maxInter = Math.max(1, ...(intercompany?.porEmpresa.map((e) => e.ingreso + e.egreso) ?? [1]));
 
   // Sugerencias del filtro general por razón social (filtra el catálogo por lo tipeado).
   const sugerencias = useMemo(() => {
@@ -355,7 +359,7 @@ export default function BancosView() {
           <Card className="overflow-hidden p-0">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
               <div data-tour="bancos-tabs" className="flex flex-wrap gap-1">
-                {([["banco", "Por banco"], ["local", "Por local"], ["mes", "Por mes"], ["categoria", "Por categoría"], ["cuit-ing", "Ingresos × CUIT"], ["cuit-egr", "Egresos × CUIT"]] as const).map(([k, l]) => (
+                {([["banco", "Por banco"], ["local", "Por local"], ["mes", "Por mes"], ["categoria", "Por categoría"], ["cuit-ing", "Ingresos × CUIT"], ["cuit-egr", "Egresos × CUIT"], ["intercompany", "Intercompany"]] as const).map(([k, l]) => (
                   <button key={k} {...(k === "cuit-ing" ? { "data-tour": "bancos-tab-cuit" } : {})} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
                 ))}
               </div>
@@ -405,8 +409,51 @@ export default function BancosView() {
                 <span className="text-2xs text-faint">{int(filasCuit.length)} {filasCuit.length === 1 ? "contraparte" : "contrapartes"}</span>
               </div>
             )}
+            {esInter && (
+              <div className="border-b border-line bg-ink/[0.015] px-4 py-2.5 text-2xs text-muted">
+                Plata que se mueve <b className="text-ink">entre tus propias cuentas</b> (las {intercompany?.porEmpresa.length ?? 0} empresas del grupo que aparecen). Sin terceros (clientes, proveedores, Rappi, etc.).
+              </div>
+            )}
             <div className="overflow-x-auto">
-              {esCuit ? (
+              {esInter ? (
+                !intercompany || intercompany.n === 0 ? (
+                  <p className="px-4 py-8 text-center text-2xs text-faint">No hay movimientos entre cuentas propias en este filtro. (Requiere que el CUIT de la contraparte sea una empresa del grupo — cargá las bases si falta.)</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 border-b border-line px-4 py-3 lg:grid-cols-4">
+                      <MiniK label="Total movido" value={money(intercompany.total)} />
+                      <MiniK label="Entradas" value={money(intercompany.ingresos)} tone="ok" />
+                      <MiniK label="Salidas" value={money(intercompany.egresos)} tone="bad" />
+                      <MiniK label="Movimientos" value={int(intercompany.n)} />
+                    </div>
+                    <table className="w-full text-left text-sm">
+                      <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                        <th className="px-4 py-2 font-medium">Empresa propia</th>
+                        <th className="px-3 py-2 text-right font-medium">Mov</th>
+                        <th className="px-3 py-2 text-right font-medium">Entradas</th>
+                        <th className="px-3 py-2 text-right font-medium">Salidas</th>
+                        <th className="px-3 py-2 font-medium">Neto</th>
+                      </tr></thead>
+                      <tbody>
+                        {intercompany.porEmpresa.map((e) => (
+                          <tr key={e.cuit} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                            <td className="px-4 py-2 text-ink">{e.nombre} <span className="ml-1 font-mono text-2xs text-faint">{e.cuit}</span></td>
+                            <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(e.n)}</td>
+                            <td className="px-3 py-2 text-right font-mono tnum text-ok monto">{e.ingreso ? money(e.ingreso) : "—"}</td>
+                            <td className="px-3 py-2 text-right font-mono tnum text-bad monto">{e.egreso ? money(e.egreso) : "—"}</td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-24 overflow-hidden rounded-full bg-ink/10"><div className={`h-full rounded-full ${e.neto < 0 ? "bg-bad/70" : "bg-ok/80"}`} style={{ width: `${Math.max(2, ((e.ingreso + e.egreso) / maxInter) * 100)}%` }} /></div>
+                                <span className="font-mono tnum font-medium text-ink monto">{money(e.neto)}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )
+              ) : esCuit ? (
                 <table className="w-full text-left text-sm">
                   <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                     <th className="px-4 py-2 font-medium">CUIT contraparte</th>
@@ -514,6 +561,16 @@ function Kpi({ label, value, sub, tone, full, plain }: { label: string; value: s
       </p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
+  );
+}
+
+function MiniK({ label, value, tone }: { label: string; value: string; tone?: "ok" | "bad" }) {
+  const c = tone === "ok" ? "text-ok" : tone === "bad" ? "text-bad" : "text-ink";
+  return (
+    <div>
+      <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
+      <p className={`mt-0.5 font-mono text-sm font-semibold tnum monto ${c}`}>{value}</p>
+    </div>
   );
 }
 
