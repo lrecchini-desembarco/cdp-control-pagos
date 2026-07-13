@@ -104,6 +104,17 @@ export default function BancosView() {
   // Elegir/limpiar contraparte (filtro general por razón social).
   function elegirContraparte(cuit: string) { setQRazon(""); setAbierto(false); filtrar(mesSel, bancoSel, cuit); }
   function limpiarContraparte() { setQRazon(""); setAbierto(false); filtrar(mesSel, bancoSel, ""); }
+  // Borra TODO lo cargado (para re-subir la carpeta de cero y que quede bien clasificado).
+  async function borrarTodo() {
+    if (!confirm("¿Borrar TODOS los extractos cargados? Es para empezar de cero y volver a subir la carpeta. No se puede deshacer.")) return;
+    setEstado("saving"); setProgreso("Borrando todo…");
+    try {
+      await fetch("/api/bancos", { method: "DELETE" });
+      setMesSel(""); setBancoSel(""); setCuitSel(""); setPreview(null);
+      await cargar("", "", "");
+    } catch (e) { setError(e instanceof Error ? e.message : "no se pudo borrar"); }
+    finally { setEstado("idle"); setProgreso(""); }
+  }
   const nombreContraparte = (cuit: string) => contrapartes.find((c) => c.cuit === cuit)?.nombre ?? cuit;
 
   async function onArchivos(files: FileList | null) {
@@ -236,6 +247,9 @@ export default function BancosView() {
             Archivos
             <input type="file" accept=".csv,.xls,.xlsx,.pdf" multiple className="hidden" onChange={(e) => onArchivos(e.target.files)} />
           </label>
+          {hayDatos && (
+            <button onClick={borrarTodo} disabled={cargando} title="Borra todo lo cargado para volver a subir la carpeta de cero" className="rounded-md px-2.5 py-1.5 text-xs font-medium text-bad hover:bg-bad/5 disabled:opacity-50">Empezar de cero</button>
+          )}
         </div>
       </div>
 
