@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const TTL_MS = 6 * 60 * 60 * 1000;
-const cacheKey = (desde: string, hasta: string) => `horas-cache-${desde}_${hasta}`;
+const cacheKey = (desde: string, hasta: string) => `horas-cache-v2-${desde}_${hasta}`;
 type Cacheado = { ts: number; resumen: ResumenHoras };
 
 // GET /api/horas?dias=N | ?desde&hasta -> ticket promedio + ritmo por hora (grupo).

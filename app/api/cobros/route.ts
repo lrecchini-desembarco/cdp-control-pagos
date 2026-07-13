@@ -14,7 +14,7 @@ export const maxDuration = 30;
 // bridge (túnel) es lento. Guardamos el resumen por rango, con TTL de 6h; si el
 // bridge falla, servimos lo último bueno.
 const TTL_MS = 6 * 60 * 60 * 1000;
-const cacheKey = (desde: string, hasta: string) => `cobros-cache-${desde}_${hasta}`;
+const cacheKey = (desde: string, hasta: string) => `cobros-cache-v2-${desde}_${hasta}`;
 type Cacheado = { ts: number; resumen: ResumenCobros };
 
 // GET /api/cobros?dias=N | ?desde&hasta -> resumen de cobros por medio de pago (grupo).
