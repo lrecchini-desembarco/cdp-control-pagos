@@ -24,6 +24,10 @@ export async function POST(req: Request) {
   try {
     if (body.tipo === "ventas" && typeof body.dia === "string" && typeof body.data === "string") {
       await writeStore(`tango-ventas:${body.dia}`, body.data);
+    } else if (body.tipo === "cobros" && typeof body.dia === "string" && typeof body.data === "string") {
+      await writeStore(`tango-cobros:${body.dia}`, body.data);
+    } else if (body.tipo === "horas" && typeof body.dia === "string" && typeof body.data === "string") {
+      await writeStore(`tango-horas:${body.dia}`, body.data);
     } else if (body.tipo === "precios" && typeof body.data === "string") {
       await writeStore("tango-precios", body.data);
     } else if (body.tipo === "fresh") {

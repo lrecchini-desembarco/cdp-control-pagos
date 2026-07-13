@@ -46,3 +46,18 @@ export async function preciosDesdeCache(): Promise<PrecioProducto[] | null> {
   const packed = await readStore<string | null>("tango-precios", null);
   return packed ? unpack<PrecioProducto[]>(packed) : null;
 }
+
+// Cobros y ventas-por-hora: mismo esquema por-día que ventas. Guardan las filas
+// CRUDAS del bridge (snake_case: id_sucursal, medio_pago…); el source las mapea.
+// Días cacheados: cdp:tango-cobros:AAAA-MM-DD y cdp:tango-horas:AAAA-MM-DD.
+async function rangoDesdeCache(prefijo: string, q: RangoQuery): Promise<any[] | null> {
+  const dias = diasEntre(q.desde, q.hasta);
+  const packs = await Promise.all(dias.map((dia) => readStore<string | null>(`${prefijo}:${dia}`, null)));
+  const presentes = packs.filter((p): p is string => Boolean(p));
+  if (presentes.length === 0) return null;
+  const out: any[] = [];
+  for (const p of presentes) out.push(...unpack<any[]>(p));
+  return out;
+}
+export const cobrosDesdeCache = (q: RangoQuery) => rangoDesdeCache("tango-cobros", q);
+export const horasDesdeCache = (q: RangoQuery) => rangoDesdeCache("tango-horas", q);

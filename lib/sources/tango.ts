@@ -1,6 +1,6 @@
 import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora } from "./types";
 import { getBridgeUrl } from "../bridge-url";
-import { ventasDesdeCache, preciosDesdeCache } from "../tango-cache";
+import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache } from "../tango-cache";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -203,16 +203,24 @@ async function rangoViaSql(query: string, q: RangoQuery): Promise<any[]> {
   return result.recordset;
 }
 
+const filaACobro = (r: any): CobroDia => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, medioPago: String(r.medio_pago ?? "").trim() || "Sin medio", importe: Number(r.importe) || 0 });
+const filaAHora = (r: any): VentaHora => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, hora: Number(r.hora) || 0, importe: Number(r.importe) || 0, tickets: Number(r.tickets) || 0 });
+
 export async function getCobros(q: RangoQuery): Promise<CobroDia[]> {
+  // 1) cache KV (lo empuja la PC de carga, sin túnel) 2) bridge 3) SQL directo.
+  const cache = await cobrosDesdeCache(q);
+  if (cache) return cache.map(filaACobro);
   const base = await getBridgeUrl();
   const rows = base ? await rangoViaBridge("/cobros", q, base) : await rangoViaSql(COBROS_QUERY, q);
-  return rows.map((r) => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, medioPago: String(r.medio_pago ?? "").trim() || "Sin medio", importe: Number(r.importe) || 0 }));
+  return rows.map(filaACobro);
 }
 
 export async function getVentasHoras(q: RangoQuery): Promise<VentaHora[]> {
+  const cache = await horasDesdeCache(q);
+  if (cache) return cache.map(filaAHora);
   const base = await getBridgeUrl();
   const rows = base ? await rangoViaBridge("/ventas-horas", q, base) : await rangoViaSql(VENTAS_HORAS_QUERY, q);
-  return rows.map((r) => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, hora: Number(r.hora) || 0, importe: Number(r.importe) || 0, tickets: Number(r.tickets) || 0 }));
+  return rows.map(filaAHora);
 }
 
 // En SQL directo el bridge devuelve claves snake_case (id_sucursal, medio_pago…) para

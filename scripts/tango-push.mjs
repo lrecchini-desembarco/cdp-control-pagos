@@ -81,9 +81,28 @@ async function ciclo() {
 
   const precios = await bridgeGet(`/precios`);
   await push({ tipo: "precios", data: pack(precios) });
+
+  // Cobros (medios de pago) y ventas-por-hora: mismo esquema por-día. Tolerante:
+  // si una vista falla (o no está), no rompe el push de ventas/precios.
+  let nCobros = 0, nHoras = 0;
+  try {
+    const cobros = await bridgeGet(`/cobros?desde=${desde}&hasta=${hasta}`);
+    const porDiaC = {}; for (const d of dias) porDiaC[d] = [];
+    for (const c of cobros) (porDiaC[String(c.fecha)] ||= []).push(c);
+    for (const dia of dias) await push({ tipo: "cobros", dia, data: pack(porDiaC[dia] || []) });
+    nCobros = cobros.length;
+  } catch (e) { log(`cobros no empujados: ${e instanceof Error ? e.message : e}`); }
+  try {
+    const horas = await bridgeGet(`/ventas-horas?desde=${desde}&hasta=${hasta}`);
+    const porDiaH = {}; for (const d of dias) porDiaH[d] = [];
+    for (const h of horas) (porDiaH[String(h.fecha)] ||= []).push(h);
+    for (const dia of dias) await push({ tipo: "horas", dia, data: pack(porDiaH[dia] || []) });
+    nHoras = horas.length;
+  } catch (e) { log(`horas no empujadas: ${e instanceof Error ? e.message : e}`); }
+
   await push({ tipo: "fresh", dias: ultimosDias(DIAS) });
 
-  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} filas ventas + ${precios.length} precios`);
+  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} ventas + ${precios.length} precios + ${nCobros} cobros + ${nHoras} horas`);
   ciclos++;
 }
 
