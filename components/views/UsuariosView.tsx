@@ -105,8 +105,13 @@ export default function UsuariosView() {
     setPass("");
     setNavSel(((u.nav ?? navByRol[u.rol] ?? []) as string[]).filter((h) => h !== "/guia"));
     setMsg(null);
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  // Llevar el formulario a la vista al entrar en edición. Va en un efecto (post-render)
+  // porque el contenedor que scrollea es <main>, no la ventana, y porque el re-render del
+  // form cancelaría un scroll suave disparado dentro del onClick.
+  useEffect(() => {
+    if (editando) document.getElementById("usuarios-form")?.scrollIntoView({ block: "start" });
+  }, [editando, email]);
   function limpiarForm() {
     setEditando(false); setEmail(""); setPass(""); setRol("local");
   }
@@ -171,7 +176,7 @@ export default function UsuariosView() {
       </div>
 
       {/* Alta / edición */}
-      <Card className="p-4">
+      <Card id="usuarios-form" className="p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-2xs font-medium uppercase tracking-wide text-faint">
             {editando ? `Editar · ${email}` : "Nuevo usuario"}
