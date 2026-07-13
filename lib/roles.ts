@@ -17,7 +17,7 @@ export const ROLES: Record<Rol, RolInfo> = {
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/cobros", "/horas", "/mozos", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/cobros", "/horas", "/mozos", "/anulados", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -109,6 +109,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/cobros", label: "Cobros · Medios de pago", icon: "▚", section: "Ventas y compras", fresh: "vivo", desc: "Cuánto entró por cada medio de pago (efectivo, tarjetas, Mercado Pago/QR, PedidosYa, Rappi), de los cierres de Tango." },
   { href: "/horas", label: "Ticket y horarios", icon: "◷", section: "Ventas y compras", fresh: "vivo", desc: "Ticket promedio y mapa de calor de horas: cuándo y cuánto se vende, con cantidad de tickets (Tango)." },
   { href: "/mozos", label: "Mozos", icon: "☰", section: "Ventas y compras", fresh: "vivo", desc: "Ventas y ticket promedio por mozo (de las comandas de Tango), filtrable por local." },
+  { href: "/anulados", label: "Anulados y devoluciones", icon: "⊘", section: "Ventas y compras", fresh: "vivo", desc: "Control anti-fuga: qué se anula/devuelve/invita, cuánto, sobre qué productos, cuándo y quién autoriza (Tango)." },
   // Costos y precios (módulo Costos) — se cargan a mano (Excel), hoy vigentes
   { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos", fresh: "carga", desc: "Maestro de insumos con costo por unidad." },
   { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos", fresh: "carga", desc: "Qué insumos (y cuánto) lleva cada producto." },

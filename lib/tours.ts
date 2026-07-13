@@ -69,6 +69,17 @@ export const TOURS_PANTALLA: Record<string, { nombre: string; pasos: PasoTour[] 
       { element: '[data-tour="mozos-detalle"]', popover: { title: "4 · Detalle por local", description: "Cada combinación local + mozo. Usá el buscador para encontrar un mozo o un restaurante puntual.", side: "top" } },
     ],
   },
+  "/anulados": {
+    nombre: "Anulados",
+    pasos: [
+      { popover: { title: "⊘ Cómo leer Anulados", description: "Control anti-fuga: la plata que se anula, devuelve o invita (comp). El monto/producto/hora/local son exactos; el 'quién' Tango lo carga parcial." } },
+      { element: '[data-tour="anul-periodo"]', popover: { title: "1 · Elegí el período", description: "Últimos 7, 15, 30 o 60 días.", side: "bottom" } },
+      { element: '[data-tour="anul-kpis"]', popover: { title: "2 · Cuánto se fue", description: "Total anulado/devuelto y el desglose: anulaciones, devoluciones e invitaciones (comps).", side: "bottom" } },
+      { element: '[data-tour="anul-producto"]', popover: { title: "3 · Sobre qué productos", description: "Qué productos se anulan/devuelven más — dónde se concentra la fuga.", side: "top" } },
+      { element: '[data-tour="anul-local"]', popover: { title: "4 · En qué local", description: "El ranking por restaurante.", side: "top" } },
+      { element: '[data-tour="anul-quien"]', popover: { title: "5 · Quién", description: "Responsable (parcial) y —más útil— quién autoriza las anulaciones. Ahí saltan los patrones sospechosos.", side: "top" } },
+    ],
+  },
   "/cruce": {
     nombre: "el Cruce",
     pasos: [

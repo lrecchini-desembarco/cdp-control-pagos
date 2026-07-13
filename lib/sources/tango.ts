@@ -1,6 +1,6 @@
-import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora, VentaMozo } from "./types";
+import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora, VentaMozo, Anulado } from "./types";
 import { getBridgeUrl } from "../bridge-url";
-import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache, sucursalesDesdeCache, mozosDesdeCache } from "../tango-cache";
+import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache, sucursalesDesdeCache, mozosDesdeCache, anuladosDesdeCache } from "../tango-cache";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -238,6 +238,23 @@ export const MOZOS_QUERY = `
   FROM dbo.vw_VentasPorMozo
   WHERE fecha BETWEEN @desde AND @hasta
   ORDER BY fecha, id_sucursal, mozo;
+`;
+
+const filaAAnulado = (r: any): Anulado => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, tipo: String(r.tipo ?? "").trim() || "Anulado", hora: Number(r.hora) || 0, responsable: String(r.responsable ?? "").trim() || "(sin dato)", autoriza: String(r.autoriza ?? "").trim(), sku: String(r.sku ?? ""), producto: String(r.producto ?? "").trim() || String(r.sku ?? ""), cantidad: Number(r.cantidad) || 0, importe: Number(r.importe) || 0, n: Number(r.n) || 0 });
+
+export async function getAnulados(q: RangoQuery): Promise<Anulado[]> {
+  const cache = await anuladosDesdeCache(q);
+  if (cache) return cache.map(filaAAnulado);
+  const base = await getBridgeUrl();
+  const rows = base ? await rangoViaBridge("/anulados", q, base) : await rangoViaSql(ANULADOS_QUERY, q);
+  return rows.map(filaAAnulado);
+}
+
+export const ANULADOS_QUERY = `
+  SELECT CONVERT(varchar(10), fecha, 23) AS fecha, id_sucursal, tipo, hora, responsable, autoriza, sku, producto, cantidad, importe, n
+  FROM dbo.vw_Anulados
+  WHERE fecha BETWEEN @desde AND @hasta
+  ORDER BY fecha, id_sucursal;
 `;
 
 // En SQL directo el bridge devuelve claves snake_case (id_sucursal, medio_pago…) para

@@ -60,6 +60,21 @@ export interface VentaMozo {
   comensales: number;  // cubiertos (CANT_CUBIERTOS); 0 en delivery/takeaway
 }
 
+/** Un renglón anulado/devuelto/invitado (vista dbo.vw_Anulados). */
+export interface Anulado {
+  fecha: string;
+  idSucursal: number;
+  tipo: string;        // "Anulado" | "Devolución" | "Invitación"
+  hora: number;        // 0..23
+  responsable: string; // quién anuló (rol/persona; muchas veces "(sin dato)")
+  autoriza: string;    // quién autorizó la anulación (nombre real donde está cargado)
+  sku: string;
+  producto: string;
+  cantidad: number;
+  importe: number;     // monto involucrado (ABS)
+  n: number;           // cantidad de renglones
+}
+
 /** Rango de consulta común a todas las fuentes. */
 export interface RangoQuery {
   desde: string; // ISO
