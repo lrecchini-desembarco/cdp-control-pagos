@@ -60,8 +60,8 @@ export default function MozosView() {
         <>
           <div data-tour="mozos-kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi label="Ticket promedio" value={money(data.ticketProm)} sub="por comanda" />
-            <Kpi label="Mozos" value={int(data.mozos)} sub="nombres distintos" />
-            <Kpi label="Locales" value={int(data.locales)} sub="con mozo cargado" />
+            <Kpi label="Venta x comensal" value={money(data.ventaPorComensal)} sub={`${int(data.totalComensales)} comensales`} />
+            <Kpi label="Mozos" value={int(data.mozos)} sub={`en ${int(data.locales)} locales`} />
             <Kpi label="Facturación" value={moneyC(data.totalImporte)} full={money(data.totalImporte)} sub={`últimos ${dias} días`} />
           </div>
 
@@ -79,6 +79,7 @@ export default function MozosView() {
                   <th className="px-3 py-2 text-right font-medium">Locales</th>
                   <th className="px-3 py-2 text-right font-medium">Tickets</th>
                   <th className="px-3 py-2 text-right font-medium">Ticket prom.</th>
+                  <th className="px-3 py-2 text-right font-medium">Vta/comensal</th>
                   <th className="px-3 py-2 font-medium">Facturación</th>
                 </tr></thead>
                 <tbody>
@@ -88,6 +89,7 @@ export default function MozosView() {
                       <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{m.locales}</td>
                       <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{int(m.tickets)}</td>
                       <td className="px-3 py-2 text-right font-mono text-xs text-ink">{money(m.ticketProm)}</td>
+                      <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{m.comensales ? money(m.ventaPorComensal) : "—"}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-action/70" style={{ width: `${Math.max(2, (m.importe / maxMozo) * 100)}%` }} /></div>
@@ -114,17 +116,19 @@ export default function MozosView() {
                   <th className="px-3 py-2 font-medium">Mozo</th>
                   <th className="px-3 py-2 text-right font-medium">Tickets</th>
                   <th className="px-3 py-2 text-right font-medium">Ticket prom.</th>
+                  <th className="px-3 py-2 text-right font-medium">Vta/comensal</th>
                   <th className="px-3 py-2 text-right font-medium">Facturación</th>
                 </tr></thead>
                 <tbody>
                   {detalle.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-6 text-center text-2xs text-faint">Nada coincide con “{q}”.</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-6 text-center text-2xs text-faint">Nada coincide con “{q}”.</td></tr>
                   ) : detalle.map((d) => (
                     <tr key={`${d.idSucursal}|${d.mozo}`} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
                       <td className="px-4 py-2 text-ink">{d.local}</td>
                       <td className="px-3 py-2 text-muted">{d.mozo}</td>
                       <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{int(d.tickets)}</td>
                       <td className="px-3 py-2 text-right font-mono text-xs text-ink">{money(d.ticketProm)}</td>
+                      <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{d.comensales ? money(d.ventaPorComensal) : "—"}</td>
                       <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{moneyC(d.importe)}</td>
                     </tr>
                   ))}

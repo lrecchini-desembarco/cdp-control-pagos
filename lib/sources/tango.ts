@@ -223,7 +223,7 @@ export async function getVentasHoras(q: RangoQuery): Promise<VentaHora[]> {
   return rows.map(filaAHora);
 }
 
-const filaAMozo = (r: any): VentaMozo => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, mozo: String(r.mozo ?? "").trim() || "Sin mozo", tickets: Number(r.tickets) || 0, importe: Number(r.importe) || 0 });
+const filaAMozo = (r: any): VentaMozo => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, mozo: String(r.mozo ?? "").trim() || "Sin mozo", tickets: Number(r.tickets) || 0, importe: Number(r.importe) || 0, comensales: Number(r.comensales) || 0 });
 
 export async function getMozos(q: RangoQuery): Promise<VentaMozo[]> {
   const cache = await mozosDesdeCache(q);
@@ -234,7 +234,7 @@ export async function getMozos(q: RangoQuery): Promise<VentaMozo[]> {
 }
 
 export const MOZOS_QUERY = `
-  SELECT CONVERT(varchar(10), fecha, 23) AS fecha, id_sucursal, mozo, tickets, importe
+  SELECT CONVERT(varchar(10), fecha, 23) AS fecha, id_sucursal, mozo, tickets, importe, comensales
   FROM dbo.vw_VentasPorMozo
   WHERE fecha BETWEEN @desde AND @hasta
   ORDER BY fecha, id_sucursal, mozo;

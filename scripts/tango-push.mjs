@@ -78,7 +78,7 @@ const SQL_Q = {
   precios: `SELECT sku, nombre, sucursal, CONVERT(varchar(10),actualizado,23) actualizado, precio, precio_neto FROM dbo.vw_PreciosProducto`,
   cobros: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, MEDIO_PAGO medio_pago, IMPORTE importe FROM dbo.vw_CobrosDiarios WHERE FECHA BETWEEN @desde AND @hasta`,
   horas: `SELECT CONVERT(varchar(10),FECHA,23) fecha, ID_SUCURSAL id_sucursal, HORA hora, IMPORTE importe, TICKETS tickets FROM dbo.vw_VentasPorHora WHERE FECHA BETWEEN @desde AND @hasta`,
-  mozos: `SELECT CONVERT(varchar(10),fecha,23) fecha, id_sucursal, mozo, tickets, importe FROM dbo.vw_VentasPorMozo WHERE fecha BETWEEN @desde AND @hasta`,
+  mozos: `SELECT CONVERT(varchar(10),fecha,23) fecha, id_sucursal, mozo, tickets, importe, comensales FROM dbo.vw_VentasPorMozo WHERE fecha BETWEEN @desde AND @hasta`,
   sucursales: `SELECT ID_SUCURSAL id, DESC_SUCURSAL nombre FROM dbo.vw_Sucursales`,
 };
 async function sqlQuery(kind, desde, hasta) {

@@ -57,6 +57,7 @@ export interface VentaMozo {
   mozo: string;        // nombre del mozo (CTA_MOZO.NOMBRE); puede ser genérico ("CAJA")
   tickets: number;     // comandas distintas
   importe: number;
+  comensales: number;  // cubiertos (CANT_CUBIERTOS); 0 en delivery/takeaway
 }
 
 /** Rango de consulta común a todas las fuentes. */
