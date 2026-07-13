@@ -1,4 +1,4 @@
-import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource } from "./types";
+import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora } from "./types";
 import { getBridgeUrl } from "../bridge-url";
 import { ventasDesdeCache, preciosDesdeCache } from "../tango-cache";
 
@@ -171,4 +171,64 @@ export const PRECIOS_QUERY = `
          precio, precio_neto
   FROM dbo.vw_PreciosProducto
   ORDER BY nombre, sucursal;
+`;
+
+// ---------------------------------------------------------------------------
+// Cobros por medio de pago y ventas por hora (para Cobros y Ticket/Horas).
+// Ambas vistas traen ID_SUCURSAL (número), no el nombre del local: Tango todavía
+// no lo expone. Por eso hoy se agregan a nivel GRUPO; el desglose por local se
+// enciende cuando Sistemas agregue DESC_SUCURSAL a las vistas.
+// Camino: en la nube se usa el bridge HTTP; en la red interna, SQL directo.
+// ---------------------------------------------------------------------------
+async function rangoViaBridge(path: string, q: RangoQuery, base: string): Promise<any[]> {
+  const u = new URL(`${base}${path}`);
+  u.searchParams.set("desde", q.desde);
+  u.searchParams.set("hasta", q.hasta);
+  const res = await fetch(u.toString(), {
+    headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "", "ngrok-skip-browser-warning": "true" },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Bridge Tango respondió ${res.status} ${res.statusText}`);
+  return (await res.json()) as any[];
+}
+
+async function rangoViaSql(query: string, q: RangoQuery): Promise<any[]> {
+  if (!process.env.TANGO_DB_HOST) {
+    throw new Error("Tango no está configurado (falta TANGO_BRIDGE_URL o TANGO_DB_HOST).");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const sql = require("mssql");
+  const pool = await getPool();
+  const result = await pool.request().input("desde", sql.Date, q.desde).input("hasta", sql.Date, q.hasta).query(query);
+  return result.recordset;
+}
+
+export async function getCobros(q: RangoQuery): Promise<CobroDia[]> {
+  const base = await getBridgeUrl();
+  const rows = base ? await rangoViaBridge("/cobros", q, base) : await rangoViaSql(COBROS_QUERY, q);
+  return rows.map((r) => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, medioPago: String(r.medio_pago ?? "").trim() || "Sin medio", importe: Number(r.importe) || 0 }));
+}
+
+export async function getVentasHoras(q: RangoQuery): Promise<VentaHora[]> {
+  const base = await getBridgeUrl();
+  const rows = base ? await rangoViaBridge("/ventas-horas", q, base) : await rangoViaSql(VENTAS_HORAS_QUERY, q);
+  return rows.map((r) => ({ fecha: String(r.fecha), idSucursal: Number(r.id_sucursal) || 0, hora: Number(r.hora) || 0, importe: Number(r.importe) || 0, tickets: Number(r.tickets) || 0 }));
+}
+
+// En SQL directo el bridge devuelve claves snake_case (id_sucursal, medio_pago…) para
+// que el mapeo de arriba funcione igual venga de donde venga.
+export const COBROS_QUERY = `
+  SELECT CONVERT(varchar(10), FECHA, 23) AS fecha, ID_SUCURSAL AS id_sucursal,
+         MEDIO_PAGO AS medio_pago, IMPORTE AS importe
+  FROM dbo.vw_CobrosDiarios
+  WHERE FECHA BETWEEN @desde AND @hasta
+  ORDER BY FECHA, ID_SUCURSAL, MEDIO_PAGO;
+`;
+
+export const VENTAS_HORAS_QUERY = `
+  SELECT CONVERT(varchar(10), FECHA, 23) AS fecha, ID_SUCURSAL AS id_sucursal,
+         HORA AS hora, IMPORTE AS importe, TICKETS AS tickets
+  FROM dbo.vw_VentasPorHora
+  WHERE FECHA BETWEEN @desde AND @hasta
+  ORDER BY FECHA, ID_SUCURSAL, HORA;
 `;

@@ -37,6 +37,28 @@ export const TOURS_PANTALLA: Record<string, { nombre: string; pasos: PasoTour[] 
       { element: '[data-tour="fact-tabs"]', popover: { title: "3 · Abrí el detalle", description: "Desglosá por <b>marca</b>, por <b>local</b>, por <b>tendencia</b> en el tiempo y por <b>receta</b> (qué se facturó sin costo/receta cargada).", side: "bottom" } },
     ],
   },
+  "/cobros": {
+    nombre: "Cobros",
+    pasos: [
+      { popover: { title: "💳 Cómo leer Cobros", description: "Cuánta plata entró y por qué medio de pago, de los cierres de caja de Tango. En vivo." } },
+      { element: '[data-tour="cobros-periodo"]', popover: { title: "1 · Elegí el período", description: "Últimos 7, 15, 30 o 60 días. Todo se recalcula.", side: "bottom" } },
+      { element: '[data-tour="cobros-kpis"]', popover: { title: "2 · Los números grandes", description: "Total cobrado, cuántos medios distintos, cuántos locales y qué % fue en efectivo.", side: "bottom" } },
+      { element: '[data-tour="cobros-familias"]', popover: { title: "3 · Cómo te pagan", description: "El reparto por tipo: efectivo, tarjetas, Mercado Pago/QR, PedidosYa, Rappi. De un vistazo ves de dónde viene la plata.", side: "top" } },
+      { element: '[data-tour="cobros-medios"]', popover: { title: "4 · Detalle por medio", description: "Cada medio de pago con su importe y su % — para el detalle fino.", side: "top" } },
+      { element: '[data-tour="cobros-nota"]', popover: { title: "5 · Por ahora, el grupo", description: "Hoy es el total del grupo. El desglose por local llega cuando Sistemas exponga el nombre de la sucursal.", side: "bottom" } },
+    ],
+  },
+  "/horas": {
+    nombre: "Ticket y horarios",
+    pasos: [
+      { popover: { title: "🕒 Cómo leer Ticket y horarios", description: "Cuánto vale cada ticket y a qué hora se mueve la venta. Sale de los comprobantes de Tango." } },
+      { element: '[data-tour="horas-periodo"]', popover: { title: "1 · Elegí el período", description: "Últimos 7, 15, 30 o 60 días.", side: "bottom" } },
+      { element: '[data-tour="horas-kpis"]', popover: { title: "2 · Los números grandes", description: "Ticket promedio, cantidad de tickets, facturación y la hora pico (la de más facturación).", side: "bottom" } },
+      { element: '[data-tour="horas-ritmo"]', popover: { title: "3 · Ritmo por hora", description: "Cuánto se factura en cada hora del día. La barra más alta y marcada es la hora pico.", side: "top" } },
+      { element: '[data-tour="horas-ticket"]', popover: { title: "4 · Ticket promedio por hora", description: "En qué horas la gente gasta más por ticket (ej. la noche suele tener el ticket más alto).", side: "top" } },
+      { element: '[data-tour="horas-nota"]', popover: { title: "5 · Por ahora, el grupo", description: "Hoy es el ritmo del grupo. Por local, cuando Sistemas exponga el nombre de la sucursal.", side: "bottom" } },
+    ],
+  },
   "/cruce": {
     nombre: "el Cruce",
     pasos: [

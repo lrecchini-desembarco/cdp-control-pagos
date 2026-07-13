@@ -17,7 +17,7 @@ export const ROLES: Record<Rol, RolInfo> = {
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/cobros", "/horas", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -106,6 +106,8 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/facturacion", label: "Facturación", icon: "≣", section: "Ventas y compras", fresh: "vivo", desc: "Cuánta plata mueve cada producto, local y marca (estimada, Tango)." },
   { href: "/mercadopago", label: "Cobros · Mercado Pago", icon: "◐", section: "Ventas y compras", fresh: "vivo", desc: "Lo que cobró Mercado Pago, por medio de pago y día; para conciliar." },
   { href: "/bancos", label: "Bancos", icon: "◫", section: "Ventas y compras", fresh: "carga", desc: "Liquidaciones de tarjetas y bancos: bruto, comisiones y neto acreditado (subís el CSV)." },
+  { href: "/cobros", label: "Cobros · Medios de pago", icon: "▚", section: "Ventas y compras", fresh: "vivo", desc: "Cuánto entró por cada medio de pago (efectivo, tarjetas, Mercado Pago/QR, PedidosYa, Rappi), de los cierres de Tango." },
+  { href: "/horas", label: "Ticket y horarios", icon: "◷", section: "Ventas y compras", fresh: "vivo", desc: "Ticket promedio y mapa de calor de horas: cuándo y cuánto se vende, con cantidad de tickets (Tango)." },
   // Costos y precios (módulo Costos) — se cargan a mano (Excel), hoy vigentes
   { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos", fresh: "carga", desc: "Maestro de insumos con costo por unidad." },
   { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos", fresh: "carga", desc: "Qué insumos (y cuánto) lleva cada producto." },

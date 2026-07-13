@@ -32,6 +32,24 @@ export interface PrecioProducto {
   actualizado?: string; // ISO: fecha de la venta que fijó el precio
 }
 
+/** Un cobro consolidado: cuánto entró por un medio de pago, en un local, un día.
+ *  Ojo: la vista trae ID_SUCURSAL (número), no el nombre — Tango no lo expone todavía. */
+export interface CobroDia {
+  fecha: string;       // ISO AAAA-MM-DD
+  idSucursal: number;  // ID de la sucursal en Tango (sin nombre por ahora)
+  medioPago: string;   // "Efectivo", "MERCADOPAGO", "PEYA TARJETA"…
+  importe: number;
+}
+
+/** Ventas por hora: importe y cantidad de tickets de un local, en una hora de un día. */
+export interface VentaHora {
+  fecha: string;       // ISO AAAA-MM-DD
+  idSucursal: number;
+  hora: number;        // 0..23
+  importe: number;
+  tickets: number;     // cantidad de comprobantes (para ticket promedio)
+}
+
 /** Rango de consulta común a todas las fuentes. */
 export interface RangoQuery {
   desde: string; // ISO
