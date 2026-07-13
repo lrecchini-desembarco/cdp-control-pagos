@@ -351,6 +351,22 @@ export function porCuit(movs: MovBanco[], tipo: "ingreso" | "egreso"): GrupoCuit
   return Array.from(mp.values()).sort((a, b) => b.monto - a.monto);
 }
 
+// Catálogo de contrapartes (CUITs presentes en los movimientos) con su razón social y
+// tipo, para el filtro general "por razón social". Ordenado por plata movida (desc).
+export interface Contraparte { cuit: string; nombre?: string; tipo?: string; n: number; monto: number }
+export function listaContrapartes(movs: MovBanco[], base: Record<string, BaseEntry>): Contraparte[] {
+  const mp = new Map<string, Contraparte>();
+  for (const m of movs) {
+    if (!m.cuit) continue;
+    const a = mp.get(m.cuit) ?? { cuit: m.cuit, n: 0, monto: 0 };
+    a.n++; a.monto += (m.ingreso || 0) + (m.egreso || 0);
+    mp.set(m.cuit, a);
+  }
+  return Array.from(mp.values())
+    .map((c) => { const e = base[c.cuit]; return e ? { ...c, nombre: e.nombre, tipo: e.tipo } : c; })
+    .sort((a, b) => b.monto - a.monto);
+}
+
 export function resumirBancos(movs: MovBanco[]): ResumenBancos {
   const grp = (key: (m: MovBanco) => string): GrupoBanco[] => {
     const mp = new Map<string, GrupoBanco>();

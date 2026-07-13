@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { resumirBancos, porCuit, aplicarBase, baseCompleta, claveOrigen, type MovBanco, type BaseEntry } from "@/lib/bancos";
+import { resumirBancos, porCuit, aplicarBase, baseCompleta, listaContrapartes, claveOrigen, type MovBanco, type BaseEntry } from "@/lib/bancos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -34,15 +34,20 @@ export async function GET(req: NextRequest) {
   const all = await leer();
   const mes = req.nextUrl.searchParams.get("mes") || "";
   const banco = req.nextUrl.searchParams.get("banco") || "";
-  const movs = all.filter((m) => (!mes || m.mes === mes) && (!banco || m.banco === banco));
+  const cuit = (req.nextUrl.searchParams.get("cuit") || "").replace(/[^0-9]/g, "");
   const meta = await readStore<{ actualizado?: string } | null>(META, null);
   const base = baseCompleta((await readStore<Record<string, BaseEntry> | null>("bancos-bases", null)) ?? {});
+  // El catálogo de contrapartes se arma con el filtro mes/banco pero SIN el de CUIT,
+  // así el selector de razón social no se achica al elegir una contraparte.
+  const movsMB = all.filter((m) => (!mes || m.mes === mes) && (!banco || m.banco === banco));
+  const movs = cuit ? movsMB.filter((m) => m.cuit === cuit) : movsMB;
   return NextResponse.json({
     ok: true,
     resumen: resumirBancos(movs),
     cobertura: cobertura(movs),
     porCuitIngreso: aplicarBase(porCuit(movs, "ingreso"), base),
     porCuitEgreso: aplicarBase(porCuit(movs, "egreso"), base),
+    contrapartes: listaContrapartes(movsMB, base),
     meses: Array.from(new Set(all.map((m) => m.mes))).sort().reverse(),
     bancos: Array.from(new Set(all.map((m) => m.banco))).sort(),
     meta,

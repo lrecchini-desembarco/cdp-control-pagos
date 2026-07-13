@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import { parseArchivoBanco, parsePdfItems, parseBaseArchivo, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem, type GrupoCuit } from "@/lib/bancos";
+import { parseArchivoBanco, parsePdfItems, parseBaseArchivo, resumirBancos, claveOrigen, type MovBanco, type ResumenBancos, type PdfItem, type GrupoCuit, type Contraparte } from "@/lib/bancos";
 
 // pdfjs se carga on-demand (recién al procesar un PDF) para no pesar el bundle.
 let pdfjsMod: any = null;
@@ -49,6 +49,10 @@ export default function BancosView() {
   const [ayuda, setAyuda] = useState(false);
   const [mesSel, setMesSel] = useState("");
   const [bancoSel, setBancoSel] = useState("");
+  const [cuitSel, setCuitSel] = useState("");           // filtro general por contraparte
+  const [contrapartes, setContrapartes] = useState<Contraparte[]>([]);
+  const [qRazon, setQRazon] = useState("");             // texto tipeado en el autocompletar
+  const [abierto, setAbierto] = useState(false);        // dropdown del autocompletar
   const [meses, setMeses] = useState<string[]>([]);
   const [bancos, setBancos] = useState<string[]>([]);
   const [porCuitIng, setPorCuitIng] = useState<GrupoCuit[]>([]);
@@ -81,19 +85,24 @@ export default function BancosView() {
     finally { setEstado("idle"); setProgreso(""); }
   }
 
-  async function cargar(mes = mesSel, banco = bancoSel) {
+  async function cargar(mes = mesSel, banco = bancoSel, cuit = cuitSel) {
     try {
-      const qs = new URLSearchParams(); if (mes) qs.set("mes", mes); if (banco) qs.set("banco", banco);
+      const qs = new URLSearchParams(); if (mes) qs.set("mes", mes); if (banco) qs.set("banco", banco); if (cuit) qs.set("cuit", cuit);
       const j = await (await fetch("/api/bancos?" + qs.toString(), { cache: "no-store" })).json();
       if (j.ok) {
         setResumen(j.resumen); setCobertura(j.cobertura ?? []); setMeta(j.meta ?? null);
         setMeses(j.meses ?? []); setBancos(j.bancos ?? []);
         setPorCuitIng(j.porCuitIngreso ?? []); setPorCuitEgr(j.porCuitEgreso ?? []);
+        setContrapartes(j.contrapartes ?? []);
       }
     } catch { /* vacío */ } finally { setEstado("idle"); }
   }
-  useEffect(() => { cargar("", ""); cargarBases(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  function filtrar(mes: string, banco: string) { setMesSel(mes); setBancoSel(banco); cargar(mes, banco); }
+  useEffect(() => { cargar("", "", ""); cargarBases(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  function filtrar(mes: string, banco: string, cuit = cuitSel) { setMesSel(mes); setBancoSel(banco); setCuitSel(cuit); cargar(mes, banco, cuit); }
+  // Elegir/limpiar contraparte (filtro general por razón social).
+  function elegirContraparte(cuit: string) { setQRazon(""); setAbierto(false); filtrar(mesSel, bancoSel, cuit); }
+  function limpiarContraparte() { setQRazon(""); setAbierto(false); filtrar(mesSel, bancoSel, ""); }
+  const nombreContraparte = (cuit: string) => contrapartes.find((c) => c.cuit === cuit)?.nombre ?? cuit;
 
   async function onArchivos(files: FileList | null) {
     if (!files || !files.length) return;
@@ -137,7 +146,7 @@ export default function BancosView() {
         ultima = r;
       }
       void ultima;
-      setPreview(null); setMesSel(""); setBancoSel(""); await cargar("", "");
+      setPreview(null); setMesSel(""); setBancoSel(""); setCuitSel(""); await cargar("", "", "");
     } catch (e) { setError(e instanceof Error ? e.message : "no se pudo guardar"); }
     finally { setEstado("idle"); setProgreso(""); }
   }
@@ -165,6 +174,13 @@ export default function BancosView() {
   }, [tab, porCuitIng, porCuitEgr, buscarCuit, tipoCuit]);
   const maxV = Math.max(1, ...filas.map((f) => Math.abs(f.ingresos - f.egresos)));
   const maxCuit = Math.max(1, ...filasCuit.map((f) => f.monto));
+
+  // Sugerencias del filtro general por razón social (filtra el catálogo por lo tipeado).
+  const sugerencias = useMemo(() => {
+    const q = normTxt(qRazon.trim());
+    const arr = q ? contrapartes.filter((c) => normTxt((c.nombre ?? "") + " " + c.cuit).includes(q)) : contrapartes;
+    return arr.slice(0, 40);
+  }, [contrapartes, qRazon]);
 
   // Matriz de cobertura: filas = banco·local, columnas = mes. Deja ver de un vistazo
   // qué extractos cargaste y —lo importante— qué mes FALTA (hueco entre meses cargados).
@@ -249,6 +265,48 @@ export default function BancosView() {
         <>
           {/* Filtros */}
           <div data-tour="bancos-filtros" className="flex flex-wrap items-center gap-2">
+            {/* Filtro general por razón social: reescopa toda la pantalla a una contraparte */}
+            <div className="relative">
+              {cuitSel ? (
+                <div className="flex items-center gap-1.5 rounded-md border border-action/40 bg-action/[0.06] px-2 py-1 text-2xs">
+                  <span className="text-faint">Contraparte:</span>
+                  <b className="max-w-[220px] truncate text-ink">{nombreContraparte(cuitSel)}</b>
+                  <button onClick={limpiarContraparte} title="Quitar filtro de contraparte" className="ml-0.5 font-bold text-action hover:text-ink">×</button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-1">
+                    <span className="text-faint">🔎</span>
+                    <input
+                      value={qRazon}
+                      onChange={(e) => { setQRazon(e.target.value); setAbierto(true); }}
+                      onFocus={() => setAbierto(true)}
+                      placeholder="Filtrar por razón social o CUIT…"
+                      className="w-52 bg-transparent text-2xs text-ink placeholder:text-faint focus:outline-none"
+                    />
+                    {qRazon && <button onClick={() => setQRazon("")} title="Borrar" className="text-faint hover:text-ink">×</button>}
+                  </div>
+                  {abierto && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} aria-hidden />
+                      <div className="absolute left-0 top-full z-40 mt-1 max-h-72 w-80 overflow-auto rounded-md border border-line bg-surface py-1 shadow-lg">
+                        {sugerencias.length === 0 ? (
+                          <p className="px-3 py-2 text-2xs text-faint">{contrapartes.length ? "Nada coincide con la búsqueda." : "No hay contrapartes con CUIT en los movimientos cargados."}</p>
+                        ) : sugerencias.map((c) => (
+                          <button key={c.cuit} onClick={() => elegirContraparte(c.cuit)} className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-ink/[0.04]">
+                            <span className="min-w-0">
+                              <span className="block truncate text-2xs font-medium text-ink">{c.nombre ?? c.cuit}</span>
+                              <span className="block truncate text-[10px] text-faint">{c.cuit}{c.tipo ? ` · ${tipoLabel(c.tipo)}` : ""} · {int(c.n)} mov</span>
+                            </span>
+                            <span className="shrink-0 font-mono text-2xs text-muted">{moneyC(c.monto)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
             <label className="flex items-center gap-1.5 text-2xs text-muted">Mes
               <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" value={mesSel} onChange={(e) => filtrar(e.target.value, bancoSel)}>
                 <option value="">todos</option>
@@ -261,7 +319,7 @@ export default function BancosView() {
                 {bancos.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
             </label>
-            {(mesSel || bancoSel) && <button onClick={() => filtrar("", "")} className="text-2xs font-medium text-action hover:underline">limpiar</button>}
+            {(mesSel || bancoSel || cuitSel) && <button onClick={() => filtrar("", "", "")} className="text-2xs font-medium text-action hover:underline">limpiar</button>}
           </div>
 
           {/* KPIs */}
