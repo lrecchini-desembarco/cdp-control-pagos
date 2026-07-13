@@ -77,18 +77,28 @@ export function detectarBanco(rows: string[][], nombre: string, ruta = ""): stri
   if (/causal.*concepto|nro. de referencia/.test(cab)) return "Macro";
   if (/numero secuencia|nombre comercio/.test(cab)) return "Provincia";
   if (/suc. origen|importe pesos/.test(cab)) return "Santander";
+  if (/icbc|industrial and commercial/.test(cab)) return "ICBC";
+  if (/supervielle/.test(cab)) return "Supervielle";
   const s = norm(nombre + " " + ruta);
   return /galicia/.test(s) ? "Galicia" : /ciudad|bee_reporte/.test(s) ? "Ciudad" : /macro/.test(s) ? "Macro"
-    : /provincia/.test(s) ? "Provincia" : /santander|descargaultimos/.test(s) ? "Santander" : /mercado ?pago/.test(s) ? "Mercado Pago" : "Otro";
+    : /provincia/.test(s) ? "Provincia" : /santander|descargaultimos/.test(s) ? "Santander" : /mercado ?pago/.test(s) ? "Mercado Pago"
+    : /icbc/.test(s) ? "ICBC" : /supervielle/.test(s) ? "Supervielle" : "Otro";
 }
 
 // Entidad/local desde la ruta relativa (cuando se sube la carpeta). Ej:
 // "Extractos Bancarios/DDR/Ciudad/archivo.csv" -> "DDR".
 export function entidadDeRuta(ruta: string): string {
   const segs = (ruta || "").split(/[\\/]/).filter(Boolean);
-  const i = segs.findIndex((x) => /extractos bancarios/i.test(x));
+  // ÚLTIMO segmento tipo "Extractos Bancarios" (la carpeta puede venir anidada y/o con
+  // sufijo de descarga, ej. "Extractos Bancarios-2026.../Extractos Bancarios/DDR/...").
+  let i = -1;
+  for (let k = 0; k < segs.length; k++) if (/extractos bancarios/i.test(segs[k])) i = k;
   let e = i >= 0 ? segs[i + 1] : segs.length > 1 ? segs[0] : "";
-  if (/estudio contable/i.test(e || "")) e = (i >= 0 ? segs[i + 2] : segs[1]) || e;
+  // Saltear carpetas contenedoras que no son la entidad.
+  while (/estudio contable|extractos bancarios/i.test(e || "")) {
+    i += 1; e = segs[i + 1] || "";
+    if (i > segs.length) break;
+  }
   return e || "General";
 }
 
@@ -140,8 +150,11 @@ export function parseArchivoBanco(nombre: string, ruta: string, data: ArrayBuffe
     else { const v = parseNumBanco(row[m.imp]); if (v >= 0) ingreso = v; else egreso = -v; }
     if (ingreso === 0 && egreso === 0) continue;
     if (ingreso > CAP || egreso > CAP) { descartados++; continue; }
-    const concepto = String(m.concepto >= 0 ? row[m.concepto] : "").trim().slice(0, 80);
-    movs.push({ fecha, mes: fecha.slice(0, 7), banco, local, concepto, ingreso, egreso, categoria: categoriaDe(concepto), cuit: extraerCuit(concepto) });
+    const conceptoFull = String(m.concepto >= 0 ? row[m.concepto] : "").trim();
+    const concepto = conceptoFull.slice(0, 80);
+    // CUIT: del texto COMPLETO (no del truncado). Solo de la columna de descripción,
+    // NO de toda la fila: columnas como "CUIT Cuenta" traen el CUIT PROPIO, no el de la contraparte.
+    movs.push({ fecha, mes: fecha.slice(0, 7), banco, local, concepto, ingreso, egreso, categoria: categoriaDe(concepto), cuit: extraerCuit(conceptoFull) });
   }
   return { movs, descartados };
 }
@@ -166,13 +179,15 @@ function fechaPdf(s: string): string {
   return "";
 }
 function detectarBancoPdf(texto: string, ruta: string): string {
-  const t = norm(texto);
-  if (/mercado ?pago|release_date/.test(t + " " + norm(ruta))) return "Mercado Pago";
-  if (/banco galicia|resumen de cuenta corriente|galicia/.test(t)) return "Galicia";
-  if (/banco macro|macro/.test(t + " " + norm(ruta))) return "Macro";
-  if (/banco ciudad|ciudad|cid campeador/.test(t + " " + norm(ruta))) return "Ciudad";
-  if (/santander/.test(t + " " + norm(ruta))) return "Santander";
-  if (/provincia/.test(t + " " + norm(ruta))) return "Provincia";
+  const tr = norm(texto) + " " + norm(ruta); // texto del PDF + ruta (respaldo cuando el texto no nombra al banco)
+  if (/mercado ?pago|release_date/.test(tr)) return "Mercado Pago";
+  if (/banco galicia|resumen de cuenta corriente|galicia/.test(tr)) return "Galicia";
+  if (/banco macro|macro/.test(tr)) return "Macro";
+  if (/banco ciudad|ciudad|cid campeador/.test(tr)) return "Ciudad";
+  if (/santander/.test(tr)) return "Santander";
+  if (/provincia/.test(tr)) return "Provincia";
+  if (/icbc|industrial and commercial/.test(tr)) return "ICBC";
+  if (/supervielle/.test(tr)) return "Supervielle";
   return "Otro";
 }
 

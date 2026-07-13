@@ -48,6 +48,9 @@ export async function GET(req: NextRequest) {
     porCuitIngreso: aplicarBase(porCuit(movs, "ingreso"), base),
     porCuitEgreso: aplicarBase(porCuit(movs, "egreso"), base),
     contrapartes: listaContrapartes(movsMB, base),
+    // Cobertura de CUIT: cuántos movimientos traen CUIT de contraparte (tarjetas,
+    // impuestos y MP no lo traen) -> para ser honestos sobre qué cubre el filtro.
+    cuitStats: { conCuit: movsMB.filter((m) => m.cuit).length, total: movsMB.length },
     meses: Array.from(new Set(all.map((m) => m.mes))).sort().reverse(),
     bancos: Array.from(new Set(all.map((m) => m.banco))).sort(),
     meta,

@@ -51,6 +51,7 @@ export default function BancosView() {
   const [bancoSel, setBancoSel] = useState("");
   const [cuitSel, setCuitSel] = useState("");           // filtro general por contraparte
   const [contrapartes, setContrapartes] = useState<Contraparte[]>([]);
+  const [cuitStats, setCuitStats] = useState<{ conCuit: number; total: number } | null>(null);
   const [qRazon, setQRazon] = useState("");             // texto tipeado en el autocompletar
   const [abierto, setAbierto] = useState(false);        // dropdown del autocompletar
   const [meses, setMeses] = useState<string[]>([]);
@@ -94,6 +95,7 @@ export default function BancosView() {
         setMeses(j.meses ?? []); setBancos(j.bancos ?? []);
         setPorCuitIng(j.porCuitIngreso ?? []); setPorCuitEgr(j.porCuitEgreso ?? []);
         setContrapartes(j.contrapartes ?? []);
+        setCuitStats(j.cuitStats ?? null);
       }
     } catch { /* vacío */ } finally { setEstado("idle"); }
   }
@@ -290,6 +292,11 @@ export default function BancosView() {
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} aria-hidden />
                       <div className="absolute left-0 top-full z-40 mt-1 max-h-72 w-80 overflow-auto rounded-md border border-line bg-surface py-1 shadow-lg">
+                        {cuitStats && cuitStats.total > 0 && (
+                          <p className="border-b border-line px-3 py-1.5 text-[10px] leading-snug text-faint">
+                            Filtra solo los <b className="text-muted">{Math.round((cuitStats.conCuit / cuitStats.total) * 100)}%</b> de movimientos con CUIT de contraparte. Tarjetas, impuestos y Mercado Pago no traen CUIT, así que no aparecen acá.
+                          </p>
+                        )}
                         {sugerencias.length === 0 ? (
                           <p className="px-3 py-2 text-2xs text-faint">{contrapartes.length ? "Nada coincide con la búsqueda." : "No hay contrapartes con CUIT en los movimientos cargados."}</p>
                         ) : sugerencias.map((c) => (
