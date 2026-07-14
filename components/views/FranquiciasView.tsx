@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
-  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, PARAMS_DEFAULT,
+  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, canonicalEmpresa, ESTADOS_CC, PARAMS_DEFAULT,
   type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion,
 } from "@/lib/franquicias";
 
@@ -47,6 +47,7 @@ export default function FranquiciasView() {
   const [fEstado, setFEstado] = useState<"todos" | "vencido" | "porvencer">("todos");
   const [fGestion, setFGestion] = useState<"todos" | "sin" | "con">("todos");
   const [orden, setOrden] = useState<"neto" | "vencido" | "mora" | "sinGestion">("neto");
+  const [formAbierto, setFormAbierto] = useState(false);        // alta de factura manual
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function cargar() {
@@ -145,6 +146,20 @@ export default function FranquiciasView() {
     try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ gestionKey: key, gestion: patch }) }); }
     catch { /* silencioso: el estado local ya quedó */ }
   }
+  // Alta de factura manual (persiste aparte, sobrevive a re-subir).
+  async function agregarManual(f: FacturaCC) {
+    setEstado("saving");
+    try {
+      const r = await (await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ manualNueva: f }) })).json();
+      if (!r.ok) throw new Error(r.error);
+      setFormAbierto(false); setInfo(`Factura agregada a mano para ${f.cliente}.`); await cargar();
+    } catch (e) { setError(e instanceof Error ? e.message : "no se pudo agregar"); }
+    finally { setEstado("idle"); }
+  }
+  async function borrarManual(key: string) {
+    setFacturas((prev) => prev.filter((f) => gestionKey(f) !== key));
+    try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ borrarManual: key }) }); } catch { /* */ }
+  }
   function filaOnClick(g: any) {
     if (tab === "franquiciado") abrirDetalle("cliente", g.k, `${g.clienteId} · ${g.k}`);
     else if (tab === "empresa") abrirDetalle("empresa", g.k, `Empresa: ${g.k}`);
@@ -172,6 +187,7 @@ export default function FranquiciasView() {
         </div>
         <div className="flex items-center gap-2">
           {meta?.actualizado && <span className="text-2xs text-faint">actualizado {new Date(meta.actualizado).toLocaleDateString("es-AR")}</span>}
+          {hayDatos && <button onClick={() => setFormAbierto(true)} disabled={cargando} className="rounded-md border border-action/40 bg-action/5 px-3 py-1.5 text-xs font-medium text-action hover:bg-action/10 disabled:opacity-50">+ Agregar factura</button>}
           <label className={`cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/[0.03] ${cargando ? "pointer-events-none opacity-50" : ""}`}>
             {hayDatos ? "Actualizar (subir archivo)" : "Subir estado de cuenta"}
             <input ref={inputRef} type="file" accept=".csv,.xls,.xlsx" className="hidden" onChange={(e) => onArchivo(e.target.files)} />
@@ -342,7 +358,8 @@ export default function FranquiciasView() {
         </>
       )}
 
-      {detalle && <DetalleModal titulo={detalle.titulo} facturas={facturas} dimKey={detalle.dimKey} val={detalle.val} params={params} onGestion={updateGestion} onClose={() => setDetalle(null)} />}
+      {detalle && <DetalleModal titulo={detalle.titulo} facturas={facturas} dimKey={detalle.dimKey} val={detalle.val} params={params} onGestion={updateGestion} onBorrarManual={borrarManual} onClose={() => setDetalle(null)} />}
+      {formAbierto && <FacturaFormModal empresas={empresas} onGuardar={agregarManual} onClose={() => setFormAbierto(false)} />}
     </div>
   );
 }
@@ -385,7 +402,7 @@ function Kpi({ label, value, sub, tone, full, big }: { label: string; value: str
 const CONTACTOS = ["", "Contactado", "Contactado sin respuesta", "Sin contacto"];
 // Detalle de un corte: facturas línea por línea, con GESTIÓN de cobranza EDITABLE
 // (contacto, promesa de pago, nota) que persiste y sobrevive a re-subir el archivo.
-function DetalleModal({ titulo, facturas, dimKey, val, params, onGestion, onClose }: { titulo: string; facturas: FacturaCC[]; dimKey: DimKey; val: string; params: ParamsCC; onGestion: (key: string, patch: Gestion) => void; onClose: () => void }) {
+function DetalleModal({ titulo, facturas, dimKey, val, params, onGestion, onBorrarManual, onClose }: { titulo: string; facturas: FacturaCC[]; dimKey: DimKey; val: string; params: ParamsCC; onGestion: (key: string, patch: Gestion) => void; onBorrarManual: (key: string) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null); // key de la fila expandida
   const propio = (f: FacturaCC) => (dimKey === "cliente" ? f.cliente : dimKey === "empresa" ? f.empresa : dimKey === "local" ? f.local : dimKey === "detalle" ? f.detalle : f.contacto);
@@ -421,7 +438,7 @@ function DetalleModal({ titulo, facturas, dimKey, val, params, onGestion, onClos
               {vis.map((c) => {
                 const k = gestionKey(c); const exp = abierto === k;
                 return (
-                <FilaFactura key={k || c.nro} c={c} exp={exp} onToggle={() => setAbierto(exp ? null : k)} onGestion={(patch) => onGestion(k, patch)} editable={!!k} />
+                <FilaFactura key={k || c.nro} c={c} exp={exp} onToggle={() => setAbierto(exp ? null : k)} onGestion={(patch) => onGestion(k, patch)} onBorrar={() => onBorrarManual(k)} editable={!!k} />
               ); })}
             </tbody>
           </table>
@@ -431,14 +448,18 @@ function DetalleModal({ titulo, facturas, dimKey, val, params, onGestion, onClos
   );
 }
 
-function FilaFactura({ c, exp, onToggle, onGestion, editable }: { c: ReturnType<typeof costear>; exp: boolean; onToggle: () => void; onGestion: (patch: Gestion) => void; editable: boolean }) {
+function FilaFactura({ c, exp, onToggle, onGestion, onBorrar, editable }: { c: ReturnType<typeof costear>; exp: boolean; onToggle: () => void; onGestion: (patch: Gestion) => void; onBorrar: () => void; editable: boolean }) {
   const [nota, setNota] = useState(c.obs ?? "");
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   return (
     <>
-      <tr onClick={onToggle} className="cursor-pointer border-b border-line/60 hover:bg-ink/[0.02]">
+      <tr onClick={onToggle} className={`cursor-pointer border-b border-line/60 hover:bg-ink/[0.02] ${c.cobradaManual ? "opacity-60" : ""}`}>
         <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{fechaLabel(c.vencimiento)}</td>
-        <td className="px-3 py-1.5 text-2xs text-ink">{c.detalle || "—"}{c.incobrable && <span className="ml-1.5 rounded bg-bad/10 px-1 py-px text-[10px] font-medium text-bad">incobrable</span>}<span className="ml-1.5 font-mono text-[10px] text-faint">{c.nro}</span></td>
+        <td className="px-3 py-1.5 text-2xs text-ink">{c.detalle || "—"}
+          {c.manual && <span className="ml-1.5 rounded bg-action/10 px-1 py-px text-[10px] font-medium text-action">manual</span>}
+          {c.estado && <span className={`ml-1.5 rounded px-1 py-px text-[10px] font-medium ${c.cobradaManual ? "bg-ok/10 text-ok" : c.incobrable ? "bg-bad/10 text-bad" : "bg-ink/[0.06] text-muted"}`}>{c.estado}</span>}
+          {!c.estado && c.incobrable && <span className="ml-1.5 rounded bg-bad/10 px-1 py-px text-[10px] font-medium text-bad">incobrable</span>}
+          <span className="ml-1.5 font-mono text-[10px] text-faint">{c.nro}</span></td>
         <td className="px-3 py-1.5 text-right font-mono text-2xs text-muted">{c.diasMora > 0 ? `${c.diasMora}d` : "—"}</td>
         <td className="px-3 py-1.5 text-right font-mono tnum font-medium text-ink monto">{money(c.neto)}</td>
         <td className="px-3 py-1.5">
@@ -458,18 +479,81 @@ function FilaFactura({ c, exp, onToggle, onGestion, editable }: { c: ReturnType<
           <td colSpan={5} className="px-4 py-2">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-2xs">
               <span className="text-faint">saldo <b className="text-ink monto">{money(c.saldo)}</b> · punitorio <b className="text-warn monto">{money(c.punitorios)}</b> ({c.tasa.toFixed(1)}%)</span>
-              <label className="flex items-center gap-1.5 text-muted">💰 Promesa de pago
+              <label className="flex items-center gap-1.5 text-muted">🏷️ Estado
+                <select value={c.estado ?? ""} onClick={stop} onChange={(e) => onGestion({ estado: e.target.value })} className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink">
+                  <option value="">Automático ({c.vencida ? "Vencida" : "Por vencer"})</option>
+                  {ESTADOS_CC.map((e) => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </label>
+              <label className="flex items-center gap-1.5 text-muted">💰 Promesa
                 <input type="date" value={c.promesa ?? ""} onClick={stop} onChange={(e) => onGestion({ promesa: e.target.value })} className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink" />
                 {c.promesa && <button onClick={(e) => { stop(e); onGestion({ promesa: "" }); }} className="text-faint hover:text-ink">×</button>}
               </label>
               <label className="flex flex-1 items-center gap-1.5 text-muted">📝 Nota
                 <input value={nota} onClick={stop} onChange={(e) => setNota(e.target.value)} onBlur={() => nota !== (c.obs ?? "") && onGestion({ nota })} placeholder="ej. quedó en pagar la semana que viene" className="min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink placeholder:text-faint" />
               </label>
+              {c.manual && <button onClick={(e) => { stop(e); if (confirm("¿Borrar esta factura cargada a mano?")) onBorrar(); }} className="rounded-md border border-bad/30 px-2 py-0.5 text-[11px] font-medium text-bad hover:bg-bad/5">Borrar factura</button>}
             </div>
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+// Alta de una factura A MANO (persiste aparte del estado de cuenta subido).
+function FacturaFormModal({ empresas, onGuardar, onClose }: { empresas: string[]; onGuardar: (f: FacturaCC) => void; onClose: () => void }) {
+  const [cliente, setCliente] = useState("");
+  const [clienteId, setClienteId] = useState("");
+  const [empresa, setEmpresa] = useState(empresas[0] ?? "");
+  const [local, setLocal] = useState("");
+  const [detalle, setDetalle] = useState("CDP");
+  const [nro, setNro] = useState("");
+  const [venc, setVenc] = useState(hoyISO());
+  const [importe, setImporte] = useState("");
+  const [cobrado, setCobrado] = useState("");
+  const impNum = Number(importe) || 0, cobNum = Number(cobrado) || 0;
+  const valido = cliente.trim() !== "" && impNum > 0;
+  function guardar() {
+    if (!valido) return;
+    const id = clienteId.trim() || `M${Date.now().toString().slice(-6)}`;
+    const f: FacturaCC = {
+      clienteId: id, cliente: cliente.trim(), vencimiento: venc, tipo: "FAC",
+      nro: nro.trim() || `MAN-${Date.now()}`, importe: impNum, cobrado: cobNum,
+      empresa: canonicalEmpresa(empresa), local: local.trim(), detalle: detalle.trim(),
+      contacto: "", obs: "", mes: venc.slice(0, 7), manual: true,
+    };
+    onGuardar(f);
+  }
+  const inp = "w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-2xs text-ink placeholder:text-faint focus:border-action";
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-3 sm:p-8" onClick={onClose}>
+      <div className="w-full max-w-md rounded-card border border-line bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="font-display text-sm font-semibold text-ink">Agregar factura a mano</p>
+          <button onClick={onClose} className="text-2xs font-medium text-muted hover:text-ink">cerrar</button>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className="col-span-2 flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Franquiciado *</span><input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Razón social / nombre" className={inp} /></label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">N° cliente</span><input value={clienteId} onChange={(e) => setClienteId(e.target.value)} placeholder="opcional" className={inp} /></label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Empresa</span>
+            <input list="fr-empresas" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className={inp} />
+            <datalist id="fr-empresas">{empresas.map((e) => <option key={e} value={e} />)}</datalist>
+          </label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Local</span><input value={local} onChange={(e) => setLocal(e.target.value)} className={inp} /></label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Concepto</span><input value={detalle} onChange={(e) => setDetalle(e.target.value)} placeholder="CDP / REGALIAS…" className={inp} /></label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Comprobante</span><input value={nro} onChange={(e) => setNro(e.target.value)} placeholder="opcional" className={inp} /></label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Vencimiento</span><input type="date" value={venc} onChange={(e) => setVenc(e.target.value)} className={inp} /></label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Importe *</span><input type="number" value={importe} onChange={(e) => setImporte(e.target.value)} placeholder="0" className={inp} /></label>
+          <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">Cobrado</span><input type="number" value={cobrado} onChange={(e) => setCobrado(e.target.value)} placeholder="0" className={inp} /></label>
+        </div>
+        <p className="mt-2 text-2xs text-faint">Saldo: <b className="text-ink monto">{money(Math.max(0, impNum - cobNum))}</b> · la mora y el punitorio se calculan solos según el vencimiento.</p>
+        <div className="mt-3 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-md px-3 py-1.5 text-xs font-medium text-muted hover:bg-ink/5">Cancelar</button>
+          <button onClick={guardar} disabled={!valido} className="rounded-md bg-ok px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40">Agregar factura</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -14,6 +14,7 @@ export const maxDuration = 30;
 const KEY = "franquicias-facturas";
 const PKEY = "franquicias-params";
 const GKEY = "franquicias-gestion";
+const MANK = "franquicias-manuales";   // facturas cargadas a mano (se guardan aparte)
 const META = "franquicias-meta";
 const pack = (o: unknown) => gzipSync(Buffer.from(JSON.stringify(o), "utf8")).toString("base64");
 const unpack = <T,>(s: string): T => JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T;
@@ -25,6 +26,9 @@ async function leer(): Promise<FacturaCC[]> {
 async function leerGestion(): Promise<Record<string, Gestion>> {
   return (await readStore<Record<string, Gestion> | null>(GKEY, null)) ?? {};
 }
+async function leerManuales(): Promise<FacturaCC[]> {
+  return (await readStore<FacturaCC[] | null>(MANK, null)) ?? [];
+}
 async function leerParams(): Promise<ParamsCC> {
   const p = await readStore<ParamsCC | null>(PKEY, null);
   return { ...PARAMS_DEFAULT, ...(p ?? {}) };
@@ -33,11 +37,12 @@ async function leerParams(): Promise<ParamsCC> {
 export async function GET() {
   const g = await guard("/franquicias");
   if ("res" in g) return g.res;
-  const [facturas, gestion, params, meta] = await Promise.all([
-    leer(), leerGestion(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
+  const [facturas, manuales, gestion, params, meta] = await Promise.all([
+    leer(), leerManuales(), leerGestion(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
   ]);
-  // Se devuelven las facturas ya CON la gestión superpuesta (y el mapa crudo para editar).
-  return NextResponse.json({ ok: true, facturas: aplicarGestion(facturas, gestion), gestion, params, meta });
+  // Snapshot + facturas manuales, con la gestión superpuesta (y el mapa crudo para editar).
+  const todas = [...facturas, ...manuales.map((m) => ({ ...m, manual: true }))];
+  return NextResponse.json({ ok: true, facturas: aplicarGestion(todas, gestion), gestion, params, meta });
 }
 
 // POST:
@@ -72,6 +77,21 @@ export async function POST(req: NextRequest) {
       if (Object.keys(next).length) cur[body.gestionKey] = next; else delete cur[body.gestionKey];
       await writeStore(GKEY, cur);
       return NextResponse.json({ ok: true });
+    }
+
+    if (body.manualNueva && typeof body.manualNueva === "object") {
+      const f = body.manualNueva as FacturaCC;
+      if (!f.cliente || !(f.importe || f.cobrado)) return NextResponse.json({ ok: false, error: "faltan cliente e importe" }, { status: 400 });
+      const cur = await leerManuales();
+      cur.push({ ...f, manual: true });
+      await writeStore(MANK, cur);
+      return NextResponse.json({ ok: true, total: cur.length });
+    }
+    if (typeof body.borrarManual === "string") {
+      const cur = await leerManuales();
+      const next = cur.filter((f) => gestionKey(f) !== body.borrarManual);
+      await writeStore(MANK, next);
+      return NextResponse.json({ ok: true, total: next.length });
     }
 
     if (body.params && typeof body.params === "object") {

@@ -26,11 +26,18 @@ export interface FacturaCC {
   obs: string;
   mes: string;
   promesa?: string;    // fecha de promesa de pago (gestión en la app), ISO
+  estado?: string;     // estado de cobranza puesto A MANO (ver ESTADOS_CC); "" = automático
+  manual?: boolean;    // factura cargada a mano (no vino del estado de cuenta)
 }
+
+// Estados de cobranza que se ponen a mano (además del automático Vencida/Por vencer).
+export const ESTADOS_CC = ["En gestión", "Prometido", "Cobrada", "Refinanciada", "Incobrable", "En reclamo"];
+export const esCobradaEstado = (estado: string) => /cobrad/i.test(estado || "");         // marcada cobrada
+export const esIncobrableEstado = (estado: string) => /incobrable/i.test(estado || "");
 
 // Capa de GESTIÓN de cobranza — se edita en la app y se guarda APARTE de las facturas
 // (keyed por comprobante), así sobrevive a re-subir el estado de cuenta. Se superpone.
-export interface Gestion { contacto?: string; promesa?: string; nota?: string }
+export interface Gestion { contacto?: string; promesa?: string; nota?: string; estado?: string }
 export const gestionKey = (f: { clienteId: string; nro: string }) => (f.nro ? `${f.clienteId}|${f.nro}` : "");
 
 /** Superpone la gestión guardada (por comprobante) sobre las facturas del snapshot. */
@@ -39,7 +46,7 @@ export function aplicarGestion(facturas: FacturaCC[], g: Record<string, Gestion>
   return facturas.map((f) => {
     const o = g[gestionKey(f)];
     if (!o) return f;
-    return { ...f, contacto: o.contacto ?? f.contacto, promesa: o.promesa ?? f.promesa, obs: o.nota ?? f.obs };
+    return { ...f, contacto: o.contacto ?? f.contacto, promesa: o.promesa ?? f.promesa, obs: o.nota ?? f.obs, estado: o.estado ?? f.estado };
   });
 }
 
@@ -63,7 +70,8 @@ export interface FacturaCosteada extends FacturaCC {
   punitorios: number;
   neto: number;
   vencida: boolean;
-  incobrable: boolean;
+  incobrable: boolean; // por concepto "INCOBRABLES" o estado a mano "Incobrable"
+  cobradaManual: boolean; // marcada "Cobrada" a mano -> ya no es cobrable
 }
 
 // "INCOBRABLES" = deuda dada por perdida; por default NO cuenta como cobrable.
@@ -91,7 +99,8 @@ export function costear(f: FacturaCC, p: ParamsCC): FacturaCosteada {
     ...f, saldo, diasMora, tasa, punitorios,
     neto: saldo + punitorios,
     vencida: diasMora > 0,
-    incobrable: esIncobrable(f.detalle),
+    incobrable: esIncobrable(f.detalle) || esIncobrableEstado(f.estado ?? ""),
+    cobradaManual: esCobradaEstado(f.estado ?? ""),
   };
 }
 
@@ -150,7 +159,7 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     totalSaldo: cs.reduce((s, c) => s + c.saldo, 0),
     totalPunitorios: cs.reduce((s, c) => s + c.punitorios, 0),
     totalNeto: cs.reduce((s, c) => s + c.neto, 0),
-    cobrable: suma((c) => p.incluirIncobrables || !c.incobrable),
+    cobrable: suma((c) => !c.cobradaManual && (p.incluirIncobrables || !c.incobrable)),
     incobrable: suma((c) => c.incobrable),
     vencido: suma((c) => c.vencida),
     porVencer: suma((c) => !c.vencida),
@@ -210,7 +219,7 @@ export function csvAMatriz(txt: string): string[][] {
   return rows;
 }
 
-const SINONIMOS: Record<keyof Omit<FacturaCC, "clienteId" | "importe" | "cobrado" | "promesa">, RegExp> & { importe: RegExp; cobrado: RegExp } = {
+const SINONIMOS: Record<keyof Omit<FacturaCC, "clienteId" | "importe" | "cobrado" | "promesa" | "estado" | "manual">, RegExp> & { importe: RegExp; cobrado: RegExp } = {
   cliente: /cliente|razon social|franquicia/,
   vencimiento: /vencimiento|vto|fecha.*venc/,
   tipo: /tipo.*comprob|tipo comp/,
