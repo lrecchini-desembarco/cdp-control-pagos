@@ -3,6 +3,7 @@
   "crons": [
     { "path": "/api/notify", "schedule": "0 12 * * *" },
     { "path": "/api/google-ratings/refresh", "schedule": "0 6 * * 1" },
-    { "path": "/api/mercadopago/refresh", "schedule": "0 5 * * *" }
+    { "path": "/api/mercadopago/refresh", "schedule": "0 5 * * *" },
+    { "path": "/api/qa", "schedule": "0 11 * * *" }
   ]
 }

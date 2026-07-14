@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/qa", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/cobros", "/horas", "/mozos", "/anulados", "/insumos", "/estimacion", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/cobros", "/horas", "/mozos", "/anulados", "/insumos", "/estimacion", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/qa", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -133,6 +133,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema", fresh: "carga", desc: "Enseñale al sistema las recetas y los códigos de sucursal." },
   { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga", desc: "Alta de usuarios y qué puede ver cada uno." },
   { href: "/estado", label: "Salud y endpoints", icon: "⚙", section: "Sistema", fresh: "vivo", desc: "Salud del sistema y de las conexiones, en vivo." },
+  { href: "/qa", label: "QA diario", icon: "✓", section: "Sistema", fresh: "vivo", desc: "El bot que audita los datos todos los días (reconciliación, margen, identidad, mapeo, frescura) y avisa si algo se rompe." },
   // Ayuda y herramientas
   { href: "/firmas", label: "Firmas", icon: "✎", section: "Ayuda", fresh: "carga", desc: "Generador de firmas de email para el equipo." },
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?", section: "Ayuda", fresh: "carga", desc: "La guía completa: qué podés hacer y cómo, paso a paso." },
