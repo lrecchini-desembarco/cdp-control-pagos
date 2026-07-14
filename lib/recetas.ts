@@ -41,6 +41,7 @@ export interface RecetaCosteada {
   costoNeto: number;
   costoConImp: number;
   nFaltantes: number;
+  fuente?: "tango"; // la receta vino del recetario de Tango (cocina), no del maestro editable
 }
 
 /** Índice de insumos por código, case-insensitive (las recetas del Excel varían mayúsculas). */

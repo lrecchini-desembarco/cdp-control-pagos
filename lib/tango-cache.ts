@@ -69,3 +69,9 @@ export async function sucursalesDesdeCache(): Promise<{ id: number; nombre: stri
   const packed = await readStore<string | null>("tango-sucursales", null);
   return packed ? unpack<{ id: number; nombre: string }[]>(packed) : null;
 }
+
+/** Recetario de Tango (filas planas de V_QS_Recetas_Insumo_Final), desde el cache KV. */
+export async function recetasTangoDesdeCache(): Promise<any[] | null> {
+  const packed = await readStore<string | null>("tango-recetas", null);
+  return packed ? unpack<any[]>(packed) : null;
+}

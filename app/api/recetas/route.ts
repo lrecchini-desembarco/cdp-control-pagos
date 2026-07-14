@@ -3,6 +3,8 @@ import { getSesion } from "@/lib/session";
 import { getRecetas, saveReceta, getReceta } from "@/lib/recetas-store";
 import { getInsumos } from "@/lib/insumos-store";
 import { costearReceta, indiceInsumos } from "@/lib/recetas";
+import { getRecetasTango } from "@/lib/sources/tango";
+import { agruparRecetasTango, costearRecetaTango, indiceInsumosPorDesc } from "@/lib/recetas-tango";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,18 @@ export async function GET(req: NextRequest) {
   const sku = req.nextUrl.searchParams.get("sku");
   if (sku) {
     const r = await getReceta(sku);
+    // Si el SKU no tiene receta en el maestro editable, buscarla en el recetario de
+    // Tango (la cocina la carga ahí; ej. hamburguesas de El Desembarco). Así el modal
+    // muestra la receta real aunque no esté en el Excel de costos.
+    if (!costeadas.some((c) => c.skuTango === sku)) {
+      try {
+        const filas = (await getRecetasTango()).filter((f) => f.sku === sku);
+        if (filas.length) {
+          const rt = agruparRecetasTango(filas)[0];
+          if (rt) costeadas.push(costearRecetaTango(rt, indiceInsumosPorDesc(insumos)));
+        }
+      } catch { /* si Tango no está disponible, el modal muestra "sin receta" */ }
+    }
     return NextResponse.json({ ok: true, recetas: costeadas, historial: r?.versiones ?? [] });
   }
   return NextResponse.json({ ok: true, recetas: costeadas });

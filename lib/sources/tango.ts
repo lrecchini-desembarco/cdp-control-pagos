@@ -1,6 +1,7 @@
 import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource, CobroDia, VentaHora, VentaMozo, Anulado } from "./types";
 import { getBridgeUrl } from "../bridge-url";
-import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache, sucursalesDesdeCache, mozosDesdeCache, anuladosDesdeCache } from "../tango-cache";
+import { ventasDesdeCache, preciosDesdeCache, cobrosDesdeCache, horasDesdeCache, sucursalesDesdeCache, mozosDesdeCache, anuladosDesdeCache, recetasTangoDesdeCache } from "../tango-cache";
+import type { FilaRecetaTango } from "../recetas-tango";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -276,6 +277,24 @@ export const VENTAS_HORAS_QUERY = `
 `;
 
 export const SUCURSALES_MAP_QUERY = `SELECT ID_SUCURSAL AS id, DESC_SUCURSAL AS nombre FROM dbo.vw_Sucursales;`;
+
+// Recetario completo de Tango (insumos finales explotados). Snapshot, no por-día.
+export const RECETAS_TANGO_QUERY = `SELECT COD_ARTICU AS sku, NOM_ARTICU AS nombre, COD_INSUMO AS insumoCod, NOM_INSUMO AS insumoDesc, CANTIDAD AS cant, CLASIF_INSUMO AS clasif FROM dbo.V_QS_Recetas_Insumo_Final;`;
+
+// Recetas reales de Tango. Cache-first (KV, empujado por la PC de carga); en dev/
+// local cae a SQL directo. Devuelve las filas planas (una por insumo del producto).
+export async function getRecetasTango(): Promise<FilaRecetaTango[]> {
+  const cache = await recetasTangoDesdeCache();
+  if (cache) return cache as FilaRecetaTango[];
+  if (process.env.TANGO_DB_HOST) {
+    try {
+      const pool = await getPool();
+      const rows = (await pool.request().query(RECETAS_TANGO_QUERY)).recordset as any[];
+      return rows.map((r) => ({ sku: String(r.sku).trim(), nombre: String(r.nombre ?? "").trim(), insumoCod: String(r.insumoCod).trim(), insumoDesc: String(r.insumoDesc ?? "").trim(), cant: Number(r.cant) || 0, clasif: r.clasif ? String(r.clasif) : undefined }));
+    } catch { return []; }
+  }
+  return [];
+}
 
 // Mapa ID_SUCURSAL -> nombre (vw_Sucursales). Cache-first; en dev cae a SQL directo.
 // Si no hay ninguno (prod sin cache aún), devuelve {} y las secciones muestran el número.

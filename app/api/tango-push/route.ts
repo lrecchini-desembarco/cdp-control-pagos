@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       await writeStore("tango-precios", body.data);
     } else if (body.tipo === "sucursales" && typeof body.data === "string") {
       await writeStore("tango-sucursales", body.data);
+    } else if (body.tipo === "recetas" && typeof body.data === "string") {
+      await writeStore("tango-recetas", body.data);
     } else if (body.tipo === "fresh") {
       await writeStore("tango-fresh", { cuando: new Date().toISOString(), dias: body.dias ?? [] });
     } else {

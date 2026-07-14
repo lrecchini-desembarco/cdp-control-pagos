@@ -81,6 +81,7 @@ const SQL_Q = {
   mozos: `SELECT CONVERT(varchar(10),fecha,23) fecha, id_sucursal, mozo, tickets, importe, comensales FROM dbo.vw_VentasPorMozo WHERE fecha BETWEEN @desde AND @hasta`,
   anulados: `SELECT CONVERT(varchar(10),fecha,23) fecha, id_sucursal, tipo, hora, responsable, autoriza, sku, producto, cantidad, importe, n FROM dbo.vw_Anulados WHERE fecha BETWEEN @desde AND @hasta`,
   sucursales: `SELECT ID_SUCURSAL id, DESC_SUCURSAL nombre FROM dbo.vw_Sucursales`,
+  recetas: `SELECT COD_ARTICU sku, NOM_ARTICU nombre, COD_INSUMO insumoCod, NOM_INSUMO insumoDesc, CANTIDAD cant, CLASIF_INSUMO clasif FROM dbo.V_QS_Recetas_Insumo_Final`,
 };
 async function sqlQuery(kind, desde, hasta) {
   const { default: sql } = await import("mssql");
@@ -156,9 +157,19 @@ async function ciclo() {
     nAnul = anul.length;
   } catch (e) { log(`anulados no empujados: ${e instanceof Error ? e.message : e}`); }
 
+  // Recetario de Tango (snapshot; cambia poco) -> solo en ciclos completos (~1h).
+  let nRec = 0;
+  if (full) {
+    try {
+      const recetas = await traer("recetas", `/recetas`);
+      await push({ tipo: "recetas", data: pack(recetas) });
+      nRec = recetas.length;
+    } catch (e) { log(`recetas no empujadas: ${e instanceof Error ? e.message : e}`); }
+  }
+
   await push({ tipo: "fresh", dias: ultimosDias(DIAS) });
 
-  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} ventas + ${precios.length} precios + ${nCobros} cobros + ${nHoras} horas + ${nMozos} mozos + ${nAnul} anulados`);
+  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} ventas + ${precios.length} precios + ${nCobros} cobros + ${nHoras} horas + ${nMozos} mozos + ${nAnul} anulados + ${nRec} recetas`);
   ciclos++;
 }
 
