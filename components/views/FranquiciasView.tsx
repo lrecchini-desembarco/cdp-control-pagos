@@ -5,8 +5,8 @@ import * as XLSX from "xlsx";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
-  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, canonicalEmpresa, ESTADOS_CC, PARAMS_DEFAULT,
-  type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion,
+  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, canonicalEmpresa, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
+  type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC,
 } from "@/lib/franquicias";
 
 // Cuentas Corrientes de Franquicias. Subís el estado de cuenta (CSV/Excel) y la app
@@ -31,6 +31,7 @@ const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa",
 
 export default function FranquiciasView() {
   const [facturas, setFacturas] = useState<FacturaCC[]>([]);
+  const [clientes, setClientes] = useState<Record<string, ClienteCC>>({});
   const [params, setParams] = useState<ParamsCC>({ ...PARAMS_DEFAULT, fechaCorte: hoyISO() });
   const [meta, setMeta] = useState<{ actualizado?: string } | null>(null);
   const [estado, setEstado] = useState<"loading" | "idle" | "saving">("loading");
@@ -55,6 +56,7 @@ export default function FranquiciasView() {
       const j = await (await fetch("/api/franquicias", { cache: "no-store" })).json();
       if (j.ok) {
         setFacturas(j.facturas ?? []);
+        setClientes(j.clientes ?? {});
         setParams((prev) => ({ ...PARAMS_DEFAULT, ...j.params, fechaCorte: j.params?.fechaCorte || prev.fechaCorte || hoyISO() }));
         setMeta(j.meta ?? null);
       }
@@ -159,6 +161,11 @@ export default function FranquiciasView() {
   async function borrarManual(key: string) {
     setFacturas((prev) => prev.filter((f) => gestionKey(f) !== key));
     try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ borrarManual: key }) }); } catch { /* */ }
+  }
+  // Estado a nivel franquiciado (etiqueta de situación del cliente).
+  async function updateCliente(clienteId: string, estado: string) {
+    setClientes((prev) => { const n = { ...prev }; if (estado) n[clienteId] = { ...n[clienteId], estado }; else if (n[clienteId]) { const c = { ...n[clienteId] }; delete c.estado; n[clienteId] = c; } return n; });
+    try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clienteEstado: { clienteId, estado } }) }); } catch { /* */ }
   }
   function filaOnClick(g: any) {
     if (tab === "franquiciado") abrirDetalle("cliente", g.k, `${g.clienteId} · ${g.k}`);
@@ -328,7 +335,7 @@ export default function FranquiciasView() {
                 <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                   <th className="px-4 py-2 font-medium">{tab === "franquiciado" ? "Franquiciado" : tab === "empresa" ? "Empresa" : tab === "local" ? "Local" : tab === "detalle" ? "Concepto" : "Gestión"}</th>
                   <th className="px-3 py-2 text-right font-medium">Mora</th>
-                  {tab === "franquiciado" && <th className="px-3 py-2 font-medium">Cobranza</th>}
+                  {tab === "franquiciado" && <th className="px-3 py-2 font-medium">Estado</th>}
                   <th className="px-3 py-2 text-right font-medium">Vencido</th>
                   <th className="px-3 py-2 font-medium">Neto a cobrar</th>
                 </tr></thead>
@@ -341,7 +348,7 @@ export default function FranquiciasView() {
                     <tr key={g.k} onClick={() => filaOnClick(g)} title="Ver las facturas" className={`cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04] ${prioridad ? "border-l-2 border-l-bad/60" : ""}`}>
                       <td className="px-4 py-2"><span className="font-medium text-ink">{g.k}</span>{g.clienteId && <span className="ml-2 font-mono text-2xs text-faint">#{g.clienteId}</span>}<span className="ml-1.5 text-2xs text-faint">›</span></td>
                       <td className="px-3 py-2 text-right font-mono tnum text-2xs text-muted">{g.maxMora > 0 ? `${g.maxMora}d` : "—"}</td>
-                      {tab === "franquiciado" && <td className="px-3 py-2"><GestionChip g={g} /></td>}
+                      {tab === "franquiciado" && <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}><EstadoFranqCell g={g} estado={clientes[g.clienteId]?.estado} onChange={(v) => updateCliente(g.clienteId, v)} /></td>}
                       <td className="px-3 py-2 text-right font-mono tnum text-bad monto">{g.vencido ? moneyC(g.vencido) : "—"}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -376,12 +383,20 @@ function Chips({ value, onChange, opts }: { value: string; onChange: (v: string)
     </div>
   );
 }
-// Estado de cobranza del franquiciado: rojo si hay vencido sin gestionar (perseguir),
-// verde si el vencido ya se gestionó, gris si está al día.
-function GestionChip({ g }: { g: { netoSinGestion: number; vencido: number } }) {
-  if (g.netoSinGestion > 0) return <span className="rounded bg-bad/10 px-1.5 py-px text-[10px] font-medium text-bad">a gestionar</span>;
-  if (g.vencido > 0) return <span className="rounded bg-ok/10 px-1.5 py-px text-[10px] font-medium text-ok">gestionado</span>;
-  return <span className="rounded bg-ink/[0.05] px-1.5 py-px text-[10px] text-faint">al día</span>;
+// Estado del franquiciado: una etiqueta MANUAL de situación (Al día / Moroso / En
+// reclamo…); si no se puso, muestra el estado DERIVADO (a gestionar / gestionado / al día).
+function EstadoFranqCell({ g, estado, onChange }: { g: { netoSinGestion: number; vencido: number }; estado?: string; onChange: (v: string) => void }) {
+  const derivado = g.netoSinGestion > 0 ? "a gestionar" : g.vencido > 0 ? "gestionado" : "al día";
+  const malo = /moroso|reclamo|incobrable/i.test(estado || "");
+  const bueno = /al d[ií]a|plan de pago/i.test(estado || "");
+  const cls = estado ? (malo ? "border-bad/40 bg-bad/5 text-bad" : bueno ? "border-ok/40 bg-ok/5 text-ok" : "border-action/40 bg-action/5 text-action")
+    : (g.netoSinGestion > 0 ? "border-bad/30 bg-bad/[0.03] text-bad" : "border-line bg-surface text-muted");
+  return (
+    <select value={estado || ""} onChange={(e) => onChange(e.target.value)} title="Estado del franquiciado" className={`rounded-md border px-1.5 py-0.5 text-[11px] ${cls}`}>
+      <option value="">— {derivado}</option>
+      {ESTADOS_FRANQ.map((s) => <option key={s} value={s}>{s}</option>)}
+    </select>
+  );
 }
 function NumIn({ v, step, onChange }: { v: number; step: number; onChange: (n: number) => void }) {
   return <input type="number" step={step} value={v} onChange={(e) => onChange(Number(e.target.value) || 0)} className="w-20 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" />;

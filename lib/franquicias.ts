@@ -32,6 +32,9 @@ export interface FacturaCC {
 
 // Estados de cobranza que se ponen a mano (además del automático Vencida/Por vencer).
 export const ESTADOS_CC = ["En gestión", "Prometido", "Cobrada", "Refinanciada", "Incobrable", "En reclamo"];
+// Estado a nivel FRANQUICIADO (etiqueta de situación del cliente, manual).
+export const ESTADOS_FRANQ = ["Al día", "En gestión", "Moroso", "Plan de pago", "En reclamo", "Incobrable"];
+export interface ClienteCC { estado?: string; nota?: string }
 export const esCobradaEstado = (estado: string) => /cobrad/i.test(estado || "");         // marcada cobrada
 export const esIncobrableEstado = (estado: string) => /incobrable/i.test(estado || "");
 

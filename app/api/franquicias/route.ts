@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { PARAMS_DEFAULT, aplicarGestion, gestionKey, type FacturaCC, type ParamsCC, type Gestion } from "@/lib/franquicias";
+import { PARAMS_DEFAULT, aplicarGestion, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC } from "@/lib/franquicias";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -15,6 +15,7 @@ const KEY = "franquicias-facturas";
 const PKEY = "franquicias-params";
 const GKEY = "franquicias-gestion";
 const MANK = "franquicias-manuales";   // facturas cargadas a mano (se guardan aparte)
+const CLIK = "franquicias-clientes";   // estado/nota a nivel franquiciado (keyed por clienteId)
 const META = "franquicias-meta";
 const pack = (o: unknown) => gzipSync(Buffer.from(JSON.stringify(o), "utf8")).toString("base64");
 const unpack = <T,>(s: string): T => JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T;
@@ -29,6 +30,9 @@ async function leerGestion(): Promise<Record<string, Gestion>> {
 async function leerManuales(): Promise<FacturaCC[]> {
   return (await readStore<FacturaCC[] | null>(MANK, null)) ?? [];
 }
+async function leerClientes(): Promise<Record<string, ClienteCC>> {
+  return (await readStore<Record<string, ClienteCC> | null>(CLIK, null)) ?? {};
+}
 async function leerParams(): Promise<ParamsCC> {
   const p = await readStore<ParamsCC | null>(PKEY, null);
   return { ...PARAMS_DEFAULT, ...(p ?? {}) };
@@ -37,12 +41,12 @@ async function leerParams(): Promise<ParamsCC> {
 export async function GET() {
   const g = await guard("/franquicias");
   if ("res" in g) return g.res;
-  const [facturas, manuales, gestion, params, meta] = await Promise.all([
-    leer(), leerManuales(), leerGestion(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
+  const [facturas, manuales, gestion, clientes, params, meta] = await Promise.all([
+    leer(), leerManuales(), leerGestion(), leerClientes(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
   ]);
   // Snapshot + facturas manuales, con la gestión superpuesta (y el mapa crudo para editar).
   const todas = [...facturas, ...manuales.map((m) => ({ ...m, manual: true }))];
-  return NextResponse.json({ ok: true, facturas: aplicarGestion(todas, gestion), gestion, params, meta });
+  return NextResponse.json({ ok: true, facturas: aplicarGestion(todas, gestion), gestion, clientes, params, meta });
 }
 
 // POST:
@@ -86,6 +90,15 @@ export async function POST(req: NextRequest) {
       cur.push({ ...f, manual: true });
       await writeStore(MANK, cur);
       return NextResponse.json({ ok: true, total: cur.length });
+    }
+    if (body.clienteEstado && typeof body.clienteEstado === "object" && typeof body.clienteEstado.clienteId === "string") {
+      const { clienteId, estado, nota } = body.clienteEstado as { clienteId: string; estado?: string; nota?: string };
+      const cur = await leerClientes();
+      const next: ClienteCC = { ...(cur[clienteId] ?? {}), ...(estado !== undefined ? { estado } : {}), ...(nota !== undefined ? { nota } : {}) };
+      (Object.keys(next) as (keyof ClienteCC)[]).forEach((k) => { if (!next[k]) delete next[k]; });
+      if (Object.keys(next).length) cur[clienteId] = next; else delete cur[clienteId];
+      await writeStore(CLIK, cur);
+      return NextResponse.json({ ok: true });
     }
     if (typeof body.borrarManual === "string") {
       const cur = await leerManuales();
