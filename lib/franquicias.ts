@@ -22,9 +22,25 @@ export interface FacturaCC {
   empresa: string;     // marca, canónica
   local: string;
   detalle: string;     // CDP / REGALIAS FAC / INCOBRABLES / TANGO Y GESTIÓN DE APPS / ...
-  contacto: string;    // gestión de cobranza
+  contacto: string;    // gestión de cobranza (editable en la app, ver Gestion)
   obs: string;
   mes: string;
+  promesa?: string;    // fecha de promesa de pago (gestión en la app), ISO
+}
+
+// Capa de GESTIÓN de cobranza — se edita en la app y se guarda APARTE de las facturas
+// (keyed por comprobante), así sobrevive a re-subir el estado de cuenta. Se superpone.
+export interface Gestion { contacto?: string; promesa?: string; nota?: string }
+export const gestionKey = (f: { clienteId: string; nro: string }) => (f.nro ? `${f.clienteId}|${f.nro}` : "");
+
+/** Superpone la gestión guardada (por comprobante) sobre las facturas del snapshot. */
+export function aplicarGestion(facturas: FacturaCC[], g: Record<string, Gestion>): FacturaCC[] {
+  if (!g || !Object.keys(g).length) return facturas;
+  return facturas.map((f) => {
+    const o = g[gestionKey(f)];
+    if (!o) return f;
+    return { ...f, contacto: o.contacto ?? f.contacto, promesa: o.promesa ?? f.promesa, obs: o.nota ?? f.obs };
+  });
 }
 
 export interface ParamsCC {
@@ -194,7 +210,7 @@ export function csvAMatriz(txt: string): string[][] {
   return rows;
 }
 
-const SINONIMOS: Record<keyof Omit<FacturaCC, "clienteId" | "importe" | "cobrado">, RegExp> & { importe: RegExp; cobrado: RegExp } = {
+const SINONIMOS: Record<keyof Omit<FacturaCC, "clienteId" | "importe" | "cobrado" | "promesa">, RegExp> & { importe: RegExp; cobrado: RegExp } = {
   cliente: /cliente|razon social|franquicia/,
   vencimiento: /vencimiento|vto|fecha.*venc/,
   tipo: /tipo.*comprob|tipo comp/,

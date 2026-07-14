@@ -5,8 +5,8 @@ import * as XLSX from "xlsx";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
-  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, PARAMS_DEFAULT,
-  type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse,
+  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, PARAMS_DEFAULT,
+  type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion,
 } from "@/lib/franquicias";
 
 // Cuentas Corrientes de Franquicias. Subís el estado de cuenta (CSV/Excel) y la app
@@ -26,6 +26,7 @@ const normTxt = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]
 const BUCKET_TONE: Record<string, string> = { "Por vencer": "bg-ink/25", "1–30 días": "bg-ok/70", "31–60 días": "bg-warn/70", "61–90 días": "bg-bad/60", "+90 días": "bg-bad" };
 
 type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion";
+type DimKey = "cliente" | "empresa" | "local" | "detalle" | "contacto";
 const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"]];
 
 export default function FranquiciasView() {
@@ -34,11 +35,12 @@ export default function FranquiciasView() {
   const [meta, setMeta] = useState<{ actualizado?: string } | null>(null);
   const [estado, setEstado] = useState<"loading" | "idle" | "saving">("loading");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [progreso, setProgreso] = useState("");
   const [preview, setPreview] = useState<ResultadoParse | null>(null);
   const [tab, setTab] = useState<Tab>("franquiciado");
   const [q, setQ] = useState("");
-  const [detalle, setDetalle] = useState<{ titulo: string; facturas: FacturaCC[] } | null>(null);
+  const [detalle, setDetalle] = useState<{ titulo: string; dimKey: DimKey; val: string } | null>(null);
   const [verComo, setVerComo] = useState(false);
   const [ajustar, setAjustar] = useState(false);                 // panel de cálculo expandido
   const [fEmpresa, setFEmpresa] = useState("");                  // filtros de la lista
@@ -99,6 +101,7 @@ export default function FranquiciasView() {
     try {
       const r = await (await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ facturas: preview.facturas, corte: params.fechaCorte }) })).json();
       if (!r.ok) throw new Error(r.error);
+      setInfo(`Guardado: ${int(r.total)} facturas${r.agregadas ? ` · ${r.agregadas} nuevas` : ""}${r.cobradas ? ` · ${r.cobradas} ya no están (cobradas/baja)` : ""}. La gestión de cobranza se mantuvo.`);
       setPreview(null); await cargar();
     } catch (e) { setError(e instanceof Error ? e.message : "no se pudo guardar"); }
     finally { setEstado("idle"); setProgreso(""); }
@@ -131,9 +134,16 @@ export default function FranquiciasView() {
   }, [resumenTabla, tab, q, orden]);
   const maxNeto = Math.max(1, ...filas.map((f) => f.neto));
 
-  function abrirDetalle(dimKey: "cliente" | "empresa" | "local" | "detalle" | "contacto", val: string, titulo: string) {
-    const fs = facturas.filter((f) => (dimKey === "cliente" ? f.cliente : dimKey === "empresa" ? f.empresa : dimKey === "local" ? f.local : dimKey === "detalle" ? f.detalle : f.contacto) === val);
-    setDetalle({ titulo, facturas: fs });
+  function abrirDetalle(dimKey: DimKey, val: string, titulo: string) {
+    setDetalle({ titulo, dimKey, val });
+  }
+  // Guarda la gestión de una factura (optimista + persiste). Sobrevive a re-subir.
+  async function updateGestion(key: string, patch: Gestion) {
+    setFacturas((prev) => prev.map((f) => gestionKey(f) === key
+      ? { ...f, ...(patch.contacto !== undefined ? { contacto: patch.contacto } : {}), ...(patch.promesa !== undefined ? { promesa: patch.promesa } : {}), ...(patch.nota !== undefined ? { obs: patch.nota } : {}) }
+      : f));
+    try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ gestionKey: key, gestion: patch }) }); }
+    catch { /* silencioso: el estado local ya quedó */ }
   }
   function filaOnClick(g: any) {
     if (tab === "franquiciado") abrirDetalle("cliente", g.k, `${g.clienteId} · ${g.k}`);
@@ -172,6 +182,12 @@ export default function FranquiciasView() {
 
       {cargando && <Card className="p-3 text-sm text-muted">{progreso || "Procesando…"}</Card>}
       {error && <Card className="border-bad/40 bg-bad/[0.04] p-3 text-sm text-bad">{error}</Card>}
+      {info && !cargando && (
+        <Card className="flex items-start justify-between gap-3 border-ok/40 bg-ok/[0.06] p-3 text-sm text-ok">
+          <span>✓ {info}</span>
+          <button onClick={() => setInfo("")} className="shrink-0 text-2xs font-medium opacity-70 hover:opacity-100">cerrar</button>
+        </Card>
+      )}
 
       {/* Preview tras subir */}
       {preview && !cargando && (
@@ -326,7 +342,7 @@ export default function FranquiciasView() {
         </>
       )}
 
-      {detalle && <DetalleModal titulo={detalle.titulo} facturas={detalle.facturas} params={params} onClose={() => setDetalle(null)} />}
+      {detalle && <DetalleModal titulo={detalle.titulo} facturas={facturas} dimKey={detalle.dimKey} val={detalle.val} params={params} onGestion={updateGestion} onClose={() => setDetalle(null)} />}
     </div>
   );
 }
@@ -366,15 +382,19 @@ function Kpi({ label, value, sub, tone, full, big }: { label: string; value: str
   );
 }
 
-// Detalle de un corte: facturas línea por línea (para conciliar y exportar).
-function DetalleModal({ titulo, facturas, params, onClose }: { titulo: string; facturas: FacturaCC[]; params: ParamsCC; onClose: () => void }) {
+const CONTACTOS = ["", "Contactado", "Contactado sin respuesta", "Sin contacto"];
+// Detalle de un corte: facturas línea por línea, con GESTIÓN de cobranza EDITABLE
+// (contacto, promesa de pago, nota) que persiste y sobrevive a re-subir el archivo.
+function DetalleModal({ titulo, facturas, dimKey, val, params, onGestion, onClose }: { titulo: string; facturas: FacturaCC[]; dimKey: DimKey; val: string; params: ParamsCC; onGestion: (key: string, patch: Gestion) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
-  const cs = useMemo(() => facturas.map((f) => costear(f, params)).sort((a, b) => b.neto - a.neto), [facturas, params]);
-  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? cs.filter((c) => normTxt(c.cliente + " " + c.local + " " + c.detalle + " " + c.nro).includes(t)) : cs; }, [cs, q]);
+  const [abierto, setAbierto] = useState<string | null>(null); // key de la fila expandida
+  const propio = (f: FacturaCC) => (dimKey === "cliente" ? f.cliente : dimKey === "empresa" ? f.empresa : dimKey === "local" ? f.local : dimKey === "detalle" ? f.detalle : f.contacto);
+  const cs = useMemo(() => facturas.filter((f) => propio(f) === val).map((f) => costear(f, params)).sort((a, b) => b.neto - a.neto), [facturas, val, params]); // eslint-disable-line react-hooks/exhaustive-deps
+  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? cs.filter((c) => normTxt(c.detalle + " " + c.nro + " " + (c.obs ?? "")).includes(t)) : cs; }, [cs, q]);
   const tot = cs.reduce((s, c) => ({ neto: s.neto + c.neto, saldo: s.saldo + c.saldo, pun: s.pun + c.punitorios }), { neto: 0, saldo: 0, pun: 0 });
   function exportar() {
-    descargarCSV("franquicias-detalle.csv", ["vencimiento", "concepto", "comprobante", "dias_mora", "importe", "cobrado", "saldo", "punitorios", "neto", "gestion"],
-      cs.map((c) => [fechaLabel(c.vencimiento), c.detalle, c.nro, c.diasMora, Math.round(c.importe), Math.round(c.cobrado), Math.round(c.saldo), Math.round(c.punitorios), Math.round(c.neto), c.contacto]));
+    descargarCSV("franquicias-detalle.csv", ["vencimiento", "concepto", "comprobante", "dias_mora", "importe", "cobrado", "saldo", "punitorios", "neto", "gestion", "promesa", "nota"],
+      cs.map((c) => [fechaLabel(c.vencimiento), c.detalle, c.nro, c.diasMora, Math.round(c.importe), Math.round(c.cobrado), Math.round(c.saldo), Math.round(c.punitorios), Math.round(c.neto), c.contacto, c.promesa ? fechaLabel(c.promesa) : "", c.obs ?? ""]));
   }
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-3 sm:p-8" onClick={onClose}>
@@ -389,30 +409,67 @@ function DetalleModal({ titulo, facturas, params, onClose }: { titulo: string; f
             <button onClick={onClose} className="text-2xs font-medium text-muted hover:text-ink">cerrar</button>
           </div>
         </div>
-        <div className="border-b border-line px-4 py-2"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar concepto / comprobante…" className="w-full rounded-md border border-line bg-surface px-2.5 py-1 text-2xs text-ink placeholder:text-faint focus:border-action" /></div>
+        <div className="border-b border-line px-4 py-2 text-2xs text-faint">Editá la <b className="text-muted">gestión de cobranza</b> acá — se guarda solo y <b className="text-muted">no se pierde</b> cuando volvés a subir el estado de cuenta.</div>
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
               <th className="px-4 py-2 font-medium">Vence</th><th className="px-3 py-2 font-medium">Concepto</th>
-              <th className="px-3 py-2 text-right font-medium">Mora</th><th className="px-3 py-2 text-right font-medium">Saldo</th>
-              <th className="px-3 py-2 text-right font-medium">Punit.</th><th className="px-3 py-2 text-right font-medium">Neto</th>
+              <th className="px-3 py-2 text-right font-medium">Mora</th><th className="px-3 py-2 text-right font-medium">Neto</th>
+              <th className="px-3 py-2 font-medium">Cobranza</th>
             </tr></thead>
             <tbody>
-              {vis.map((c, i) => (
-                <tr key={i} className="border-b border-line/60 last:border-0 hover:bg-ink/[0.02]">
-                  <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{fechaLabel(c.vencimiento)}</td>
-                  <td className="px-3 py-1.5 text-2xs text-ink">{c.detalle || "—"}{c.incobrable && <span className="ml-1.5 rounded bg-bad/10 px-1 py-px text-[10px] font-medium text-bad">incobrable</span>}<span className="ml-1.5 font-mono text-[10px] text-faint">{c.nro}</span></td>
-                  <td className="px-3 py-1.5 text-right font-mono text-2xs text-muted">{c.diasMora > 0 ? `${c.diasMora}d` : "—"}</td>
-                  <td className="px-3 py-1.5 text-right font-mono tnum text-ink monto">{money(c.saldo)}</td>
-                  <td className="px-3 py-1.5 text-right font-mono tnum text-warn monto">{c.punitorios ? money(c.punitorios) : "—"}</td>
-                  <td className="px-3 py-1.5 text-right font-mono tnum font-medium text-ink monto">{money(c.neto)}</td>
-                </tr>
-              ))}
+              {vis.map((c) => {
+                const k = gestionKey(c); const exp = abierto === k;
+                return (
+                <FilaFactura key={k || c.nro} c={c} exp={exp} onToggle={() => setAbierto(exp ? null : k)} onGestion={(patch) => onGestion(k, patch)} editable={!!k} />
+              ); })}
             </tbody>
           </table>
         </div>
       </div>
     </div>
+  );
+}
+
+function FilaFactura({ c, exp, onToggle, onGestion, editable }: { c: ReturnType<typeof costear>; exp: boolean; onToggle: () => void; onGestion: (patch: Gestion) => void; editable: boolean }) {
+  const [nota, setNota] = useState(c.obs ?? "");
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+  return (
+    <>
+      <tr onClick={onToggle} className="cursor-pointer border-b border-line/60 hover:bg-ink/[0.02]">
+        <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{fechaLabel(c.vencimiento)}</td>
+        <td className="px-3 py-1.5 text-2xs text-ink">{c.detalle || "—"}{c.incobrable && <span className="ml-1.5 rounded bg-bad/10 px-1 py-px text-[10px] font-medium text-bad">incobrable</span>}<span className="ml-1.5 font-mono text-[10px] text-faint">{c.nro}</span></td>
+        <td className="px-3 py-1.5 text-right font-mono text-2xs text-muted">{c.diasMora > 0 ? `${c.diasMora}d` : "—"}</td>
+        <td className="px-3 py-1.5 text-right font-mono tnum font-medium text-ink monto">{money(c.neto)}</td>
+        <td className="px-3 py-1.5">
+          {editable ? (
+            <select value={CONTACTOS.includes(c.contacto) ? c.contacto : ""} onClick={stop} onChange={(e) => onGestion({ contacto: e.target.value })} className={`rounded-md border px-1.5 py-0.5 text-[11px] ${gestionado(c.contacto) ? "border-ok/40 bg-ok/5 text-ok" : c.diasMora > 0 ? "border-bad/40 bg-bad/5 text-bad" : "border-line bg-surface text-muted"}`}>
+              <option value="">Sin gestionar</option>
+              <option value="Contactado">Contactado</option>
+              <option value="Contactado sin respuesta">Sin respuesta</option>
+              <option value="Sin contacto">Sin contacto</option>
+            </select>
+          ) : <span className="text-2xs text-faint">—</span>}
+          {c.promesa && <span className="ml-1.5 rounded bg-action/10 px-1 py-px text-[10px] text-action">💰 {fechaLabel(c.promesa)}</span>}
+        </td>
+      </tr>
+      {exp && editable && (
+        <tr className="border-b border-line/60 bg-ink/[0.015]">
+          <td colSpan={5} className="px-4 py-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-2xs">
+              <span className="text-faint">saldo <b className="text-ink monto">{money(c.saldo)}</b> · punitorio <b className="text-warn monto">{money(c.punitorios)}</b> ({c.tasa.toFixed(1)}%)</span>
+              <label className="flex items-center gap-1.5 text-muted">💰 Promesa de pago
+                <input type="date" value={c.promesa ?? ""} onClick={stop} onChange={(e) => onGestion({ promesa: e.target.value })} className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink" />
+                {c.promesa && <button onClick={(e) => { stop(e); onGestion({ promesa: "" }); }} className="text-faint hover:text-ink">×</button>}
+              </label>
+              <label className="flex flex-1 items-center gap-1.5 text-muted">📝 Nota
+                <input value={nota} onClick={stop} onChange={(e) => setNota(e.target.value)} onBlur={() => nota !== (c.obs ?? "") && onGestion({ nota })} placeholder="ej. quedó en pagar la semana que viene" className="min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink placeholder:text-faint" />
+              </label>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
