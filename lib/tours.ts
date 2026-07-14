@@ -69,6 +69,16 @@ export const TOURS_PANTALLA: Record<string, { nombre: string; pasos: PasoTour[] 
       { element: '[data-tour="mozos-detalle"]', popover: { title: "4 · Detalle por local", description: "Cada combinación local + mozo. Usá el buscador para encontrar un mozo o un restaurante puntual.", side: "top" } },
     ],
   },
+  "/estimacion": {
+    nombre: "Estimación de insumos",
+    pasos: [
+      { popover: { title: "≈ Cómo funciona la estimación", description: "Pronostica cuánto vas a vender por día de semana (los mismos días recientes pesan más) y lo traduce a insumos con las recetas. Para planificar compras." } },
+      { element: '[data-tour="est-horizonte"]', popover: { title: "1 · Horizonte", description: "Para cuántos días adelante querés estimar (7, 14 o 30).", side: "bottom" } },
+      { element: '[data-tour="est-local"]', popover: { title: "2 · Local", description: "Todos los locales juntos, o uno puntual.", side: "bottom" } },
+      { element: '[data-tour="est-kpis"]', popover: { title: "3 · El resumen", description: "Costo estimado de insumos, unidades pronosticadas y la cobertura de receta (qué % de las ventas se pudo traducir).", side: "bottom" } },
+      { element: '[data-tour="est-insumos"]', popover: { title: "4 · Qué comprar", description: "Cada insumo con la cantidad estimada, los bultos aproximados y el costo. Ordenado por plata.", side: "top" } },
+    ],
+  },
   "/anulados": {
     nombre: "Anulados",
     pasos: [

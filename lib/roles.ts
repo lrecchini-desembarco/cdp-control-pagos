@@ -17,7 +17,7 @@ export const ROLES: Record<Rol, RolInfo> = {
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/cobros", "/horas", "/mozos", "/anulados", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/cobros", "/horas", "/mozos", "/anulados", "/insumos", "/estimacion", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -112,6 +112,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/anulados", label: "Anulados y devoluciones", icon: "⊘", section: "Ventas y compras", fresh: "vivo", desc: "Control anti-fuga: qué se anula/devuelve/invita, cuánto, sobre qué productos, cuándo y quién autoriza (Tango)." },
   // Costos y precios (módulo Costos) — se cargan a mano (Excel), hoy vigentes
   { href: "/insumos", label: "Insumos", icon: "◆", section: "Costos", fresh: "carga", desc: "Maestro de insumos con costo por unidad." },
+  { href: "/estimacion", label: "Estimación de insumos", icon: "≈", section: "Costos", fresh: "vivo", desc: "Cuánto de cada insumo vas a necesitar (pronóstico por día de semana × recetas), para planificar compras." },
   { href: "/recetas", label: "Recetas", icon: "❏", section: "Costos", fresh: "carga", desc: "Qué insumos (y cuánto) lleva cada producto." },
   { href: "/listas", label: "Precios y margen", icon: "▤", section: "Costos", fresh: "carga", desc: "Costo de receta, CMV y margen por lista de precios." },
   { href: "/apps", label: "Margen apps", icon: "◧", section: "Costos", fresh: "carga", desc: "Margen por app de delivery, según sus comisiones." },
