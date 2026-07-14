@@ -12,12 +12,12 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
     label: "Operaciones",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/cobros", "/horas", "/mozos", "/anulados", "/insumos", "/estimacion", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/cobros", "/horas", "/mozos", "/anulados", "/insumos", "/estimacion", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/contactos", "/firmas", "/guia"],
     gestionaUsuarios: false,
   },
   local: {
@@ -106,6 +106,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/facturacion", label: "Facturación", icon: "≣", section: "Ventas y compras", fresh: "vivo", desc: "Cuánta plata mueve cada producto, local y marca (estimada, Tango)." },
   { href: "/mercadopago", label: "Cobros · Mercado Pago", icon: "◐", section: "Ventas y compras", fresh: "vivo", desc: "Lo que cobró Mercado Pago, por medio de pago y día; para conciliar." },
   { href: "/bancos", label: "Bancos", icon: "◫", section: "Ventas y compras", fresh: "carga", desc: "Liquidaciones de tarjetas y bancos: bruto, comisiones y neto acreditado (subís el CSV)." },
+  { href: "/franquicias", label: "Cuentas Corrientes · Franquicias", icon: "◨", section: "Ventas y compras", fresh: "carga", desc: "Lo que cada franquiciado debe: subís el estado de cuenta y la app recalcula mora, punitorios y neto — con parámetros que controlás vos. Aging y gestión de cobranza." },
   { href: "/cobros", label: "Cobros · Medios de pago", icon: "▚", section: "Ventas y compras", fresh: "vivo", desc: "Cuánto entró por cada medio de pago (efectivo, tarjetas, Mercado Pago/QR, PedidosYa, Rappi), de los cierres de Tango." },
   { href: "/horas", label: "Ticket y horarios", icon: "◷", section: "Ventas y compras", fresh: "vivo", desc: "Ticket promedio y mapa de calor de horas: cuándo y cuánto se vende, con cantidad de tickets (Tango)." },
   { href: "/mozos", label: "Mozos", icon: "☰", section: "Ventas y compras", fresh: "vivo", desc: "Ventas y ticket promedio por mozo (de las comandas de Tango), filtrable por local." },

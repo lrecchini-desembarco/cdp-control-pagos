@@ -90,6 +90,16 @@ export const TOURS_PANTALLA: Record<string, { nombre: string; pasos: PasoTour[] 
       { element: '[data-tour="anul-quien"]', popover: { title: "5 · Quién", description: "Responsable (parcial) y —más útil— quién autoriza las anulaciones. Ahí saltan los patrones sospechosos.", side: "top" } },
     ],
   },
+  "/franquicias": {
+    nombre: "Cuentas Corrientes",
+    pasos: [
+      { popover: { title: "◨ Cómo usar Cuentas Corrientes", description: "Lo que cada franquiciado le debe al grupo. Subís el estado de cuenta y la app <b>recalcula todo</b> (mora, punitorios, neto) como vos quieras. Te muestro las zonas." } },
+      { element: '[data-tour="fr-kpis"]', popover: { title: "1 · Los números grandes", description: "<b>Neto a cobrar</b> total, el <b>cobrable real</b> (sin incobrables), lo <b>vencido</b> y lo que está <b>por vencer</b>.", side: "bottom" } },
+      { element: '[data-tour="fr-control"]', popover: { title: "2 · Controlá cómo se suma", description: "Acá está lo clave: cambiás la <b>fecha de corte</b>, la <b>tasa</b>, sobre qué se calcula el punitorio y si contás los incobrables — y <b>todo recalcula al instante</b>. Tocá «¿cómo se calcula?» para ver la fórmula.", side: "bottom" } },
+      { element: '[data-tour="fr-aging"]', popover: { title: "3 · Antigüedad de la deuda", description: "El aging: cuánto está por vencer, y cuánto lleva 30, 60, 90+ días de mora. De un vistazo ves dónde está el riesgo.", side: "top" } },
+      { element: '[data-tour="fr-tabs"]', popover: { title: "4 · Quién debe", description: "Por <b>franquiciado</b>, empresa, local, concepto o estado de gestión. Tocá una fila para ver sus facturas y exportar.", side: "top" } },
+    ],
+  },
   "/cruce": {
     nombre: "el Cruce",
     pasos: [
