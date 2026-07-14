@@ -32,6 +32,7 @@ export interface FactProducto {
   tieneCosto?: boolean;      // true = receta completa y costeable (hay margen real)
   tieneReceta?: boolean;     // existe receta EDITABLE (maestro/Excel) para el SKU, aunque incompleta
   recetaTango?: boolean;     // existe receta en el recetario de Tango (cocina), aunque sin costo cargado
+  costoDudoso?: boolean;     // el costo de receta da un margen irreal (>techo) -> receta casi seguro incompleta; no se cuenta
 }
 export interface FactTurno { turno: string; unidades: number; facturacion: number; }
 export interface FactDia { fecha: string; unidades: number; facturacion: number; }
@@ -107,6 +108,18 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
   const precioDe = (sku: string, suc: string): number =>
     pLocal.get(clave(sku, baseSuc(suc))) ?? pSku.get(sku) ?? 0;
 
+  // TECHO DE PLAUSIBILIDAD del margen: si el costo de receta implica un margen bruto
+  // irrealmente alto (> CEIL_MARGEN), la receta casi seguro está INCOMPLETA (le faltan
+  // renglones aunque sus insumos existan en el maestro) -> el costo no es confiable.
+  // Se saca del margen (no cuenta en margenTotal ni facturacionConCosto) y se marca
+  // "costoDudoso" para avisar. Evita el margen inflado (ej. balde/doble cheese al 80%).
+  const CEIL_MARGEN = 0.70;
+  const costoDudoso = new Set<string>();
+  for (const [sku, cu] of Array.from(costoPorSku.entries())) {
+    const precio = pSku.get(sku) ?? 0;
+    if (precio > 0 && 1 - cu / precio > CEIL_MARGEN) { costoDudoso.add(sku); costoPorSku.delete(sku); }
+  }
+
   const prod = new Map<string, FactProducto>();
   const uppPorSku = new Map<string, number>(); // unidades VALORIZADAS por SKU (para el margen)
   const local = new Map<string, { sucursal: string; marca: string; unidades: number; facturacion: number; conPrecio: number; margen: number }>();
@@ -169,6 +182,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     abc[p.clase === "A" ? "a" : p.clase === "B" ? "b" : "c"]++;
     p.tieneReceta = skusConReceta.has(p.sku);
     p.recetaTango = skusRecetaTango.has(p.sku);
+    p.costoDudoso = costoDudoso.has(p.sku); // receta con costo que da margen irreal (incompleta)
     // Margen bruto del producto (costo de receta constante por SKU).
     const cu = costoPorSku.get(p.sku);
     if (cu != null && cu > 0) {

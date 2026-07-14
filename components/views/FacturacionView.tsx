@@ -6,7 +6,7 @@ import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/compone
 import { descargarCSV } from "@/lib/exportar-csv";
 import RecetaModal from "@/components/RecetaModal";
 
-interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; tieneReceta?: boolean; recetaTango?: boolean; }
+interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; tieneReceta?: boolean; recetaTango?: boolean; costoDudoso?: boolean; }
 interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; margen: number; }
 interface FactMarca { marca: string; unidades: number; facturacion: number; }
 interface FactTurno { turno: string; unidades: number; facturacion: number; }
@@ -261,7 +261,7 @@ export default function FacturacionView() {
                 <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                   <th className="px-4 py-2 font-medium">#</th><th className="px-3 py-2 font-medium">Producto</th>
                   <th className="px-3 py-2 text-right font-medium">Unidades</th><th className="px-3 py-2 text-right font-medium">Precio</th>
-                  <th className="px-3 py-2 font-medium">Facturación estimada</th><th className="px-3 py-2 text-right font-medium">Margen bruto</th>
+                  <th className="px-3 py-2 font-medium">Facturación{d?.exacta ? "" : " estimada"}</th><th className="px-3 py-2 text-right font-medium">Margen bruto</th>
                 </tr></thead>
                 <tbody>
                   {productos.slice(0, LIMITE).map((p, i) => (
@@ -280,7 +280,9 @@ export default function FacturacionView() {
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {p.tieneCosto
+                        {p.costoDudoso
+                          ? <span className="text-2xs text-warn" title="El costo de la receta da un margen irrealmente alto: casi seguro la receta está incompleta (le faltan renglones). No se cuenta en el margen hasta completarla en Recetas.">⚠ revisar receta</span>
+                          : p.tieneCosto
                           ? <span className={`font-mono tnum font-medium ${(p.margen ?? 0) < 0 ? "text-bad" : "text-ok"}`}><span className="monto">{money(p.margen ?? 0)}</span> <span className="text-2xs text-faint">{Math.round((p.margenPct ?? 0) * 100)}%</span></span>
                           : p.tieneReceta
                             ? <span className="text-2xs text-warn" title="Tiene receta cargada pero le falta un insumo en el maestro para poder costearla. Completá el insumo en Insumos.">receta incompleta</span>
@@ -301,7 +303,7 @@ export default function FacturacionView() {
             <table className="w-full text-left text-sm">
               <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                 <th className="px-4 py-2 font-medium">#</th><th className="px-3 py-2 font-medium">Local</th>
-                <th className="px-3 py-2 text-right font-medium">Unidades</th><th className="px-3 py-2 font-medium">Facturación estimada</th>
+                <th className="px-3 py-2 text-right font-medium">Unidades</th><th className="px-3 py-2 font-medium">Facturación{d?.exacta ? "" : " estimada"}</th>
                 <th className="px-3 py-2 text-right font-medium">Margen bruto</th><th className="px-3 py-2 text-right font-medium">Cobertura</th>
               </tr></thead>
               <tbody>
