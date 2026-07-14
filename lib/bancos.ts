@@ -102,6 +102,19 @@ export function entidadDeRuta(ruta: string): string {
   return e || "General";
 }
 
+// Alias de locales: distintas carpetas para la MISMA entidad -> un único nombre
+// canónico. Evita que un local se cuente dos veces (ej. "DDR" = "El Desembarco del
+// Rey": mismas cuentas, dos carpetas -> doble conteo). La clave se normaliza
+// (sin acentos, minúsculas). Ampliable si aparecen más alias.
+const LOCAL_ALIAS: Record<string, string> = {
+  "ddr": "El Desembarco del Rey",
+  "el desembarco del rey": "El Desembarco del Rey",
+};
+export function canonicalLocal(local: string): string {
+  const k = norm(local);
+  return LOCAL_ALIAS[k] ?? (local || "General");
+}
+
 function mapear(rows: string[][]): { start: number; fecha: number; imp: number; deb: number; cred: number; concepto: number } | null {
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const h = rows[i].map(norm);
@@ -137,7 +150,7 @@ export function parseArchivoBanco(nombre: string, ruta: string, data: ArrayBuffe
   const m = mapear(rows);
   if (!m) return { movs: [], descartados: 0, error: "no encontré encabezado (fecha + importe/débito-crédito)" };
   const banco = detectarBanco(rows, nombre, ruta);
-  const local = entidadDeRuta(ruta || nombre);
+  const local = canonicalLocal(entidadDeRuta(ruta || nombre));
   const movs: MovBanco[] = [];
   let descartados = 0;
   for (let r = m.start; r < rows.length; r++) {
@@ -257,7 +270,7 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
   }
   if (!movs.length) return { movs: [], descartados: desconf, error: "no reconocí movimientos (¿PDF escaneado o formato nuevo?)" };
   const banco = detectarBancoPdf(lineasTxt.slice(0, 40).join(" "), ruta);
-  const local = entidadDeRuta(ruta || nombre);
+  const local = canonicalLocal(entidadDeRuta(ruta || nombre));
   for (const m of movs) { m.banco = banco; m.local = local; }
   return { movs, descartados: desconf };
 }
@@ -402,6 +415,75 @@ export function resumirIntercompany(movs: MovBanco[], base: Record<string, BaseE
     .map(([cuit, v]) => ({ cuit, nombre: v.nombre, ingreso: v.ingreso, egreso: v.egreso, neto: v.ingreso - v.egreso, n: v.n }))
     .sort((a, b) => (b.ingreso + b.egreso) - (a.ingreso + a.egreso));
   return { total: ingresos + egresos, ingresos, egresos, n, porEmpresa };
+}
+
+// ── Migración de alias de local (arreglo del doble conteo) ───────────────────
+export interface DiagAlias {
+  antes: { movs: number; ingresos: number; egresos: number };
+  despues: { movs: number; ingresos: number; egresos: number };
+  duplicados: { movs: number; ingresos: number; egresos: number };
+  renombrados: { de: string; a: string; movs: number }[];
+}
+const firmaMov = (m: MovBanco) => `${m.fecha}|${m.ingreso}|${m.egreso}|${m.concepto}|${m.cuit ?? ""}`;
+
+/** Reagrupa por local canónico y elimina duplicados SOLO donde dos carpetas (alias)
+ *  colapsaron al mismo local. Dedup por firma con "máximo entre orígenes": si el
+ *  mismo movimiento vino de las dos carpetas, queda 1; si un mismo movimiento existe
+ *  2 veces en UNA sola carpeta (transacción legítima repetida), se conservan las 2.
+ *  Los locales SIN colisión no se tocan (riesgo cero de borrar movimientos reales). */
+export function migrarAlias(movs: MovBanco[]): { movs: MovBanco[]; diag: DiagAlias } {
+  const sum = (arr: MovBanco[], f: (m: MovBanco) => number) => arr.reduce((s, m) => s + f(m), 0);
+  const antes = { movs: movs.length, ingresos: sum(movs, (m) => m.ingreso), egresos: sum(movs, (m) => m.egreso) };
+
+  // Agrupar por (canónico, banco, mes), recordando el local ORIGINAL de cada mov.
+  const grupos = new Map<string, { orig: string; m: MovBanco }[]>();
+  for (const m of movs) {
+    const canon = canonicalLocal(m.local);
+    const k = `${canon}|${m.banco}|${m.mes}`;
+    (grupos.get(k) ?? grupos.set(k, []).get(k)!).push({ orig: m.local, m });
+  }
+
+  const out: MovBanco[] = [];
+  const renombradosMap = new Map<string, number>(); // "de → a" -> movs
+  for (const [k, arr] of Array.from(grupos.entries())) {
+    const canon = k.slice(0, k.indexOf("|"));
+    const origLocals = new Set(arr.map((x) => x.orig));
+    if (origLocals.size <= 1) {
+      // Sin colisión de alias: dejar los movimientos tal cual, solo renombrando al canónico.
+      for (const x of arr) {
+        if (x.orig !== canon) renombradosMap.set(`${x.orig} → ${canon}`, (renombradosMap.get(`${x.orig} → ${canon}`) ?? 0) + 1);
+        out.push(x.m.local === canon ? x.m : { ...x.m, local: canon });
+      }
+      continue;
+    }
+    // Colisión: contar cada firma por local original, y quedarnos con el MÁXIMO entre orígenes.
+    const porLocal = new Map<string, Map<string, { mov: MovBanco; n: number }>>();
+    for (const x of arr) {
+      const lm = porLocal.get(x.orig) ?? porLocal.set(x.orig, new Map()).get(x.orig)!;
+      const s = firmaMov(x.m); const e = lm.get(s);
+      if (e) e.n++; else lm.set(s, { mov: x.m, n: 1 });
+    }
+    const maxN = new Map<string, { mov: MovBanco; n: number }>();
+    for (const lm of Array.from(porLocal.values())) for (const [s, e] of Array.from(lm.entries())) {
+      const cur = maxN.get(s);
+      if (!cur || e.n > cur.n) maxN.set(s, e);
+    }
+    for (const e of Array.from(maxN.values())) for (let i = 0; i < e.n; i++) out.push({ ...e.mov, local: canon });
+    for (const x of arr) if (x.orig !== canon) renombradosMap.set(`${x.orig} → ${canon}`, (renombradosMap.get(`${x.orig} → ${canon}`) ?? 0) + 1);
+  }
+
+  const despues = { movs: out.length, ingresos: sum(out, (m) => m.ingreso), egresos: sum(out, (m) => m.egreso) };
+  const renombrados = Array.from(renombradosMap.entries())
+    .map(([kv, n]) => { const [de, a] = kv.split(" → "); return { de, a, movs: n }; })
+    .sort((x, y) => y.movs - x.movs);
+  return {
+    movs: out,
+    diag: {
+      antes, despues,
+      duplicados: { movs: antes.movs - despues.movs, ingresos: antes.ingresos - despues.ingresos, egresos: antes.egresos - despues.egresos },
+      renombrados,
+    },
+  };
 }
 
 export function resumirBancos(movs: MovBanco[]): ResumenBancos {
