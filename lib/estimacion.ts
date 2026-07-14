@@ -5,7 +5,7 @@ import type { VentaSku } from "./sources/types";
 import { versionVigente, indiceInsumos, type Receta } from "./recetas";
 import { precioConImpuestos, type Insumo } from "./insumos";
 
-export interface InsumoEstimado { cod: string; nombre: string; presentacion: string; cantidad: number; bultos: number; costo: number; nProductos: number }
+export interface InsumoEstimado { cod: string; nombre: string; proveedor: string; presentacion: string; cantidad: number; bultos: number; costo: number; nProductos: number }
 export interface SinRecetaItem { sku: string; nombre: string; unidades: number }
 export interface ResumenEstimacion {
   horizonteDias: number;
@@ -108,7 +108,7 @@ export function estimarInsumos(
     const ins = idxIns.get(key);
     const costoU = ins ? precioConImpuestos(ins) : 0;
     const factor = ins?.factor && ins.factor > 0 ? ins.factor : 0;
-    return { cod: ins?.cod ?? key, nombre: ins?.descripcion ?? key, presentacion: ins?.presentacion ?? "", cantidad: v.cantidad, bultos: factor ? v.cantidad / factor : 0, costo: v.cantidad * costoU, nProductos: v.skus.size };
+    return { cod: ins?.cod ?? key, nombre: ins?.descripcion ?? key, proveedor: ins?.proveedor ?? "", presentacion: ins?.presentacion ?? "", cantidad: v.cantidad, bultos: factor ? v.cantidad / factor : 0, costo: v.cantidad * costoU, nProductos: v.skus.size };
   }).sort((a, b) => b.costo - a.costo);
 
   const den = (uConReceta + uSinReceta) || 1;

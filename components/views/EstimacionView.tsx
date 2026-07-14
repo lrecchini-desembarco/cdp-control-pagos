@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, ErrorState, Skeleton } from "@/components/ui/primitives";
+import { descargarCSV } from "@/lib/exportar-csv";
 import type { ResumenEstimacion } from "@/lib/estimacion";
+
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 const moneyC = (n: number) => {
@@ -23,6 +26,7 @@ export default function EstimacionView() {
   const [sucursales, setSucursales] = useState<string[]>([]);
   const [estado, setEstado] = useState<"cargando" | "ok" | "error">("cargando");
   const [err, setErr] = useState("");
+  const [q, setQ] = useState("");
 
   async function cargar(d = dias, suc = sucursal) {
     setEstado("cargando");
@@ -38,6 +42,18 @@ export default function EstimacionView() {
   useEffect(() => { cargar(dias, sucursal); /* eslint-disable-next-line */ }, [dias, sucursal]);
 
   const maxCosto = Math.max(1, ...(data?.porInsumo.map((i) => i.costo) ?? [1]));
+  const filtro = norm(q.trim());
+  const insumos = useMemo(() => {
+    if (!data) return [];
+    if (!filtro) return data.porInsumo;
+    return data.porInsumo.filter((i) => norm(i.nombre + " " + i.proveedor).includes(filtro));
+  }, [data, filtro]);
+  function exportar() {
+    if (!data) return;
+    descargarCSV(`estimacion-insumos-${data.futDesde}_${data.futHasta}${sucursal ? "-" + sucursal : ""}.csv`,
+      ["insumo", "proveedor", "presentacion", "cantidad", "bultos_aprox", "costo_estimado"],
+      insumos.map((i) => [i.nombre, i.proveedor, i.presentacion, Math.round(i.cantidad * 100) / 100, Math.round(i.bultos * 100) / 100, Math.round(i.costo)]));
+  }
 
   return (
     <div className="space-y-4">
@@ -77,21 +93,29 @@ export default function EstimacionView() {
 
           {/* Por insumo */}
           <div data-tour="est-insumos"><Card className="overflow-hidden">
-            <p className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">Insumos a reponer ({data.porInsumo.length})</p>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2">
+              <p className="text-2xs font-medium uppercase tracking-wide text-faint">Insumos a reponer ({insumos.length})</p>
+              <div className="flex items-center gap-2">
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar insumo o proveedor…" className="w-48 rounded-md border border-line bg-surface px-2.5 py-1 text-2xs text-ink placeholder:text-faint focus:border-action" />
+                <button onClick={exportar} className="rounded-md border border-line bg-surface px-2.5 py-1 text-2xs font-medium text-action hover:bg-action/5">Exportar CSV</button>
+              </div>
+            </div>
             <div className="max-h-[32rem] overflow-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                   <th className="px-4 py-2 font-medium">Insumo</th>
+                  <th className="px-3 py-2 font-medium">Proveedor</th>
                   <th className="px-3 py-2 text-right font-medium">Cantidad</th>
                   <th className="px-3 py-2 text-right font-medium">Bultos aprox.</th>
                   <th className="px-3 py-2 font-medium">Costo estimado</th>
                 </tr></thead>
                 <tbody>
-                  {data.porInsumo.length === 0 ? (
-                    <tr><td colSpan={4} className="px-4 py-8 text-center text-2xs text-faint">Sin insumos estimables. ¿Hay ventas y recetas cargadas para este filtro?</td></tr>
-                  ) : data.porInsumo.map((i) => (
+                  {insumos.length === 0 ? (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-2xs text-faint">{q ? `Ningún insumo coincide con “${q}”.` : "Sin insumos estimables. ¿Hay ventas y recetas cargadas para este filtro?"}</td></tr>
+                  ) : insumos.map((i) => (
                     <tr key={i.cod} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
                       <td className="px-4 py-2 text-ink">{i.nombre} {i.presentacion && <span className="ml-1 text-2xs text-faint">· {i.presentacion}</span>}</td>
+                      <td className="px-3 py-2 text-2xs text-muted">{i.proveedor || "—"}</td>
                       <td className="px-3 py-2 text-right font-mono text-xs text-ink">{num1(i.cantidad)}</td>
                       <td className="px-3 py-2 text-right font-mono text-2xs text-muted">{i.bultos ? "≈ " + num1(i.bultos) : "—"}</td>
                       <td className="px-3 py-2">
