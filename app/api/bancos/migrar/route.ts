@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
-import { guard } from "@/lib/api-guard";
+import { guardAdmin } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
 import { migrarAlias, purgarOtroDuplicado, resumirBancos, type MovBanco } from "@/lib/bancos";
 
@@ -23,7 +23,7 @@ async function leer(key: string): Promise<MovBanco[]> {
 //  - sin aplicar (dry-run): devuelve el diagnóstico SIN tocar nada.
 //  - aplicar:true: hace backup del blob actual y guarda la versión migrada.
 export async function POST(req: NextRequest) {
-  const g = await guard("/bancos");
+  const g = await guardAdmin();
   if ("res" in g) return g.res;
   try {
     const body = (await req.json().catch(() => ({}))) as { aplicar?: boolean; restaurar?: boolean; accion?: string };

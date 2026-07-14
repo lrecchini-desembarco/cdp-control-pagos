@@ -216,7 +216,17 @@ export default function BancosView() {
   // qué extractos cargaste y —lo importante— qué mes FALTA (hueco entre meses cargados).
   const matrizCob = useMemo(() => {
     if (!cobertura.length) return null;
-    const mesesU = Array.from(new Set(cobertura.map((c) => c.mes))).sort();
+    const presentes = Array.from(new Set(cobertura.map((c) => c.mes))).sort();
+    // Rango COMPLETO de meses (del primero al último). Así un mes que falta en TODOS
+    // los bancos (ej. 2025-09) igual aparece como columna en rojo, no desaparece.
+    const rango = (min: string, max: string) => {
+      const out: string[] = []; if (!min || !max) return presentes;
+      let [y, m] = min.split("-").map(Number);
+      const [ey, em] = max.split("-").map(Number);
+      while (y < ey || (y === ey && m <= em)) { out.push(`${y}-${String(m).padStart(2, "0")}`); m++; if (m > 12) { m = 1; y++; } }
+      return out;
+    };
+    const mesesU = rango(presentes[0], presentes[presentes.length - 1]);
     const mapa = new Map<string, Cobertura[]>();
     for (const c of cobertura) {
       const k = `${c.banco}|~|${c.local}`;

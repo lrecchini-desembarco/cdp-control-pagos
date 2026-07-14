@@ -41,12 +41,21 @@ export function parseNumBanco(v: unknown): number {
   return Number.isFinite(n) ? (neg ? -n : n) : 0;
 }
 
+// Valida que año/mes/día tengan rangos posibles (evita meses fantasma tipo 2026-13).
+function ymdValido(y: string, mo: string, d: string): boolean {
+  const Y = +y, M = +mo, D = +d;
+  return Y >= 2000 && Y <= 2100 && M >= 1 && M <= 12 && D >= 1 && D <= 31;
+}
 function isoDe(s: unknown): string {
   const str = String(s || "").trim();
   let m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  if (m) return ymdValido(m[1], m[2], m[3]) ? `${m[1]}-${m[2]}-${m[3]}` : "";
   m = str.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/);
-  if (m) { let [, d, mo, y] = m; if (y.length === 2) y = "20" + y; return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`; }
+  if (m) {
+    let [, d, mo, y] = m; if (y.length === 2) y = "20" + y;
+    const mo2 = mo.padStart(2, "0"), d2 = d.padStart(2, "0");
+    return ymdValido(y, mo2, d2) ? `${y}-${mo2}-${d2}` : "";
+  }
   return "";
 }
 const norm = (s: unknown) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
@@ -99,6 +108,9 @@ export function entidadDeRuta(ruta: string): string {
     i += 1; e = segs[i + 1] || "";
     if (i > segs.length) break;
   }
+  // Si lo que quedó es el propio ARCHIVO (cuelga directo de la carpeta, sin subcarpeta
+  // de entidad), no es un local -> "General". Evita locales tipo "Galicia.csv".
+  if (/\.(csv|xlsx?|pdf)$/i.test(e || "")) return "General";
   return e || "General";
 }
 
@@ -204,7 +216,7 @@ function detectarBancoPdf(texto: string, ruta: string): string {
   return "Otro";
 }
 
-interface FilaPdf { ancla?: number; fecha?: string; concepto?: string; mov?: number | null; saldo?: number }
+interface FilaPdf { ancla?: number; fecha?: string; concepto?: string; mov?: number | null; saldo?: number; cuit?: string }
 
 /** Parsea los items de texto de un PDF (por página) a movimientos.
  * Cada fila trae un IMPORTE (columna) y un SALDO corrido. Dos casos:
@@ -231,8 +243,8 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
       if (!nums.length) continue;
       const saldo = parseNumBanco(nums[nums.length - 1].s); // el más a la derecha = saldo
       const mov = nums.length >= 2 ? parseNumBanco(nums[nums.length - 2].s) : null;
-      const concepto = ln.slice(1).filter((i) => !esNum(i.s) && !fechaPdf(i.s)).map((i) => i.s).join(" ").trim().slice(0, 80);
-      filas.push({ fecha, concepto, mov, saldo });
+      const conceptoFull = ln.slice(1).filter((i) => !esNum(i.s) && !fechaPdf(i.s)).map((i) => i.s).join(" ").trim();
+      filas.push({ fecha, concepto: conceptoFull.slice(0, 80), mov, saldo, cuit: extraerCuit(conceptoFull) });
     }
   }
   const datos = filas.filter((f) => f.fecha);
@@ -249,10 +261,18 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
     if (!okPrev && !okNext) desconf++;
   }
   if (evaluadas && desconf / evaluadas > 0.3) return { movs: [], descartados: desconf, error: "formato no reconocido (los importes no cuadran con el saldo — ¿resumen de tarjeta o escaneado?)" };
+  // Modo delta (banco SIN signo, ej. Ciudad): si el PDF lista del más nuevo al más
+  // viejo, el delta de saldo saldría con el signo invertido (ingreso↔egreso). Se
+  // detecta por las fechas y se procesa en orden cronológico (el ancla "SALDO
+  // ANTERIOR" queda al inicio tras invertir). Bancos firmados no se tocan.
+  let filasBuild = filas;
+  if (!firmado && datos.length > 1 && (datos[0].fecha as string) > (datos[datos.length - 1].fecha as string)) {
+    filasBuild = [...filas].reverse();
+  }
   // Armar movimientos.
   const movs: MovBanco[] = [];
   let saldoPrev: number | null = null;
-  for (const f of filas) {
+  for (const f of filasBuild) {
     if (f.ancla != null) { saldoPrev = f.ancla; continue; }
     if (!f.fecha) continue;
     let ingreso = 0, egreso = 0;
@@ -266,7 +286,7 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
     saldoPrev = f.saldo as number;
     if (ingreso === 0 && egreso === 0) continue;
     const concepto = f.concepto ?? "";
-    movs.push({ fecha: f.fecha, mes: f.fecha.slice(0, 7), banco: "", local: "", concepto, ingreso, egreso, categoria: categoriaDe(concepto), cuit: extraerCuit(concepto) });
+    movs.push({ fecha: f.fecha, mes: f.fecha.slice(0, 7), banco: "", local: "", concepto, ingreso, egreso, categoria: categoriaDe(concepto), cuit: f.cuit });
   }
   if (!movs.length) return { movs: [], descartados: desconf, error: "no reconocí movimientos (¿PDF escaneado o formato nuevo?)" };
   const banco = detectarBancoPdf(lineasTxt.slice(0, 40).join(" "), ruta);
