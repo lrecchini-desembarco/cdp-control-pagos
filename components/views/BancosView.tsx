@@ -63,7 +63,18 @@ export default function BancosView() {
   const [avisoBase, setAvisoBase] = useState<{ texto: string; huboDescartes: boolean } | null>(null);
   const [buscarCuit, setBuscarCuit] = useState("");
   const [tipoCuit, setTipoCuit] = useState<"" | "cliente" | "proveedor" | "propia">("");
+  const [detalle, setDetalle] = useState<{ titulo: string; filtro: Record<string, string> } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Abre el detalle (movimientos línea por línea) para un corte, respetando los filtros activos.
+  function abrirDetalle(extra: Record<string, string>, titulo: string) {
+    const filtro: Record<string, string> = {};
+    if (mesSel) filtro.mes = mesSel;
+    if (bancoSel) filtro.banco = bancoSel;
+    if (cuitSel) filtro.cuit = cuitSel;
+    Object.assign(filtro, extra); // el corte clickeado pisa/afina el filtro activo
+    setDetalle({ titulo, filtro });
+  }
 
   async function cargarBases() {
     try { const j = await (await fetch("/api/bancos/bases", { cache: "no-store" })).json(); if (j.ok) setBasesConteo(j.conteo); } catch { /* */ }
@@ -355,6 +366,23 @@ export default function BancosView() {
             <Kpi label="Período" value={r.desde && r.hasta ? `${mesLabel(r.desde.slice(0, 7))} → ${mesLabel(r.hasta.slice(0, 7))}` : "—"} plain sub={`${r.porBanco.length} bancos`} />
           </div>
 
+          {/* Aviso: banco no reconocido ("Otro") — destapa plata sin clasificar */}
+          {(() => {
+            const otro = r.porBanco.find((b) => b.k === "Otro");
+            if (!otro) return null;
+            return (
+              <Card className="border-warn/40 bg-warn/[0.05] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-2xs leading-snug text-ink">
+                    ⚠️ <b>{int(otro.n)} movimientos</b> ({money(otro.ingresos)} entradas · {money(otro.egresos)} salidas) quedaron como banco <b>“Otro”</b>: la app no reconoció de qué banco son (archivo suelto o formato nuevo).
+                    <span className="text-muted"> Están en los totales pero sin clasificar.</span>
+                  </p>
+                  <button onClick={() => abrirDetalle({ banco: "Otro" }, "Banco no reconocido (Otro)")} className="shrink-0 rounded-md border border-warn/40 bg-surface px-2.5 py-1 text-2xs font-medium text-warn hover:bg-warn/10">Ver movimientos →</button>
+                </div>
+              </Card>
+            );
+          })()}
+
           {/* Desglose */}
           <Card className="overflow-hidden p-0">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
@@ -464,8 +492,8 @@ export default function BancosView() {
                     {filasCuit.length === 0 ? (
                       <tr><td colSpan={3} className="px-4 py-6 text-center text-2xs text-faint">{buscarCuit || tipoCuit ? "Ninguna contraparte coincide con la búsqueda." : "Ningún movimiento con CUIT de contraparte en este filtro (ventas con tarjeta, impuestos y comisiones no traen CUIT)."}</td></tr>
                     ) : filasCuit.map((f) => (
-                      <tr key={f.cuit} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
-                        <td className="px-4 py-2 text-ink"><span className="font-mono">{f.cuit}</span>{f.nombre && <span className="ml-2 font-medium">{f.nombre}</span>}{f.tipo && <span className="ml-1.5 rounded bg-ink/[0.06] px-1 py-px text-2xs text-muted">{tipoLabel(f.tipo)}</span>}</td>
+                      <tr key={f.cuit} onClick={() => abrirDetalle({ cuit: f.cuit }, `Contraparte: ${f.nombre ?? f.cuit}`)} title="Ver los movimientos" className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04]">
+                        <td className="px-4 py-2 text-ink"><span className="font-mono">{f.cuit}</span>{f.nombre && <span className="ml-2 font-medium">{f.nombre}</span>}{f.tipo && <span className="ml-1.5 rounded bg-ink/[0.06] px-1 py-px text-2xs text-muted">{tipoLabel(f.tipo)}</span>}<span className="ml-1.5 text-2xs text-faint">›</span></td>
                         <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(f.n)}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
@@ -487,9 +515,9 @@ export default function BancosView() {
                     <th className="px-3 py-2 font-medium">Neto</th>
                   </tr></thead>
                   <tbody>
-                    {filas.map((f) => { const neto = f.ingresos - f.egresos; return (
-                      <tr key={f.k} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
-                        <td className="px-4 py-2 font-medium text-ink">{tab === "mes" ? mesLabel(f.k) : f.k}</td>
+                    {filas.map((f) => { const neto = f.ingresos - f.egresos; const dim: Record<string, string> = tab === "banco" ? { banco: f.k } : tab === "local" ? { local: f.k } : tab === "mes" ? { mes: f.k } : { categoria: f.k }; return (
+                      <tr key={f.k} onClick={() => abrirDetalle(dim, `${tab === "banco" ? "Banco" : tab === "local" ? "Local" : tab === "mes" ? "Mes" : "Categoría"}: ${tab === "mes" ? mesLabel(f.k) : f.k}`)} title="Ver los movimientos" className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04]">
+                        <td className="px-4 py-2 font-medium text-ink">{tab === "mes" ? mesLabel(f.k) : f.k}<span className="ml-1.5 text-2xs text-faint">›</span></td>
                         <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(f.n)}</td>
                         <td className="px-3 py-2 text-right font-mono tnum text-ok monto">{f.ingresos ? money(f.ingresos) : "—"}</td>
                         <td className="px-3 py-2 text-right font-mono tnum text-bad monto">{f.egresos ? money(f.egresos) : "—"}</td>
@@ -547,6 +575,96 @@ export default function BancosView() {
           </Card>
         </>
       )}
+
+      {detalle && <DetalleModal titulo={detalle.titulo} filtro={detalle.filtro} onClose={() => setDetalle(null)} />}
+    </div>
+  );
+}
+
+// Detalle: movimientos línea por línea de un corte (para conciliar y exportar).
+function DetalleModal({ titulo, filtro, onClose }: { titulo: string; filtro: Record<string, string>; onClose: () => void }) {
+  const [movs, setMovs] = useState<MovBanco[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [suma, setSuma] = useState<{ ingresos: number; egresos: number }>({ ingresos: 0, egresos: 0 });
+  const [q, setQ] = useState("");
+  const [err, setErr] = useState("");
+  const LIM = 500;
+
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const qs = new URLSearchParams({ ...filtro, limit: String(LIM) });
+        const j = await (await fetch("/api/bancos/detalle?" + qs.toString(), { cache: "no-store" })).json();
+        if (!vivo) return;
+        if (!j.ok) { setErr(j.error || "no se pudo cargar"); return; }
+        setMovs(j.movs ?? []); setTotal(j.total ?? 0); setSuma(j.suma ?? { ingresos: 0, egresos: 0 });
+      } catch (e) { if (vivo) setErr(e instanceof Error ? e.message : "error"); }
+    })();
+    return () => { vivo = false; };
+  }, [JSON.stringify(filtro)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const vis = useMemo(() => {
+    const t = normTxt(q.trim());
+    return (movs ?? []).filter((m) => !t || normTxt((m.concepto ?? "") + " " + (m.cuit ?? "") + " " + m.banco + " " + m.local).includes(t));
+  }, [movs, q]);
+
+  async function exportarDetalle() {
+    // Trae TODO el corte (no solo la página) para el CSV de conciliación.
+    const qs = new URLSearchParams({ ...filtro, limit: "20000" });
+    const j = await (await fetch("/api/bancos/detalle?" + qs.toString(), { cache: "no-store" })).json();
+    const rows: MovBanco[] = j.movs ?? [];
+    descargarCSV(`bancos-detalle.csv`, ["fecha", "banco", "local", "concepto", "categoria", "cuit", "ingreso", "egreso"],
+      rows.map((m) => [m.fecha, m.banco, m.local, m.concepto, m.categoria, m.cuit ?? "", Math.round(m.ingreso), Math.round(m.egreso)]));
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-3 sm:p-8" onClick={onClose}>
+      <div className="w-full max-w-4xl rounded-card border border-line bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
+          <div className="min-w-0">
+            <p className="truncate font-display text-sm font-semibold text-ink">{titulo}</p>
+            <p className="text-2xs text-faint">{int(total)} movimientos · <span className="text-ok">{money(suma.ingresos)}</span> entradas · <span className="text-bad">{money(suma.egresos)}</span> salidas{total > LIM ? ` · mostrando los ${LIM} más recientes` : ""}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={exportarDetalle} className="rounded-md border border-line bg-surface px-2.5 py-1 text-2xs font-medium text-action hover:bg-action/5">⬇ Exportar detalle</button>
+            <button onClick={onClose} className="text-2xs font-medium text-muted hover:text-ink">cerrar</button>
+          </div>
+        </div>
+        <div className="border-b border-line px-4 py-2">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en concepto / CUIT…" className="w-full rounded-md border border-line bg-surface px-2.5 py-1 text-2xs text-ink placeholder:text-faint focus:border-action" />
+        </div>
+        {err ? (
+          <p className="px-4 py-8 text-center text-2xs text-bad">{err}</p>
+        ) : movs === null ? (
+          <p className="px-4 py-8 text-center text-2xs text-faint">Cargando movimientos…</p>
+        ) : (
+          <div className="max-h-[60vh] overflow-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                <th className="px-4 py-2 font-medium">Fecha</th>
+                <th className="px-3 py-2 font-medium">Concepto</th>
+                <th className="px-3 py-2 font-medium">Banco · Local</th>
+                <th className="px-3 py-2 text-right font-medium">Entrada</th>
+                <th className="px-3 py-2 text-right font-medium">Salida</th>
+              </tr></thead>
+              <tbody>
+                {vis.length === 0 ? (
+                  <tr><td colSpan={5} className="px-4 py-6 text-center text-2xs text-faint">{q ? "Nada coincide con la búsqueda." : "Sin movimientos."}</td></tr>
+                ) : vis.map((m, i) => (
+                  <tr key={i} className="border-b border-line/60 last:border-0 hover:bg-ink/[0.02]">
+                    <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{m.fecha}</td>
+                    <td className="px-3 py-1.5 text-2xs text-ink">{m.concepto || "—"}{m.cuit && <span className="ml-1.5 font-mono text-[10px] text-faint">{m.cuit}</span>}</td>
+                    <td className="whitespace-nowrap px-3 py-1.5 text-2xs text-muted">{m.banco} · {m.local}</td>
+                    <td className="px-3 py-1.5 text-right font-mono tnum text-ok monto">{m.ingreso ? money(m.ingreso) : "—"}</td>
+                    <td className="px-3 py-1.5 text-right font-mono tnum text-bad monto">{m.egreso ? money(m.egreso) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

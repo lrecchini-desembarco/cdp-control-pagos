@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
   const mes = p.get("mes") || "";
   const banco = p.get("banco") || "";
   const local = p.get("local") || "";
+  const categoria = p.get("categoria") || "";
   const cuit = (p.get("cuit") || "").replace(/[^0-9]/g, "");
   const q = (p.get("q") || "").toLowerCase().trim();
   const limit = Math.min(Math.max(Number(p.get("limit")) || 200, 1), 20000);
@@ -32,6 +33,7 @@ export async function GET(req: NextRequest) {
   const all = await leer();
   const filt = all.filter((m) =>
     (!mes || m.mes === mes) && (!banco || m.banco === banco) && (!local || m.local === local) &&
+    (!categoria || m.categoria === categoria) &&
     (!cuit || m.cuit === cuit) && (!q || (m.concepto || "").toLowerCase().includes(q)));
   // Más recientes primero.
   filt.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
