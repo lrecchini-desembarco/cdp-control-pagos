@@ -6,6 +6,8 @@ import { getSources } from "@/lib/sources";
 import { getRecetas } from "@/lib/recetas-store";
 import { getInsumos } from "@/lib/insumos-store";
 import { estimarInsumos, type ResumenEstimacion } from "@/lib/estimacion";
+import { getRecetasTango } from "@/lib/sources/tango";
+import { agruparRecetasTango } from "@/lib/recetas-tango";
 import { recentDates } from "@/lib/catalogo";
 
 export const dynamic = "force-dynamic";
@@ -31,12 +33,16 @@ export async function GET(req: NextRequest) {
   const cache = await readStore<Cacheado | null>(k, null);
   if (cache && Date.now() - cache.ts < TTL_MS) return NextResponse.json({ ok: true, cacheado: true, ...cache.resumen });
   try {
-    const [ventas, recetas, insumos] = await Promise.all([
+    const [ventas, recetas, insumos, filasTango] = await Promise.all([
       getSources().ventas.getVentas({ desde, hasta: hoy }),
       getRecetas(),
       getInsumos(),
+      getRecetasTango().catch(() => [] as Awaited<ReturnType<typeof getRecetasTango>>),
     ]);
     const resumen = estimarInsumos(ventas, recetas, insumos, { horizonteDias: horizonte, hoy, sucursal: sucursal || undefined });
+    // Marcar los "sin receta" que SÍ tienen receta en el recetario de Tango (falta el costo).
+    const skusRecetaTango = new Set(agruparRecetasTango(filasTango as any).map((r) => String(r.sku)));
+    for (const it of resumen.sinReceta) it.recetaTango = skusRecetaTango.has(String(it.sku));
     await writeStore(k, { ts: Date.now(), resumen } as Cacheado);
     return NextResponse.json({ ok: true, cacheado: false, ...resumen });
   } catch (e) {

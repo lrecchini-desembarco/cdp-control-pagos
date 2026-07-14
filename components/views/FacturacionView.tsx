@@ -6,7 +6,7 @@ import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/compone
 import { descargarCSV } from "@/lib/exportar-csv";
 import RecetaModal from "@/components/RecetaModal";
 
-interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; tieneReceta?: boolean; }
+interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; tieneReceta?: boolean; recetaTango?: boolean; }
 interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; margen: number; }
 interface FactMarca { marca: string; unidades: number; facturacion: number; }
 interface FactTurno { turno: string; unidades: number; facturacion: number; }
@@ -39,7 +39,7 @@ export default function FacturacionView() {
   const [d, setD] = useState<Datos | null>(null);
   const [estado, setEstado] = useState<"loading" | "ok" | "error">("loading");
   const [errMsg, setErrMsg] = useState("");
-  const [tab, setTab] = useState<"productos" | "locales" | "marcas" | "sin-receta">("productos");
+  const [tab, setTab] = useState<"productos" | "locales" | "marcas" | "sin-receta" | "receta-tango">("productos");
   const [marca, setMarca] = useState("");
   const [q, setQ] = useState("");
   const [dias, setDias] = useState(30);
@@ -94,11 +94,15 @@ export default function FacturacionView() {
   // Productos que facturan pero NO tienen receta cargada (el hueco del margen). Ordenados por $.
   // OJO: "sin receta" = la receta no existe. Los que SÍ tienen receta pero le falta un insumo
   // en el maestro NO van acá: son "receta incompleta" (existen, hay que completarlas, no crearlas).
-  const sinReceta = useMemo(() => productos.filter((p) => !p.tieneReceta).sort((a, b) => b.facturacion - a.facturacion), [productos]);
+  // "Sin receta de verdad" = no existe NI en el maestro editable NI en el recetario de Tango.
+  const sinReceta = useMemo(() => productos.filter((p) => !p.tieneReceta && !p.recetaTango).sort((a, b) => b.facturacion - a.facturacion), [productos]);
   const factSinReceta = useMemo(() => sinReceta.reduce((s, p) => s + p.facturacion, 0), [sinReceta]);
+  // "Con receta en Tango pero sin costo" = la cocina la tiene cargada, falta el precio del insumo.
+  const recetaTango = useMemo(() => productos.filter((p) => !p.tieneReceta && p.recetaTango).sort((a, b) => b.facturacion - a.facturacion), [productos]);
+  const factRecetaTango = useMemo(() => recetaTango.reduce((s, p) => s + p.facturacion, 0), [recetaTango]);
   const incompletas = useMemo(() => productos.filter((p) => p.tieneReceta && !p.tieneCosto), [productos]);
 
-  const totalFilt = useMemo(() => (tab === "locales" ? locales : tab === "sin-receta" ? sinReceta : productos).reduce((s, x) => s + x.facturacion, 0), [tab, locales, productos, sinReceta]);
+  const totalFilt = useMemo(() => (tab === "locales" ? locales : tab === "sin-receta" ? sinReceta : tab === "receta-tango" ? recetaTango : productos).reduce((s, x) => s + x.facturacion, 0), [tab, locales, productos, sinReceta, recetaTango]);
 
   function exportar() {
     if (tab === "locales") {
@@ -107,6 +111,9 @@ export default function FacturacionView() {
     } else if (tab === "sin-receta") {
       descargarCSV("facturacion-sin-receta", ["SKU", "Producto", "Marca", "Unidades", "Precio", "Facturación estimada"],
         sinReceta.map((p) => [p.sku, p.nombre, marcaLabel(p.marca), p.unidades, Math.round(p.precio), Math.round(p.facturacion)]));
+    } else if (tab === "receta-tango") {
+      descargarCSV("facturacion-con-receta-tango-sin-costo", ["SKU", "Producto", "Marca", "Unidades", "Precio", "Facturación estimada"],
+        recetaTango.map((p) => [p.sku, p.nombre, marcaLabel(p.marca), p.unidades, Math.round(p.precio), Math.round(p.facturacion)]));
     } else if (tab === "productos") {
       descargarCSV("facturacion-productos", ["SKU", "Producto", "Marca", "Clase ABC", "Unidades", "Precio", "Facturación estimada", "Margen bruto", "Margen %"],
         productos.map((p) => [p.sku, p.nombre, marcaLabel(p.marca), p.clase ?? "", p.unidades, Math.round(p.precio), Math.round(p.facturacion), p.tieneCosto ? Math.round(p.margen ?? 0) : "", p.tieneCosto ? Math.round((p.margenPct ?? 0) * 100) : ""]));
@@ -207,6 +214,7 @@ export default function FacturacionView() {
           ["productos", "Por producto"],
           ["locales", "Por local"],
           ["marcas", "Por marca"],
+          ["receta-tango", `Con receta, sin costo${recetaTango.length ? ` (${recetaTango.length})` : ""}`],
           ["sin-receta", `Sin receta${sinReceta.length ? ` (${sinReceta.length})` : ""}`],
         ] as [typeof tab, string][]).map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)}
@@ -229,7 +237,7 @@ export default function FacturacionView() {
           </div>
           <input className={`${inputClass} max-w-[220px] py-1`} placeholder={tab === "productos" ? "Buscar producto…" : "Buscar local…"} value={q} onChange={(e) => setQ(e.target.value)} />
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-2xs text-faint">{tab === "productos" ? `${productos.length} productos` : tab === "sin-receta" ? `${sinReceta.length} sin receta` : `${locales.length} locales`} · {money(totalFilt)}</span>
+            <span className="text-2xs text-faint">{tab === "productos" ? `${productos.length} productos` : tab === "sin-receta" ? `${sinReceta.length} sin receta` : tab === "receta-tango" ? `${recetaTango.length} con receta Tango` : `${locales.length} locales`} · {money(totalFilt)}</span>
             <Button variant="outline" onClick={exportar} disabled={estado !== "ok"}>⬇ Exportar</Button>
           </div>
         </Card>
@@ -276,7 +284,9 @@ export default function FacturacionView() {
                           ? <span className={`font-mono tnum font-medium ${(p.margen ?? 0) < 0 ? "text-bad" : "text-ok"}`}><span className="monto">{money(p.margen ?? 0)}</span> <span className="text-2xs text-faint">{Math.round((p.margenPct ?? 0) * 100)}%</span></span>
                           : p.tieneReceta
                             ? <span className="text-2xs text-warn" title="Tiene receta cargada pero le falta un insumo en el maestro para poder costearla. Completá el insumo en Insumos.">receta incompleta</span>
-                            : <span className="text-2xs text-faint" title="No hay ninguna receta cargada para este producto">sin receta</span>}
+                            : p.recetaTango
+                              ? <span className="text-2xs text-action" title="Tiene receta en el recetario de Tango (cocina), pero sus insumos todavía no tienen precio cargado. Tocá el producto para verla.">receta Tango · sin costo</span>
+                              : <span className="text-2xs text-faint" title="No hay ninguna receta cargada para este producto">sin receta</span>}
                       </td>
                     </tr>
                   ))}
@@ -318,10 +328,11 @@ export default function FacturacionView() {
           sinReceta.length === 0 ? <EmptyState title="Todo con receta" desc="Todos los productos que facturan ya tienen receta cargada. 👏" /> : (
             <>
             <p className="border-b border-line px-4 py-2.5 text-2xs text-muted">
-              <b className="text-warn">Sin receta:</b> estos productos facturan pero <b>no tienen ninguna receta cargada</b> (no se pueden costear).
+              <b className="text-warn">Sin receta de verdad:</b> estos productos facturan y <b>no tienen receta en ningún lado</b> (ni en el maestro editable ni en el recetario de Tango).
               Suman <b className="monto">{money(factSinReceta)}</b>{d && d.total ? ` (${Math.round((factSinReceta / d.total) * 100)}% de la facturación)` : ""}. Cargá su receta en{" "}
               <Link href="/recetas" className="font-medium text-action hover:underline">Recetas</Link> — de arriba hacia abajo, empezando por lo que más factura.
-              {incompletas.length > 0 && <> Aparte hay <b>{incompletas.length}</b> con <b className="text-warn">receta incompleta</b> (tienen receta pero les falta un insumo en el maestro): aparecen en la lista de <b>Productos</b> marcadas y no suman margen hasta completarlas.</>}
+              {recetaTango.length > 0 && <> (Los que <b>sí</b> tienen receta en Tango pero sin costo van en la pestaña <b className="text-action">«Con receta, sin costo»</b>.)</>}
+              {incompletas.length > 0 && <> Aparte hay <b>{incompletas.length}</b> con <b className="text-warn">receta incompleta</b>: aparecen en <b>Productos</b> marcadas y no suman margen hasta completarlas.</>}
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -348,6 +359,42 @@ export default function FacturacionView() {
                 </tbody>
               </table>
               {sinReceta.length > LIMITE && <p className="border-t border-line px-4 py-2.5 text-2xs text-faint">Mostrando los {LIMITE} de {int(sinReceta.length)}. Exportá para ver todo.</p>}
+            </div>
+            </>
+          )
+        ) : tab === "receta-tango" ? (
+          recetaTango.length === 0 ? <EmptyState title="Sin pendientes acá" desc="No hay productos con receta de Tango a la espera de costo. 👏" /> : (
+            <>
+            <p className="border-b border-line px-4 py-2.5 text-2xs text-muted">
+              <b className="text-action">Con receta, sin costo:</b> estos productos <b>sí tienen receta</b> — la carga la cocina en Tango — pero sus insumos todavía <b>no tienen precio</b> en el maestro de costos, así que no se puede calcular su margen.
+              Suman <b className="monto">{money(factRecetaTango)}</b>{d && d.total ? ` (${Math.round((factRecetaTango / d.total) * 100)}% de la facturación)` : ""}. Tocá un producto para <b>ver su receta real</b>; para costearlo, cargá el precio de sus insumos en{" "}
+              <Link href="/insumos" className="font-medium text-action hover:underline">Insumos</Link>.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                  <th className="px-4 py-2 font-medium">#</th><th className="px-3 py-2 font-medium">Producto</th>
+                  <th className="px-3 py-2 text-right font-medium">Unidades</th><th className="px-3 py-2 text-right font-medium">Precio</th>
+                  <th className="px-3 py-2 font-medium">Facturación sin costear</th>
+                </tr></thead>
+                <tbody>
+                  {recetaTango.slice(0, LIMITE).map((p, i) => (
+                    <tr key={p.sku} onClick={() => setModalProd({ sku: p.sku, nombre: p.nombre })} title="Ver la receta de Tango" className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04]">
+                      <td className="px-4 py-2 text-2xs text-faint tnum">{i + 1}</td>
+                      <td className="px-3 py-2"><span className="font-medium text-ink">{p.nombre}</span><span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(p.marca)}</span><span className="ml-2 text-2xs text-action">ver receta →</span></td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(p.unidades)}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-muted"><span className="monto">{p.precio ? money(p.precio) : "—"}</span></td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-action/70" style={{ width: `${Math.max(2, (p.facturacion / (recetaTango[0]?.facturacion || 1)) * 100)}%` }} /></div>
+                          <span className="font-mono tnum font-medium text-ink monto">{money(p.facturacion)}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {recetaTango.length > LIMITE && <p className="border-t border-line px-4 py-2.5 text-2xs text-faint">Mostrando los {LIMITE} de {int(recetaTango.length)}. Exportá para ver todo.</p>}
             </div>
             </>
           )

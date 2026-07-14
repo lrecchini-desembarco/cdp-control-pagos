@@ -6,7 +6,7 @@ import { versionVigente, indiceInsumos, type Receta } from "./recetas";
 import { precioConImpuestos, type Insumo } from "./insumos";
 
 export interface InsumoEstimado { cod: string; nombre: string; proveedor: string; presentacion: string; cantidad: number; bultos: number; costo: number; nProductos: number }
-export interface SinRecetaItem { sku: string; nombre: string; unidades: number }
+export interface SinRecetaItem { sku: string; nombre: string; unidades: number; recetaTango?: boolean }
 export interface ResumenEstimacion {
   horizonteDias: number;
   histDesde: string; histHasta: string;  // ventana histórica usada

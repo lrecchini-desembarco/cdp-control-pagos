@@ -4,6 +4,8 @@ import { rangoActividad } from "./actividad";
 import { getRecetas } from "./recetas-store";
 import { getInsumos } from "./insumos-store";
 import { costearReceta, indiceInsumos } from "./recetas";
+import { getRecetasTango } from "./sources/tango";
+import { agruparRecetasTango } from "./recetas-tango";
 import { baseSuc } from "./sucursal-key";
 import type { RangoQuery } from "./sources/types";
 
@@ -28,7 +30,8 @@ export interface FactProducto {
   margen?: number;           // margen bruto total = facturación − costo × unidades
   margenPct?: number;        // margen / facturación
   tieneCosto?: boolean;      // true = receta completa y costeable (hay margen real)
-  tieneReceta?: boolean;     // existe receta para el SKU, aunque esté incompleta (falta insumo)
+  tieneReceta?: boolean;     // existe receta EDITABLE (maestro/Excel) para el SKU, aunque incompleta
+  recetaTango?: boolean;     // existe receta en el recetario de Tango (cocina), aunque sin costo cargado
 }
 export interface FactTurno { turno: string; unidades: number; facturacion: number; }
 export interface FactDia { fecha: string; unidades: number; facturacion: number; }
@@ -62,8 +65,9 @@ export interface Facturacion {
 
 export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { sucursal?: string }): Promise<Facturacion> {
   const { ventas } = getSources();
-  const [dataRaw, precios, recetas, insumos] = await Promise.all([
+  const [dataRaw, precios, recetas, insumos, filasTango] = await Promise.all([
     ventas.getVentas(q), getPreciosSource().getPrecios(), getRecetas(), getInsumos(),
+    getRecetasTango().catch(() => [] as Awaited<ReturnType<typeof getRecetasTango>>),
   ]);
   // Drill-down: si viene una sucursal, se filtran las ventas a ese local y TODO el
   // resto del cálculo (productos, margen, ABC, turno, día) queda scopeado a ese local.
@@ -84,6 +88,9 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
   // "sin receta" (no existe) de "receta incompleta" (existe pero no costeable) —
   // para el usuario no es lo mismo (una hay que cargarla, la otra completarla).
   const skusConReceta = new Set(recetas.map((r) => String(r.skuTango)));
+  // SKUs que tienen receta en el recetario de TANGO (la cocina) — aunque no tengan
+  // costo cargado. Distingue "sin receta de verdad" de "tiene receta pero falta el costo".
+  const skusRecetaTango = new Set(agruparRecetasTango(filasTango as any).map((r) => String(r.sku)));
 
   // Precio por SKU×local; y fallback: precio del SKU en cualquier local (mejora cobertura).
   const pLocal = new Map<string, number>();
@@ -161,6 +168,7 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
     p.clase = cumAntes < 0.8 ? "A" : cumAntes < 0.95 ? "B" : "C";
     abc[p.clase === "A" ? "a" : p.clase === "B" ? "b" : "c"]++;
     p.tieneReceta = skusConReceta.has(p.sku);
+    p.recetaTango = skusRecetaTango.has(p.sku);
     // Margen bruto del producto (costo de receta constante por SKU).
     const cu = costoPorSku.get(p.sku);
     if (cu != null && cu > 0) {

@@ -142,7 +142,7 @@ export default function EstimacionView() {
                   <tbody>
                     {data.sinReceta.map((p) => (
                       <tr key={p.sku} onClick={() => setModalProd({ sku: p.sku, nombre: p.nombre })} className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-ink/[0.03]">
-                        <td className="px-4 py-2 text-ink">{p.nombre} <span className="ml-1 text-2xs text-action">ver receta →</span></td>
+                        <td className="px-4 py-2 text-ink">{p.nombre} {p.recetaTango ? <span className="ml-1 rounded bg-action/10 px-1 py-px text-[10px] font-medium text-action">receta en Tango · sin costo</span> : <span className="ml-1 text-2xs text-action">ver receta →</span>}</td>
                         <td className="px-3 py-2 text-right font-mono text-2xs text-muted">≈ {int(p.unidades)} u pronost.</td>
                       </tr>
                     ))}
