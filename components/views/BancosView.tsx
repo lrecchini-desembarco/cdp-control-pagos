@@ -203,12 +203,14 @@ export default function BancosView() {
   const maxCuit = Math.max(1, ...filasCuit.map((f) => f.monto));
   const maxInter = Math.max(1, ...(intercompany?.porEmpresa.map((e) => e.ingreso + e.egreso) ?? [1]));
 
-  // Sugerencias del filtro general por razón social (filtra el catálogo por lo tipeado).
+  // Sugerencias del filtro por razón social: SOLO empresas PROPIAS del grupo (pedido
+  // del usuario — no externas tipo Rappi/clientes/proveedores). Ordenadas por plata movida.
+  const propias = useMemo(() => contrapartes.filter((c) => c.tipo === "propia"), [contrapartes]);
   const sugerencias = useMemo(() => {
     const q = normTxt(qRazon.trim());
-    const arr = q ? contrapartes.filter((c) => normTxt((c.nombre ?? "") + " " + c.cuit).includes(q)) : contrapartes;
+    const arr = q ? propias.filter((c) => normTxt((c.nombre ?? "") + " " + c.cuit).includes(q)) : propias;
     return arr.slice(0, 40);
-  }, [contrapartes, qRazon]);
+  }, [propias, qRazon]);
 
   // Matriz de cobertura: filas = banco·local, columnas = mes. Deja ver de un vistazo
   // qué extractos cargaste y —lo importante— qué mes FALTA (hueco entre meses cargados).
@@ -312,7 +314,7 @@ export default function BancosView() {
                       value={qRazon}
                       onChange={(e) => { setQRazon(e.target.value); setAbierto(true); }}
                       onFocus={() => setAbierto(true)}
-                      placeholder="Filtrar por razón social o CUIT…"
+                      placeholder="Filtrar por empresa propia…"
                       className="w-52 bg-transparent text-2xs text-ink placeholder:text-faint focus:outline-none"
                     />
                     {qRazon && <button onClick={() => setQRazon("")} title="Borrar" className="text-faint hover:text-ink">×</button>}
@@ -321,13 +323,11 @@ export default function BancosView() {
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setAbierto(false)} aria-hidden />
                       <div className="absolute left-0 top-full z-40 mt-1 max-h-72 w-80 overflow-auto rounded-md border border-line bg-surface py-1 shadow-lg">
-                        {cuitStats && cuitStats.total > 0 && (
-                          <p className="border-b border-line px-3 py-1.5 text-[10px] leading-snug text-faint">
-                            Filtra solo los <b className="text-muted">{Math.round((cuitStats.conCuit / cuitStats.total) * 100)}%</b> de movimientos con CUIT de contraparte. Tarjetas, impuestos y Mercado Pago no traen CUIT, así que no aparecen acá.
-                          </p>
-                        )}
+                        <p className="border-b border-line px-3 py-1.5 text-[10px] leading-snug text-faint">
+                          Solo <b className="text-muted">empresas propias del grupo</b> (traspasos entre tus sociedades). Las contrapartes externas (Rappi, clientes, proveedores) están en las pestañas <b className="text-muted">Ingresos/Egresos × CUIT</b>.
+                        </p>
                         {sugerencias.length === 0 ? (
-                          <p className="px-3 py-2 text-2xs text-faint">{contrapartes.length ? "Nada coincide con la búsqueda." : "No hay contrapartes con CUIT en los movimientos cargados."}</p>
+                          <p className="px-3 py-2 text-2xs text-faint">{propias.length ? "Ninguna empresa propia coincide con la búsqueda." : "No hay movimientos con una empresa propia identificada por CUIT."}</p>
                         ) : sugerencias.map((c) => (
                           <button key={c.cuit} onClick={() => elegirContraparte(c.cuit)} className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left hover:bg-ink/[0.04]">
                             <span className="min-w-0">
