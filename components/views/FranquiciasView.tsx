@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
-  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, PARAMS_DEFAULT, AGING_ORDEN,
+  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, PARAMS_DEFAULT,
   type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse,
 } from "@/lib/franquicias";
 
@@ -40,6 +40,11 @@ export default function FranquiciasView() {
   const [q, setQ] = useState("");
   const [detalle, setDetalle] = useState<{ titulo: string; facturas: FacturaCC[] } | null>(null);
   const [verComo, setVerComo] = useState(false);
+  const [ajustar, setAjustar] = useState(false);                 // panel de cálculo expandido
+  const [fEmpresa, setFEmpresa] = useState("");                  // filtros de la lista
+  const [fEstado, setFEstado] = useState<"todos" | "vencido" | "porvencer">("todos");
+  const [fGestion, setFGestion] = useState<"todos" | "sin" | "con">("todos");
+  const [orden, setOrden] = useState<"neto" | "vencido" | "mora" | "sinGestion">("neto");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function cargar() {
@@ -54,8 +59,18 @@ export default function FranquiciasView() {
   }
   useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const resumen: ResumenCC | null = useMemo(() => facturas.length ? resumir(facturas, params) : null, [facturas, params]);
   const hayDatos = facturas.length > 0;
+  const costeadas = useMemo(() => facturas.map((f) => costear(f, params)), [facturas, params]);
+  const empresas = useMemo(() => Array.from(new Set(facturas.map((f) => f.empresa).filter(Boolean))).sort(), [facturas]);
+  // KPIs + aging: SIEMPRE del total (la foto completa). Los filtros scopean la LISTA.
+  const resumen: ResumenCC | null = useMemo(() => hayDatos ? resumir(costeadas, params) : null, [costeadas, hayDatos, params]);
+  const hayFiltro = fEmpresa !== "" || fEstado !== "todos" || fGestion !== "todos";
+  const filtradas = useMemo(() => costeadas.filter((c) =>
+    (!fEmpresa || c.empresa === fEmpresa) &&
+    (fEstado === "todos" || (fEstado === "vencido" ? c.vencida : !c.vencida)) &&
+    (fGestion === "todos" || (fGestion === "sin" ? (c.vencida && !gestionado(c.contacto)) : gestionado(c.contacto)))
+  ), [costeadas, fEmpresa, fEstado, fGestion]);
+  const resumenTabla = useMemo(() => hayFiltro ? resumir(filtradas, params) : resumen, [hayFiltro, filtradas, params, resumen]);
 
   async function onArchivo(files: FileList | null) {
     const f = files?.[0]; if (!f) return;
@@ -104,14 +119,16 @@ export default function FranquiciasView() {
 
   const setP = (patch: Partial<ParamsCC>) => setParams((p) => ({ ...p, ...patch }));
 
-  // Filas de la pestaña activa
+  // Filas de la pestaña activa (usan el resumen FILTRADO + orden elegido)
   const filas = useMemo(() => {
-    if (!resumen) return [];
-    const base = tab === "franquiciado" ? resumen.porFranquiciado : tab === "empresa" ? resumen.porEmpresa
-      : tab === "local" ? resumen.porLocal : tab === "detalle" ? resumen.porDetalle : resumen.porContacto;
+    if (!resumenTabla) return [];
+    const base = tab === "franquiciado" ? resumenTabla.porFranquiciado : tab === "empresa" ? resumenTabla.porEmpresa
+      : tab === "local" ? resumenTabla.porLocal : tab === "detalle" ? resumenTabla.porDetalle : resumenTabla.porContacto;
     const t = normTxt(q.trim());
-    return t ? base.filter((g) => normTxt(g.k + " " + ((g as any).clienteId ?? "")).includes(t)) : base;
-  }, [resumen, tab, q]);
+    const filt = t ? base.filter((g) => normTxt(g.k + " " + ((g as any).clienteId ?? "")).includes(t)) : base;
+    const key = orden === "vencido" ? (g: any) => g.vencido : orden === "mora" ? (g: any) => g.maxMora : orden === "sinGestion" ? (g: any) => g.netoSinGestion : (g: any) => g.neto;
+    return [...filt].sort((a, b) => key(b) - key(a));
+  }, [resumenTabla, tab, q, orden]);
   const maxNeto = Math.max(1, ...filas.map((f) => f.neto));
 
   function abrirDetalle(dimKey: "cliente" | "empresa" | "local" | "detalle" | "contacto", val: string, titulo: string) {
@@ -184,39 +201,42 @@ export default function FranquiciasView() {
             <Kpi label="Por vencer" value={moneyC(resumen.porVencer)} full={money(resumen.porVencer)} tone="muted" sub="al día" />
           </div>
 
-          {/* Panel de control — cómo se calcula (controlá qué se suma) */}
+          {/* Panel de cálculo — compacto: resumen siempre visible, controles al expandir */}
           <Card className="p-3">
-            <div data-tour="fr-control" className="flex flex-wrap items-end gap-x-4 gap-y-2">
-              <Ctl label="Al día de">
-                <input type="date" value={params.fechaCorte} onChange={(e) => setP({ fechaCorte: e.target.value })} className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" />
-              </Ctl>
-              <Ctl label="Tasa base %"><NumIn v={params.baseAnual} step={0.5} onChange={(n) => setP({ baseAnual: n })} /></Ctl>
-              <Ctl label="+ % por día"><NumIn v={params.diaria} step={0.01} onChange={(n) => setP({ diaria: n })} /></Ctl>
-              <Ctl label="Punitorio sobre">
-                <div className="flex overflow-hidden rounded-md border border-line text-2xs">
-                  {(["importe", "saldo"] as const).map((b) => (
-                    <button key={b} onClick={() => setP({ baseCalc: b })} className={`px-2 py-1 ${params.baseCalc === b ? "bg-ink/[0.07] font-medium text-ink" : "bg-surface text-muted hover:bg-ink/[0.03]"}`}>{b === "importe" ? "importe" : "saldo"}</button>
-                  ))}
-                </div>
-              </Ctl>
-              <label className="flex cursor-pointer items-center gap-1.5 text-2xs text-muted">
-                <input type="checkbox" checked={params.incluirIncobrables} onChange={(e) => setP({ incluirIncobrables: e.target.checked })} className="accent-action" />
-                Contar incobrables en el cobrable
-              </label>
+            <div data-tour="fr-control" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-2xs">
+              <span className="rounded-md bg-ink/[0.04] px-2 py-1 text-muted">📅 al día <b className="text-ink">{fechaLabel(params.fechaCorte)}</b></span>
+              <span className="text-muted">Punitorio: <b className="text-ink">{params.baseAnual}% + {params.diaria}%/día</b> sobre <b className="text-ink">{params.baseCalc}</b></span>
+              <span className="text-muted">Incobrables: <b className={params.incluirIncobrables ? "text-warn" : "text-ink"}>{params.incluirIncobrables ? "se cuentan" : "aparte"}</b></span>
               <div className="ml-auto flex items-center gap-2">
-                <button onClick={() => setVerComo((v) => !v)} className="text-2xs font-medium text-action hover:underline">{verComo ? "ocultar" : "¿cómo se calcula?"}</button>
-                <button onClick={() => setParams({ ...PARAMS_DEFAULT, fechaCorte: params.fechaCorte })} className="text-2xs font-medium text-muted hover:text-ink">reset</button>
-                <button onClick={guardarParams} className="rounded-md border border-line bg-surface px-2 py-1 text-2xs font-medium text-ink hover:bg-ink/[0.03]">Guardar como default</button>
+                <button onClick={() => setVerComo((v) => !v)} className="font-medium text-action hover:underline">¿cómo se calcula?</button>
+                <button onClick={() => setAjustar((v) => !v)} className={`rounded-md border px-2 py-1 font-medium ${ajustar ? "border-action bg-action/10 text-action" : "border-line bg-surface text-ink hover:bg-ink/[0.03]"}`}>{ajustar ? "listo" : "⚙ Ajustar cálculo"}</button>
               </div>
             </div>
             {verComo && (
               <div className="mt-2 rounded-md border border-line bg-ink/[0.02] px-3 py-2 text-2xs leading-relaxed text-muted">
-                <b className="text-ink">Cómo se arma cada número</b> (todo recalcula solo al cambiar los parámetros):<br />
-                • <b>Días de mora</b> = fecha de corte − vencimiento (0 si no venció).<br />
-                • <b>Tasa punitoria</b> = {params.baseAnual}% + {params.diaria}% × días de mora.<br />
-                • <b>Punitorio</b> = {params.baseCalc} × (tasa ÷ 100) ÷ {params.divisor} × días de mora.<br />
-                • <b>Saldo</b> = importe pendiente − cobrado · <b>Neto</b> = saldo + punitorio.<br />
-                • <b>Cobrable real</b> = neto {params.incluirIncobrables ? "incluyendo" : "excluyendo"} los marcados «INCOBRABLES» ({money(resumen.incobrable)}).
+                <b className="text-ink">Cómo se arma cada número</b> (recalcula solo al cambiar un parámetro):<br />
+                • <b>Días de mora</b> = fecha de corte − vencimiento · <b>Tasa</b> = {params.baseAnual}% + {params.diaria}% × días.<br />
+                • <b>Punitorio</b> = {params.baseCalc} × (tasa ÷ 100) ÷ {params.divisor} × días · <b>Saldo</b> = importe − cobrado · <b>Neto</b> = saldo + punitorio.<br />
+                • <b>Cobrable real</b> = neto {params.incluirIncobrables ? "incluyendo" : "excluyendo"} los «INCOBRABLES» ({money(resumen.incobrable)}).
+              </div>
+            )}
+            {ajustar && (
+              <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-2 border-t border-line pt-3">
+                <Ctl label="Al día de"><input type="date" value={params.fechaCorte} onChange={(e) => setP({ fechaCorte: e.target.value })} className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" /></Ctl>
+                <Ctl label="Tasa base %"><NumIn v={params.baseAnual} step={0.5} onChange={(n) => setP({ baseAnual: n })} /></Ctl>
+                <Ctl label="+ % por día"><NumIn v={params.diaria} step={0.01} onChange={(n) => setP({ diaria: n })} /></Ctl>
+                <Ctl label="Punitorio sobre">
+                  <div className="flex overflow-hidden rounded-md border border-line text-2xs">
+                    {(["importe", "saldo"] as const).map((b) => (
+                      <button key={b} onClick={() => setP({ baseCalc: b })} className={`px-2 py-1 ${params.baseCalc === b ? "bg-ink/[0.07] font-medium text-ink" : "bg-surface text-muted hover:bg-ink/[0.03]"}`}>{b}</button>
+                    ))}
+                  </div>
+                </Ctl>
+                <label className="flex cursor-pointer items-center gap-1.5 text-2xs text-muted"><input type="checkbox" checked={params.incluirIncobrables} onChange={(e) => setP({ incluirIncobrables: e.target.checked })} className="accent-action" />Contar incobrables</label>
+                <div className="ml-auto flex items-center gap-2">
+                  <button onClick={() => setParams({ ...PARAMS_DEFAULT, fechaCorte: params.fechaCorte })} className="text-2xs font-medium text-muted hover:text-ink">reset</button>
+                  <button onClick={guardarParams} className="rounded-md border border-line bg-surface px-2 py-1 text-2xs font-medium text-ink hover:bg-ink/[0.03]">Guardar como default</button>
+                </div>
               </div>
             )}
           </Card>
@@ -245,41 +265,60 @@ export default function FranquiciasView() {
 
           {/* Desglose */}
           <Card className="overflow-hidden p-0">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-              <div data-tour="fr-tabs" className="flex flex-wrap gap-1">
-                {TABS.map(([k, l]) => (
-                  <button key={k} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar…" className="w-40 rounded-md border border-line bg-surface px-2.5 py-1 text-2xs text-ink placeholder:text-faint focus:border-action" />
-                <button onClick={exportar} className="text-2xs font-medium text-action hover:underline">Exportar CSV</button>
+            <div data-tour="fr-tabs" className="flex flex-wrap gap-1 border-b border-line px-3 py-2">
+              {TABS.map(([k, l]) => (
+                <button key={k} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
+              ))}
+            </div>
+            {/* Filtros rápidos (scopean la lista) + orden + export */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-ink/[0.015] px-3 py-2 text-2xs">
+              <select value={fEmpresa} onChange={(e) => setFEmpresa(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink">
+                <option value="">Todas las empresas</option>
+                {empresas.map((e) => <option key={e} value={e}>{e}</option>)}
+              </select>
+              <Chips value={fEstado} onChange={(v) => setFEstado(v as any)} opts={[["todos", "Todos"], ["vencido", "Vencidos"], ["porvencer", "Por vencer"]]} />
+              <Chips value={fGestion} onChange={(v) => setFGestion(v as any)} opts={[["todos", "Gestión: todas"], ["sin", "Sin gestionar"], ["con", "Gestionados"]]} />
+              {hayFiltro && <button onClick={() => { setFEmpresa(""); setFEstado("todos"); setFGestion("todos"); }} className="font-medium text-action hover:underline">limpiar</button>}
+              <div className="ml-auto flex items-center gap-2">
+                <label className="text-faint">ordenar</label>
+                <select value={orden} onChange={(e) => setOrden(e.target.value as any)} className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink">
+                  <option value="neto">por neto</option><option value="vencido">por vencido</option><option value="mora">por días de mora</option><option value="sinGestion">a gestionar</option>
+                </select>
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar…" className="w-32 rounded-md border border-line bg-surface px-2.5 py-1 text-2xs text-ink placeholder:text-faint focus:border-action" />
+                <button onClick={exportar} className="font-medium text-action hover:underline">Exportar</button>
               </div>
             </div>
+            {resumenTabla && (
+              <div className="border-b border-line px-3 py-1.5 text-2xs text-faint">{int(filas.length)} {tab === "franquiciado" ? "franquiciados" : tab === "empresa" ? "empresas" : "filas"} · neto <b className="text-ink monto">{money(filas.reduce((s, f) => s + f.neto, 0))}</b>{hayFiltro && " (con filtros)"}</div>
+            )}
             <div className="max-h-[30rem] overflow-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                   <th className="px-4 py-2 font-medium">{tab === "franquiciado" ? "Franquiciado" : tab === "empresa" ? "Empresa" : tab === "local" ? "Local" : tab === "detalle" ? "Concepto" : "Gestión"}</th>
-                  <th className="px-3 py-2 text-right font-medium">Fc</th>
+                  <th className="px-3 py-2 text-right font-medium">Mora</th>
+                  {tab === "franquiciado" && <th className="px-3 py-2 font-medium">Cobranza</th>}
                   <th className="px-3 py-2 text-right font-medium">Vencido</th>
                   <th className="px-3 py-2 font-medium">Neto a cobrar</th>
                 </tr></thead>
                 <tbody>
                   {filas.length === 0 ? (
-                    <tr><td colSpan={4} className="px-4 py-6 text-center text-2xs text-faint">Nada coincide con la búsqueda.</td></tr>
-                  ) : filas.map((g: any) => (
-                    <tr key={g.k} onClick={() => filaOnClick(g)} title="Ver las facturas" className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04]">
+                    <tr><td colSpan={tab === "franquiciado" ? 5 : 4} className="px-4 py-6 text-center text-2xs text-faint">{hayFiltro || q ? "Nada coincide con estos filtros." : "Sin datos."}</td></tr>
+                  ) : filas.map((g: any) => {
+                    const prioridad = g.netoSinGestion > 0; // vencido sin gestionar = perseguir
+                    return (
+                    <tr key={g.k} onClick={() => filaOnClick(g)} title="Ver las facturas" className={`cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04] ${prioridad ? "border-l-2 border-l-bad/60" : ""}`}>
                       <td className="px-4 py-2"><span className="font-medium text-ink">{g.k}</span>{g.clienteId && <span className="ml-2 font-mono text-2xs text-faint">#{g.clienteId}</span>}<span className="ml-1.5 text-2xs text-faint">›</span></td>
-                      <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(g.n)}</td>
+                      <td className="px-3 py-2 text-right font-mono tnum text-2xs text-muted">{g.maxMora > 0 ? `${g.maxMora}d` : "—"}</td>
+                      {tab === "franquiciado" && <td className="px-3 py-2"><GestionChip g={g} /></td>}
                       <td className="px-3 py-2 text-right font-mono tnum text-bad monto">{g.vencido ? moneyC(g.vencido) : "—"}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-ink/10"><div className="h-full rounded-full bg-action/70" style={{ width: `${Math.max(2, (g.neto / maxNeto) * 100)}%` }} /></div>
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-ink/10 sm:w-28"><div className="h-full rounded-full bg-action/70" style={{ width: `${Math.max(2, (g.neto / maxNeto) * 100)}%` }} /></div>
                           <span className="font-mono tnum font-medium text-ink monto">{money(g.neto)}</span>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ); })}
                 </tbody>
               </table>
             </div>
@@ -294,6 +333,22 @@ export default function FranquiciasView() {
 
 function Ctl({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex flex-col gap-0.5"><span className="text-[10px] uppercase tracking-wide text-faint">{label}</span>{children}</label>;
+}
+function Chips({ value, onChange, opts }: { value: string; onChange: (v: string) => void; opts: [string, string][] }) {
+  return (
+    <div className="flex overflow-hidden rounded-md border border-line">
+      {opts.map(([k, l]) => (
+        <button key={k} onClick={() => onChange(k)} className={`px-2 py-1 text-2xs ${value === k ? "bg-ink/[0.07] font-medium text-ink" : "bg-surface text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
+      ))}
+    </div>
+  );
+}
+// Estado de cobranza del franquiciado: rojo si hay vencido sin gestionar (perseguir),
+// verde si el vencido ya se gestionó, gris si está al día.
+function GestionChip({ g }: { g: { netoSinGestion: number; vencido: number } }) {
+  if (g.netoSinGestion > 0) return <span className="rounded bg-bad/10 px-1.5 py-px text-[10px] font-medium text-bad">a gestionar</span>;
+  if (g.vencido > 0) return <span className="rounded bg-ok/10 px-1.5 py-px text-[10px] font-medium text-ok">gestionado</span>;
+  return <span className="rounded bg-ink/[0.05] px-1.5 py-px text-[10px] text-faint">al día</span>;
 }
 function NumIn({ v, step, onChange }: { v: number; step: number; onChange: (n: number) => void }) {
   return <input type="number" step={step} value={v} onChange={(e) => onChange(Number(e.target.value) || 0)} className="w-20 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" />;

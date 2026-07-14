@@ -52,6 +52,9 @@ export interface FacturaCosteada extends FacturaCC {
 
 // "INCOBRABLES" = deuda dada por perdida; por default NO cuenta como cobrable.
 export const esIncobrable = (detalle: string) => /incobrable/i.test(detalle || "");
+// Gestionado = ya se lo contactó (Contactado / Contactado sin respuesta). Sin gestionar
+// = vacío o "Sin contacto" -> es a quién hay que perseguir primero.
+export const gestionado = (contacto: string) => /contactad/i.test(contacto || "");
 
 const DIA = 86400000;
 export function diasEntre(desdeISO: string, hastaISO: string): number {
@@ -76,7 +79,7 @@ export function costear(f: FacturaCC, p: ParamsCC): FacturaCosteada {
   };
 }
 
-export interface GrupoCC { k: string; n: number; saldo: number; punitorios: number; neto: number; vencido: number }
+export interface GrupoCC { k: string; n: number; saldo: number; punitorios: number; neto: number; vencido: number; maxMora: number; netoSinGestion: number }
 export interface AgingBucket { bucket: string; n: number; neto: number }
 export interface ResumenCC {
   fechaCorte: string;
@@ -108,8 +111,11 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     const m = new Map<string, GrupoCC>();
     for (const c of cs) {
       const k = key(c) || "(sin dato)";
-      const a = m.get(k) ?? { k, n: 0, saldo: 0, punitorios: 0, neto: 0, vencido: 0 };
-      a.n++; a.saldo += c.saldo; a.punitorios += c.punitorios; a.neto += c.neto; if (c.vencida) a.vencido += c.neto;
+      const a = m.get(k) ?? { k, n: 0, saldo: 0, punitorios: 0, neto: 0, vencido: 0, maxMora: 0, netoSinGestion: 0 };
+      a.n++; a.saldo += c.saldo; a.punitorios += c.punitorios; a.neto += c.neto;
+      if (c.vencida) a.vencido += c.neto;
+      if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
+      if (c.vencida && !gestionado(c.contacto)) a.netoSinGestion += c.neto; // vencido a perseguir
       m.set(k, a);
     }
     return Array.from(m.values()).sort((x, y) => y.neto - x.neto);
