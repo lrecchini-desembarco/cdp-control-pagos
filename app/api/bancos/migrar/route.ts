@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { migrarAlias, resumirBancos, type MovBanco } from "@/lib/bancos";
+import { migrarAlias, purgarOtroDuplicado, resumirBancos, type MovBanco } from "@/lib/bancos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const g = await guard("/bancos");
   if ("res" in g) return g.res;
   try {
-    const body = (await req.json().catch(() => ({}))) as { aplicar?: boolean; restaurar?: boolean };
+    const body = (await req.json().catch(() => ({}))) as { aplicar?: boolean; restaurar?: boolean; accion?: string };
 
     // Restaurar desde el backup (por si algo salió mal).
     if (body.restaurar) {
@@ -36,6 +36,20 @@ export async function POST(req: NextRequest) {
       const movs = unpack<MovBanco[]>(bak);
       await writeStore(META, { actualizado: new Date().toISOString(), total: movs.length });
       return NextResponse.json({ ok: true, restaurado: true, total: movs.length });
+    }
+
+    // Purga de duplicados del banco "Otro" (gemelos exactos bajo un banco reconocido).
+    if (body.accion === "purgar-otro") {
+      const movsAll = await leer(KEY);
+      const { movs: limpios, diag } = purgarOtroDuplicado(movsAll);
+      if (body.aplicar) {
+        const yaHayBackup = await readStore<string | null>(BACKUP, null);
+        if (!yaHayBackup) await writeStore(BACKUP, pack(movsAll));
+        await writeStore(KEY, pack(limpios));
+        await writeStore(META, { actualizado: new Date().toISOString(), total: limpios.length });
+        return NextResponse.json({ ok: true, aplicado: true, accion: "purgar-otro", diag, resumen: resumirBancos(limpios) });
+      }
+      return NextResponse.json({ ok: true, aplicado: false, dryRun: true, accion: "purgar-otro", diag });
     }
 
     const movs = await leer(KEY);

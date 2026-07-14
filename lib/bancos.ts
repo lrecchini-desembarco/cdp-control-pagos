@@ -486,6 +486,21 @@ export function migrarAlias(movs: MovBanco[]): { movs: MovBanco[]; diag: DiagAli
   };
 }
 
+/** Quita los movimientos del banco "Otro" (no reconocido) que sean DUPLICADO EXACTO
+ *  de un movimiento ya presente bajo un banco reconocido. Seguro: solo borra un "Otro"
+ *  si existe su gemelo idéntico (misma fecha, importe y concepto) en otro banco. */
+export function purgarOtroDuplicado(movs: MovBanco[]): { movs: MovBanco[]; diag: { quitados: number; ingresos: number; egresos: number } } {
+  const firmasReales = new Set<string>();
+  for (const m of movs) if (m.banco !== "Otro") firmasReales.add(firmaMov(m));
+  const out: MovBanco[] = [];
+  let quitados = 0, ingresos = 0, egresos = 0;
+  for (const m of movs) {
+    if (m.banco === "Otro" && firmasReales.has(firmaMov(m))) { quitados++; ingresos += m.ingreso; egresos += m.egreso; continue; }
+    out.push(m);
+  }
+  return { movs: out, diag: { quitados, ingresos, egresos } };
+}
+
 export function resumirBancos(movs: MovBanco[]): ResumenBancos {
   const grp = (key: (m: MovBanco) => string): GrupoBanco[] => {
     const mp = new Map<string, GrupoBanco>();
