@@ -367,6 +367,8 @@ export default function FacturacionView() {
       {localSel && (
         <LocalModal sucursal={localSel} data={localData} loading={localLoading} dias={dias} onClose={() => setLocalSel(null)} />
       )}
+
+      {modalProd && <RecetaModal sku={modalProd.sku} nombre={modalProd.nombre} onClose={() => setModalProd(null)} />}
     </div>
   );
 }
