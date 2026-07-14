@@ -51,10 +51,13 @@ export async function correrChecks(): Promise<QaCheck[]> {
     const ok = casi(sp, fact.total, 2) && casi(sl, fact.total, 2);
     return { ok, valor: M(fact.total), detalle: ok ? "producto = local = marca = total, sin pérdida" : `no cuadra: Σproducto ${M(sp)} vs total ${M(fact.total)}` };
   }));
-  checks.push(safe({ id: "fact-margen", persona: "Lucho", seccion: "Facturación", titulo: "Margen sin inflar", severidad: "alta" }, async () => {
+  checks.push(safe({ id: "fact-margen", persona: "Lucho", seccion: "Facturación", titulo: "Márgenes altos a revisar", severidad: "media" }, async () => {
     if (!fact) throw new Error("sin facturación");
-    const inflados = fact.porProducto.filter((p) => p.tieneCosto && (p.margenPct ?? 0) > 0.72);
-    return { ok: inflados.length === 0, valor: inflados.length + " inflados", detalle: inflados.length === 0 ? "ningún producto costeado con margen irreal (>72%)" : `¡ojo! ${inflados.length} con margen >72% (receta subcosteada): ${inflados.slice(0, 3).map((p) => p.nombre).join(", ")}` };
+    // Las hamburguesas subcosteadas ya se excluyen (costoDudoso). Esto avisa de otros
+    // productos con margen alto (>80%) por si hay más recetas incompletas escondidas
+    // (bebidas/packaging pueden tener margen alto real, por eso es un aviso, no un error).
+    const altos = fact.porProducto.filter((p) => p.tieneCosto && (p.margenPct ?? 0) > 0.80).sort((a, b) => (b.margenPct ?? 0) - (a.margenPct ?? 0));
+    return { ok: altos.length === 0, valor: altos.length + " con >80%", detalle: altos.length === 0 ? "ningún producto costeado con margen sospechoso (>80%)" : `revisar ${altos.length} con margen >80% (¿receta incompleta o margen real?): ${altos.slice(0, 3).map((p) => `${p.nombre} ${Math.round((p.margenPct ?? 0) * 100)}%`).join(", ")}` };
   }));
   checks.push(safe({ id: "fact-exacta", persona: "Lucho", seccion: "Facturación", titulo: "Facturación exacta (Tango)", severidad: "media" }, async () => {
     if (!fact) throw new Error("sin facturación");
