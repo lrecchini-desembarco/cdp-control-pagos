@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, ErrorState, Skeleton } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
+import RecetaModal from "@/components/RecetaModal";
 import type { ResumenEstimacion } from "@/lib/estimacion";
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -27,6 +28,7 @@ export default function EstimacionView() {
   const [estado, setEstado] = useState<"cargando" | "ok" | "error">("cargando");
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
+  const [modalProd, setModalProd] = useState<{ sku: string; nombre: string } | null>(null);
 
   async function cargar(d = dias, suc = sucursal) {
     setEstado("cargando");
@@ -139,19 +141,21 @@ export default function EstimacionView() {
                 <table className="w-full text-left text-sm">
                   <tbody>
                     {data.sinReceta.map((p) => (
-                      <tr key={p.sku} className="border-b border-line/70 last:border-0">
-                        <td className="px-4 py-2 text-ink">{p.nombre}</td>
+                      <tr key={p.sku} onClick={() => setModalProd({ sku: p.sku, nombre: p.nombre })} className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-ink/[0.03]">
+                        <td className="px-4 py-2 text-ink">{p.nombre} <span className="ml-1 text-2xs text-action">ver receta →</span></td>
                         <td className="px-3 py-2 text-right font-mono text-2xs text-muted">≈ {int(p.unidades)} u pronost.</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="border-t border-line px-4 py-2 text-2xs text-faint">Cargá su receta en Recetas para que entren a la estimación.</p>
+              <p className="border-t border-line px-4 py-2 text-2xs text-faint">Tocá un producto para ver por qué figura sin receta (o cargala en Recetas).</p>
             </Card>
           )}
         </>
       )}
+
+      {modalProd && <RecetaModal sku={modalProd.sku} nombre={modalProd.nombre} onClose={() => setModalProd(null)} />}
     </div>
   );
 }

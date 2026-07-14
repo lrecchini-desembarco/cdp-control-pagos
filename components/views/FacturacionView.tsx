@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
+import RecetaModal from "@/components/RecetaModal";
 
 interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; tieneReceta?: boolean; }
 interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; margen: number; }
@@ -46,6 +47,7 @@ export default function FacturacionView() {
   const [localSel, setLocalSel] = useState<string | null>(null);
   const [localData, setLocalData] = useState<Datos | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
+  const [modalProd, setModalProd] = useState<{ sku: string; nombre: string } | null>(null);
 
   async function abrirLocal(sucursal: string) {
     setLocalSel(sucursal); setLocalData(null); setLocalLoading(true);
@@ -255,7 +257,7 @@ export default function FacturacionView() {
                 </tr></thead>
                 <tbody>
                   {productos.slice(0, LIMITE).map((p, i) => (
-                    <tr key={p.sku} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                    <tr key={p.sku} onClick={() => setModalProd({ sku: p.sku, nombre: p.nombre })} title="Ver receta" className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
                       <td className="px-4 py-2 text-2xs text-faint tnum">{i + 1}</td>
                       <td className="px-3 py-2">
                         <span className={`mr-1.5 inline-block rounded px-1 py-px text-[9px] font-bold ${claseTone(p.clase)}`} title={`Clase ${p.clase} · acumulado ${Math.round((p.acumulado ?? 0) * 100)}%`}>{p.clase}</span>
@@ -330,9 +332,9 @@ export default function FacturacionView() {
                 </tr></thead>
                 <tbody>
                   {sinReceta.slice(0, LIMITE).map((p, i) => (
-                    <tr key={p.sku} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
+                    <tr key={p.sku} onClick={() => setModalProd({ sku: p.sku, nombre: p.nombre })} title="Ver por qué figura sin receta" className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
                       <td className="px-4 py-2 text-2xs text-faint tnum">{i + 1}</td>
-                      <td className="px-3 py-2"><span className="font-medium text-ink">{p.nombre}</span><span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(p.marca)}</span></td>
+                      <td className="px-3 py-2"><span className="font-medium text-ink">{p.nombre}</span><span className="ml-2 font-mono text-2xs text-faint">{p.sku}</span><span className="ml-2 text-2xs text-faint">{marcaLabel(p.marca)}</span><span className="ml-2 text-2xs text-action">ver receta →</span></td>
                       <td className="px-3 py-2 text-right font-mono tnum text-muted">{int(p.unidades)}</td>
                       <td className="px-3 py-2 text-right font-mono tnum text-muted"><span className="monto">{p.precio ? money(p.precio) : "—"}</span></td>
                       <td className="px-3 py-2">
