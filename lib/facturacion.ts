@@ -78,12 +78,25 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
   // margen bruto real: solo cubre lo que tenga receta cargada (se reporta cobertura).
   const idxIns = indiceInsumos(insumos);
   const costoPorSku = new Map<string, number>();
+  // Recetas estructuralmente INCOMPLETAS: un plato armado (hamburguesa/milanesa: trae
+  // medallón/bolas/milanesa) con MUY POCOS insumos (≤2) casi seguro está a medias — le
+  // faltan pan, queso, papas, packaging, etc. Su costo queda subvaluado y el margen
+  // saldría inflado (ej. balde o doble cheese con 1 solo insumo = solo la carne). No las
+  // costeamos y las marcamos "revisar receta". No aplica a: milanesas al plato completas
+  // (>2 insumos), bebidas/adicionales (margen alto REAL, sin medallón), ni "adicional/extra".
+  const costoDudoso = new Set<string>();
   for (const r of recetas) {
     const cost = costearReceta(r, idxIns);
     // Solo recetas COMPLETAS: si falta algún insumo en el maestro, ese componente
     // se costea $0 y el costo total queda sub-valuado -> el margen saldría inflado.
     // Mejor tratarla como "sin costo" (no cubre margen) que mostrar un margen falso.
-    if (cost.costoConImp > 0 && cost.nFaltantes === 0) costoPorSku.set(r.skuTango, cost.costoConImp);
+    if (cost.costoConImp > 0 && cost.nFaltantes === 0) {
+      const desc = cost.componentes.map((c) => c.insumoDesc.toLowerCase()).join(" | ");
+      const esPlato = /medall[oó]n|bolas|milanes|hamburgues/.test(desc);
+      const esAdicional = /adicional|extra\b|adic\./i.test(cost.descripcion);
+      if (esPlato && cost.componentes.length <= 2 && !esAdicional) { costoDudoso.add(String(r.skuTango)); continue; }
+      costoPorSku.set(r.skuTango, cost.costoConImp);
+    }
   }
   // SKUs que TIENEN receta cargada (aunque le falte algún insumo). Distingue
   // "sin receta" (no existe) de "receta incompleta" (existe pero no costeable) —
@@ -107,18 +120,6 @@ export async function getFacturacion(q: RangoQuery = rangoActividad(), opts?: { 
   }
   const precioDe = (sku: string, suc: string): number =>
     pLocal.get(clave(sku, baseSuc(suc))) ?? pSku.get(sku) ?? 0;
-
-  // TECHO DE PLAUSIBILIDAD del margen: si el costo de receta implica un margen bruto
-  // irrealmente alto (> CEIL_MARGEN), la receta casi seguro está INCOMPLETA (le faltan
-  // renglones aunque sus insumos existan en el maestro) -> el costo no es confiable.
-  // Se saca del margen (no cuenta en margenTotal ni facturacionConCosto) y se marca
-  // "costoDudoso" para avisar. Evita el margen inflado (ej. balde/doble cheese al 80%).
-  const CEIL_MARGEN = 0.70;
-  const costoDudoso = new Set<string>();
-  for (const [sku, cu] of Array.from(costoPorSku.entries())) {
-    const precio = pSku.get(sku) ?? 0;
-    if (precio > 0 && 1 - cu / precio > CEIL_MARGEN) { costoDudoso.add(sku); costoPorSku.delete(sku); }
-  }
 
   const prod = new Map<string, FactProducto>();
   const uppPorSku = new Map<string, number>(); // unidades VALORIZADAS por SKU (para el margen)
