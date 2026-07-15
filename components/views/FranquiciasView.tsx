@@ -344,7 +344,7 @@ export default function FranquiciasView() {
               ))}
             </div>
             {tab === "cobros" ? (
-              <CobrosPanel cobros={cobros} onBorrar={borrarCobro} />
+              <CobrosPanel cobros={cobros} cobrosHist={cobrosHist} onBorrar={borrarCobro} />
             ) : tab === "cobrolocal" ? (
               <CobroLocalPanel facturas={facturas} params={params} cobros={cobrosTodos} />
             ) : tab === "maestro" ? (
@@ -818,35 +818,42 @@ function MorosidadPanel({ facturas, params, onVer }: { facturas: FacturaCC[]; pa
   );
 }
 
-// Registro de cobros: log de todos los cobros aplicados (bajan el saldo de su factura).
-// Cada cobro se carga desde el detalle de una factura (match exacto por comprobante).
-function CobrosPanel({ cobros, onBorrar }: { cobros: CobroCC[]; onBorrar: (id: string) => void }) {
-  const orden = useMemo(() => [...cobros].sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")), [cobros]);
-  const total = useMemo(() => cobros.reduce((s, c) => s + (Number(c.importe) || 0), 0), [cobros]);
+// Registro de cobros (hoja "Registro de Cobros" del Excel): TODOS los cobros. Los
+// HISTÓRICOS vienen del Excel (ya aplicados en el snapshot, solo lectura); los NUEVOS
+// se cargan desde el detalle de una factura y bajan su saldo (borrables).
+function CobrosPanel({ cobros, cobrosHist, onBorrar }: { cobros: CobroCC[]; cobrosHist: CobroCC[]; onBorrar: (id: string) => void }) {
+  const orden = useMemo(() => [
+    ...cobros.map((c) => ({ ...c, hist: false })),
+    ...cobrosHist.map((c) => ({ ...c, hist: true })),
+  ].sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")), [cobros, cobrosHist]);
+  const totalNuevos = useMemo(() => cobros.reduce((s, c) => s + (Number(c.importe) || 0), 0), [cobros]);
+  const totalHist = useMemo(() => cobrosHist.reduce((s, c) => s + (Number(c.importe) || 0), 0), [cobrosHist]);
   function exportar() {
-    const filas = [["Fecha", "Comprobante", "Franquiciado", "Local", "Empresa", "Importe"],
-      ...orden.map((c) => [c.fecha, c.nroFactura, c.cliente ?? "", c.local ?? "", c.empresa ?? "", String(c.importe)])];
+    const filas = [["Fecha", "Comprobante", "Franquiciado", "Local", "Empresa", "Importe", "Origen"],
+      ...orden.map((c) => [c.fecha, c.nroFactura, c.cliente ?? "", c.local ?? "", c.empresa ?? "", String(c.importe), c.hist ? "histórico" : "nuevo"])];
     const csv = filas.map((f) => f.map((x) => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "cobros-franquicias.csv"; a.click(); URL.revokeObjectURL(url);
+    const a = document.createElement("a"); a.href = url; a.download = "registro-de-cobros.csv"; a.click(); URL.revokeObjectURL(url);
   }
-  if (!cobros.length) return (
+  if (!orden.length) return (
     <div className="px-4 py-10 text-center">
-      <p className="text-2xs text-muted">Todavía no registraste ningún cobro.</p>
+      <p className="text-2xs text-muted">Todavía no hay cobros registrados.</p>
       <p className="mt-1 text-2xs text-faint">Entrá al detalle de un franquiciado, abrí una factura y usá <b className="text-ok">＋ Registrar cobro</b>. El cobro baja el saldo de esa factura y queda anotado acá.</p>
     </div>
   );
   return (
     <>
-      <div className="flex items-center justify-between border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
-        <span className="text-muted"><b className="text-ink">{cobros.length}</b> {cobros.length === 1 ? "cobro registrado" : "cobros registrados"} · total <b className="text-ok monto">{money(total)}</b></span>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
+        <span className="text-muted"><b className="text-ink">{orden.length}</b> cobros · total <b className="text-ok monto">{money(totalHist + totalNuevos)}</b>
+          <span className="text-faint"> ({cobrosHist.length} del Excel {money(totalHist)}{cobros.length ? ` + ${cobros.length} nuevos ${money(totalNuevos)}` : ""})</span>
+        </span>
         <button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
             <th className="px-4 py-1.5 font-medium">Fecha</th>
-            <th className="px-3 py-1.5 font-medium">Franquiciado</th>
+            <th className="px-3 py-1.5 font-medium">Local / Franquiciado</th>
             <th className="px-3 py-1.5 font-medium">Comprobante</th>
             <th className="px-3 py-1.5 text-right font-medium">Importe</th>
             <th className="px-3 py-1.5"></th>
@@ -855,10 +862,11 @@ function CobrosPanel({ cobros, onBorrar }: { cobros: CobroCC[]; onBorrar: (id: s
             {orden.map((c) => (
               <tr key={c.id} className="border-b border-line/60 hover:bg-ink/[0.02]">
                 <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{fechaLabel(c.fecha)}</td>
-                <td className="px-3 py-1.5 text-2xs text-ink">{c.cliente || "—"}{c.local && <span className="ml-1.5 text-faint">· {c.local}</span>}</td>
+                <td className="px-3 py-1.5 text-2xs text-ink">{c.local || c.cliente || "—"}{c.empresa && <span className="ml-1.5 text-faint">· {c.empresa}</span>}
+                  {c.hist && <span className="ml-1.5 rounded bg-ink/[0.06] px-1 py-px text-[10px] font-medium text-faint" title="Cobro histórico del Excel — ya está aplicado en el saldo">Excel</span>}</td>
                 <td className="px-3 py-1.5 font-mono text-2xs text-muted">{c.nroFactura}</td>
                 <td className="px-3 py-1.5 text-right font-mono tnum font-medium text-ok monto">{money(Number(c.importe) || 0)}</td>
-                <td className="px-3 py-1.5 text-right"><button onClick={() => { if (confirm("¿Borrar este cobro? El saldo de la factura vuelve a subir.")) onBorrar(c.id); }} className="text-faint hover:text-bad" title="Borrar cobro">×</button></td>
+                <td className="px-3 py-1.5 text-right">{c.hist ? <span className="text-[10px] text-faint" title="Ya aplicado en el saldo; no se puede borrar desde acá">·</span> : <button onClick={() => { if (confirm("¿Borrar este cobro? El saldo de la factura vuelve a subir.")) onBorrar(c.id); }} className="text-faint hover:text-bad" title="Borrar cobro">×</button>}</td>
               </tr>
             ))}
           </tbody>
