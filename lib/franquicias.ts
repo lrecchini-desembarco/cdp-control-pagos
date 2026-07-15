@@ -44,6 +44,22 @@ const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g
 // y no depende del N° (que en el Excel a veces falta o se repite entre clientes distintos).
 export const claveFranq = (nombre: string) => norm(nombre).replace(/\s+/g, " ") || "(sin dato)";
 
+// Registro de COBROS: cada pago que ingresa se registra acá (contra una factura) y
+// baja su saldo, sin tener que re-subir el estado de cuenta. Se guarda aparte.
+export interface CobroCC { id: string; fecha: string; nroFactura: string; importe: number; cliente?: string; local?: string; empresa?: string; nota?: string }
+
+/** Superpone los cobros registrados: suma al "cobrado" de la factura (por comprobante),
+ *  topeado al importe (nunca saldo negativo). Es aditivo al cobrado del estado de cuenta. */
+export function aplicarCobros(facturas: FacturaCC[], cobros: CobroCC[]): FacturaCC[] {
+  if (!cobros?.length) return facturas;
+  const porNro = new Map<string, number>();
+  for (const c of cobros) if (c.nroFactura) porNro.set(c.nroFactura, (porNro.get(c.nroFactura) ?? 0) + (Number(c.importe) || 0));
+  return facturas.map((f) => {
+    const add = porNro.get(f.nro);
+    return add ? { ...f, cobrado: Math.min(f.importe, f.cobrado + add) } : f;
+  });
+}
+
 // Capa de GESTIÓN de cobranza — se edita en la app y se guarda APARTE de las facturas
 // (keyed por comprobante), así sobrevive a re-subir el estado de cuenta. Se superpone.
 export interface Gestion { contacto?: string; promesa?: string; nota?: string; estado?: string }

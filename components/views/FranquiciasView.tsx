@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
   parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, claveFranq, canonicalEmpresa, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
-  type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC,
+  type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC, type CobroCC,
 } from "@/lib/franquicias";
 
 // Cuentas Corrientes de Franquicias. Subís el estado de cuenta (CSV/Excel) y la app
@@ -25,13 +25,14 @@ const fechaLabel = (iso: string) => { if (!iso) return "—"; const [y, m, d] = 
 const normTxt = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const BUCKET_TONE: Record<string, string> = { "Por vencer": "bg-ink/25", "1–30 días": "bg-ok/70", "31–60 días": "bg-warn/70", "61–90 días": "bg-bad/60", "+90 días": "bg-bad" };
 
-type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion";
+type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion" | "cobros";
 type DimKey = "cliente" | "empresa" | "local" | "detalle" | "contacto";
-const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"]];
+const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"], ["cobros", "Cobros"]];
 
 export default function FranquiciasView() {
   const [facturas, setFacturas] = useState<FacturaCC[]>([]);
   const [clientes, setClientes] = useState<Record<string, ClienteCC>>({});
+  const [cobros, setCobros] = useState<CobroCC[]>([]);
   const [params, setParams] = useState<ParamsCC>({ ...PARAMS_DEFAULT, fechaCorte: hoyISO() });
   const [meta, setMeta] = useState<{ actualizado?: string } | null>(null);
   const [estado, setEstado] = useState<"loading" | "idle" | "saving">("loading");
@@ -57,6 +58,7 @@ export default function FranquiciasView() {
       if (j.ok) {
         setFacturas(j.facturas ?? []);
         setClientes(j.clientes ?? {});
+        setCobros(j.cobros ?? []);
         setParams((prev) => ({ ...PARAMS_DEFAULT, ...j.params, fechaCorte: j.params?.fechaCorte || prev.fechaCorte || hoyISO() }));
         setMeta(j.meta ?? null);
       }
@@ -127,7 +129,7 @@ export default function FranquiciasView() {
 
   // Filas de la pestaña activa (usan el resumen FILTRADO + orden elegido)
   const filas = useMemo(() => {
-    if (!resumenTabla) return [];
+    if (!resumenTabla || tab === "cobros") return [];
     const base = tab === "franquiciado" ? resumenTabla.porFranquiciado : tab === "empresa" ? resumenTabla.porEmpresa
       : tab === "local" ? resumenTabla.porLocal : tab === "detalle" ? resumenTabla.porDetalle : resumenTabla.porContacto;
     const t = normTxt(q.trim());
@@ -172,6 +174,19 @@ export default function FranquiciasView() {
       return n;
     });
     try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clienteEstado: { clienteId: clave, ...patch } }) }); } catch { /* */ }
+  }
+  // Registro de cobros: baja el saldo de una factura sin re-subir el estado de cuenta.
+  async function registrarCobro(f: FacturaCC, importe: number, fecha: string) {
+    const cobro = { nroFactura: f.nro, importe, fecha, cliente: f.cliente, local: f.local, empresa: f.empresa };
+    try {
+      const r = await (await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cobroNuevo: cobro }) })).json();
+      if (!r.ok) throw new Error(r.error);
+      await cargar();
+    } catch (e) { setError(e instanceof Error ? e.message : "no se pudo registrar el cobro"); }
+  }
+  async function borrarCobro(id: string) {
+    setCobros((prev) => prev.filter((c) => c.id !== id));
+    try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ borrarCobro: id }) }); await cargar(); } catch { /* */ }
   }
   function filaOnClick(g: any) {
     if (tab === "franquiciado") abrirDetalle("cliente", g.clave ?? g.k, `${g.clienteId ? "#" + g.clienteId + " · " : ""}${g.nombre ?? g.k}`);
@@ -315,6 +330,10 @@ export default function FranquiciasView() {
                 <button key={k} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
               ))}
             </div>
+            {tab === "cobros" ? (
+              <CobrosPanel cobros={cobros} onBorrar={borrarCobro} />
+            ) : (
+            <>
             {/* Filtros rápidos (scopean la lista) + orden + export */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-ink/[0.015] px-3 py-2 text-2xs">
               <select value={fEmpresa} onChange={(e) => setFEmpresa(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink">
@@ -367,11 +386,13 @@ export default function FranquiciasView() {
                 </tbody>
               </table>
             </div>
+            </>
+            )}
           </Card>
         </>
       )}
 
-      {detalle && <DetalleModal titulo={detalle.titulo} facturas={facturas} dimKey={detalle.dimKey} val={detalle.val} params={params} cliente={detalle.dimKey === "cliente" ? (clientes[detalle.val] ?? {}) : undefined} onCliente={(patch) => updateCliente(detalle.val, patch)} onGestion={updateGestion} onBorrarManual={borrarManual} onClose={() => setDetalle(null)} />}
+      {detalle && <DetalleModal titulo={detalle.titulo} facturas={facturas} dimKey={detalle.dimKey} val={detalle.val} params={params} cliente={detalle.dimKey === "cliente" ? (clientes[detalle.val] ?? {}) : undefined} onCliente={(patch) => updateCliente(detalle.val, patch)} onGestion={updateGestion} onCobro={registrarCobro} onBorrarManual={borrarManual} onClose={() => setDetalle(null)} />}
       {formAbierto && <FacturaFormModal empresas={empresas} onGuardar={agregarManual} onClose={() => setFormAbierto(false)} />}
     </div>
   );
@@ -423,7 +444,7 @@ function Kpi({ label, value, sub, tone, full, big }: { label: string; value: str
 const CONTACTOS = ["", "Contactado", "Contactado sin respuesta", "Sin contacto"];
 // Detalle de un corte: facturas línea por línea, con GESTIÓN de cobranza EDITABLE
 // (contacto, promesa de pago, nota) que persiste y sobrevive a re-subir el archivo.
-function DetalleModal({ titulo, facturas, dimKey, val, params, cliente, onCliente, onGestion, onBorrarManual, onClose }: { titulo: string; facturas: FacturaCC[]; dimKey: DimKey; val: string; params: ParamsCC; cliente?: ClienteCC; onCliente?: (patch: Partial<ClienteCC>) => void; onGestion: (key: string, patch: Gestion) => void; onBorrarManual: (key: string) => void; onClose: () => void }) {
+function DetalleModal({ titulo, facturas, dimKey, val, params, cliente, onCliente, onGestion, onCobro, onBorrarManual, onClose }: { titulo: string; facturas: FacturaCC[]; dimKey: DimKey; val: string; params: ParamsCC; cliente?: ClienteCC; onCliente?: (patch: Partial<ClienteCC>) => void; onGestion: (key: string, patch: Gestion) => void; onCobro: (f: FacturaCC, importe: number, fecha: string) => void; onBorrarManual: (key: string) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null); // key de la fila expandida
   const esFranq = dimKey === "cliente" && !!onCliente;
@@ -484,7 +505,7 @@ function DetalleModal({ titulo, facturas, dimKey, val, params, cliente, onClient
               {vis.map((c) => {
                 const k = gestionKey(c); const exp = abierto === k;
                 return (
-                <FilaFactura key={k || c.nro} c={c} corte={params.fechaCorte} exp={exp} onToggle={() => setAbierto(exp ? null : k)} onGestion={(patch) => onGestion(k, patch)} onBorrar={() => onBorrarManual(k)} editable={!!k} />
+                <FilaFactura key={k || c.nro} c={c} corte={params.fechaCorte} exp={exp} onToggle={() => setAbierto(exp ? null : k)} onGestion={(patch) => onGestion(k, patch)} onCobro={(imp, fecha) => onCobro(c, imp, fecha)} onBorrar={() => onBorrarManual(k)} editable={!!k} />
               ); })}
             </tbody>
           </table>
@@ -494,9 +515,18 @@ function DetalleModal({ titulo, facturas, dimKey, val, params, cliente, onClient
   );
 }
 
-function FilaFactura({ c, corte, exp, onToggle, onGestion, onBorrar, editable }: { c: ReturnType<typeof costear>; corte: string; exp: boolean; onToggle: () => void; onGestion: (patch: Gestion) => void; onBorrar: () => void; editable: boolean }) {
+function FilaFactura({ c, corte, exp, onToggle, onGestion, onCobro, onBorrar, editable }: { c: ReturnType<typeof costear>; corte: string; exp: boolean; onToggle: () => void; onGestion: (patch: Gestion) => void; onCobro: (importe: number, fecha: string) => void; onBorrar: () => void; editable: boolean }) {
   const [nota, setNota] = useState(c.obs ?? "");
+  const [cobImp, setCobImp] = useState("");
+  const [cobFecha, setCobFecha] = useState(hoyISO());
+  const cobNum = Number(cobImp) || 0;
   const stop = (e: React.MouseEvent) => e.stopPropagation();
+  function registrar(e: React.MouseEvent) {
+    stop(e);
+    if (cobNum <= 0) return;
+    onCobro(cobNum, cobFecha);
+    setCobImp("");
+  }
   return (
     <>
       <tr onClick={onToggle} className={`cursor-pointer border-b border-line/60 hover:bg-ink/[0.02] ${c.cobradaManual ? "opacity-60" : ""}`}>
@@ -542,9 +572,69 @@ function FilaFactura({ c, corte, exp, onToggle, onGestion, onBorrar, editable }:
               </label>
               {c.manual && <button onClick={(e) => { stop(e); if (confirm("¿Borrar esta factura cargada a mano?")) onBorrar(); }} className="rounded-md border border-bad/30 px-2 py-0.5 text-[11px] font-medium text-bad hover:bg-bad/5">Borrar factura</button>}
             </div>
+            {c.saldo > 1 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-line/60 pt-2 text-2xs">
+                <span className="font-medium text-ok">＋ Registrar cobro</span>
+                <input type="number" value={cobImp} onClick={stop} onChange={(e) => setCobImp(e.target.value)} placeholder="importe" className="w-28 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink placeholder:text-faint" />
+                <button type="button" onClick={(e) => { stop(e); setCobImp(String(Math.round(c.saldo))); }} className="text-[10px] text-action hover:underline">todo el saldo ({money(c.saldo)})</button>
+                <input type="date" value={cobFecha} onClick={stop} onChange={(e) => setCobFecha(e.target.value)} className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink" />
+                <button onClick={registrar} disabled={cobNum <= 0} className="rounded-md bg-ok px-2.5 py-0.5 text-[11px] font-semibold text-white hover:opacity-90 disabled:opacity-40">Registrar</button>
+                {cobNum > 0 && <span className="text-faint">nuevo saldo <b className="text-ink monto">{money(Math.max(0, c.saldo - cobNum))}</b></span>}
+              </div>
+            )}
           </td>
         </tr>
       )}
+    </>
+  );
+}
+
+// Registro de cobros: log de todos los cobros aplicados (bajan el saldo de su factura).
+// Cada cobro se carga desde el detalle de una factura (match exacto por comprobante).
+function CobrosPanel({ cobros, onBorrar }: { cobros: CobroCC[]; onBorrar: (id: string) => void }) {
+  const orden = useMemo(() => [...cobros].sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")), [cobros]);
+  const total = useMemo(() => cobros.reduce((s, c) => s + (Number(c.importe) || 0), 0), [cobros]);
+  function exportar() {
+    const filas = [["Fecha", "Comprobante", "Franquiciado", "Local", "Empresa", "Importe"],
+      ...orden.map((c) => [c.fecha, c.nroFactura, c.cliente ?? "", c.local ?? "", c.empresa ?? "", String(c.importe)])];
+    const csv = filas.map((f) => f.map((x) => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = "cobros-franquicias.csv"; a.click(); URL.revokeObjectURL(url);
+  }
+  if (!cobros.length) return (
+    <div className="px-4 py-10 text-center">
+      <p className="text-2xs text-muted">Todavía no registraste ningún cobro.</p>
+      <p className="mt-1 text-2xs text-faint">Entrá al detalle de un franquiciado, abrí una factura y usá <b className="text-ok">＋ Registrar cobro</b>. El cobro baja el saldo de esa factura y queda anotado acá.</p>
+    </div>
+  );
+  return (
+    <>
+      <div className="flex items-center justify-between border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
+        <span className="text-muted"><b className="text-ink">{cobros.length}</b> {cobros.length === 1 ? "cobro registrado" : "cobros registrados"} · total <b className="text-ok monto">{money(total)}</b></span>
+        <button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
+            <th className="px-4 py-1.5 font-medium">Fecha</th>
+            <th className="px-3 py-1.5 font-medium">Franquiciado</th>
+            <th className="px-3 py-1.5 font-medium">Comprobante</th>
+            <th className="px-3 py-1.5 text-right font-medium">Importe</th>
+            <th className="px-3 py-1.5"></th>
+          </tr></thead>
+          <tbody>
+            {orden.map((c) => (
+              <tr key={c.id} className="border-b border-line/60 hover:bg-ink/[0.02]">
+                <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{fechaLabel(c.fecha)}</td>
+                <td className="px-3 py-1.5 text-2xs text-ink">{c.cliente || "—"}{c.local && <span className="ml-1.5 text-faint">· {c.local}</span>}</td>
+                <td className="px-3 py-1.5 font-mono text-2xs text-muted">{c.nroFactura}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum font-medium text-ok monto">{money(Number(c.importe) || 0)}</td>
+                <td className="px-3 py-1.5 text-right"><button onClick={() => { if (confirm("¿Borrar este cobro? El saldo de la factura vuelve a subir.")) onBorrar(c.id); }} className="text-faint hover:text-bad" title="Borrar cobro">×</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { PARAMS_DEFAULT, aplicarGestion, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC } from "@/lib/franquicias";
+import { PARAMS_DEFAULT, aplicarGestion, aplicarCobros, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC, type CobroCC } from "@/lib/franquicias";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -16,6 +16,7 @@ const PKEY = "franquicias-params";
 const GKEY = "franquicias-gestion";
 const MANK = "franquicias-manuales";   // facturas cargadas a mano (se guardan aparte)
 const CLIK = "franquicias-clientes";   // estado/nota a nivel franquiciado (keyed por clienteId)
+const COBK = "franquicias-cobros";     // registro de cobros (bajan el saldo)
 const META = "franquicias-meta";
 const pack = (o: unknown) => gzipSync(Buffer.from(JSON.stringify(o), "utf8")).toString("base64");
 const unpack = <T,>(s: string): T => JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T;
@@ -33,6 +34,9 @@ async function leerManuales(): Promise<FacturaCC[]> {
 async function leerClientes(): Promise<Record<string, ClienteCC>> {
   return (await readStore<Record<string, ClienteCC> | null>(CLIK, null)) ?? {};
 }
+async function leerCobros(): Promise<CobroCC[]> {
+  return (await readStore<CobroCC[] | null>(COBK, null)) ?? [];
+}
 async function leerParams(): Promise<ParamsCC> {
   const p = await readStore<ParamsCC | null>(PKEY, null);
   return { ...PARAMS_DEFAULT, ...(p ?? {}) };
@@ -41,12 +45,13 @@ async function leerParams(): Promise<ParamsCC> {
 export async function GET() {
   const g = await guard("/franquicias");
   if ("res" in g) return g.res;
-  const [facturas, manuales, gestion, clientes, params, meta] = await Promise.all([
-    leer(), leerManuales(), leerGestion(), leerClientes(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
+  const [facturas, manuales, gestion, clientes, cobros, params, meta] = await Promise.all([
+    leer(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
   ]);
-  // Snapshot + facturas manuales, con la gestión superpuesta (y el mapa crudo para editar).
+  // Snapshot + facturas manuales; se aplican los cobros registrados (bajan el saldo) y
+  // se superpone la gestión. Se devuelve todo crudo para editar.
   const todas = [...facturas, ...manuales.map((m) => ({ ...m, manual: true }))];
-  return NextResponse.json({ ok: true, facturas: aplicarGestion(todas, gestion), gestion, clientes, params, meta });
+  return NextResponse.json({ ok: true, facturas: aplicarGestion(aplicarCobros(todas, cobros), gestion), gestion, clientes, cobros, params, meta });
 }
 
 // POST:
@@ -93,6 +98,21 @@ export async function POST(req: NextRequest) {
       sinDup.push({ ...f, manual: true });
       await writeStore(MANK, sinDup);
       return NextResponse.json({ ok: true, total: sinDup.length });
+    }
+    if (body.cobroNuevo && typeof body.cobroNuevo === "object") {
+      const c = body.cobroNuevo as CobroCC;
+      if (!c.nroFactura || !(Number(c.importe) > 0)) return NextResponse.json({ ok: false, error: "falta comprobante o importe" }, { status: 400 });
+      const cur = await leerCobros();
+      const id = "c" + Date.now().toString(36) + Math.round(Math.random() * 1e6).toString(36);
+      cur.push({ ...c, id, importe: Number(c.importe) });
+      await writeStore(COBK, cur);
+      return NextResponse.json({ ok: true, id, total: cur.length });
+    }
+    if (typeof body.borrarCobro === "string") {
+      const cur = await leerCobros();
+      const next = cur.filter((c) => c.id !== body.borrarCobro);
+      await writeStore(COBK, next);
+      return NextResponse.json({ ok: true, total: next.length });
     }
     if (body.clienteEstado && typeof body.clienteEstado === "object" && typeof body.clienteEstado.clienteId === "string") {
       const { clienteId, estado, nota, telefono, email } = body.clienteEstado as { clienteId: string } & ClienteCC;
