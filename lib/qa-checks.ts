@@ -89,11 +89,13 @@ export async function correrChecks(): Promise<QaCheck[]> {
       const sinNombre = ccFacturas.filter((f) => claveFranq(f.cliente) === "(sin dato)").length;
       return { ok: sinNombre === 0, valor: sinNombre + " s/nombre", detalle: sinNombre === 0 ? "todos los franquiciados se identifican por nombre (unifica N° repetidos/faltantes)" : `${sinNombre} facturas sin nombre de franquiciado usable` };
     }));
-    checks.push(safe({ id: "cc-aging", persona: "Marina", seccion: "Cuentas Corrientes", titulo: "El aging cuadra con el neto", severidad: "media" }, async () => {
+    checks.push(safe({ id: "cc-aging", persona: "Marina", seccion: "Cuentas Corrientes", titulo: "El aging cuadra con el cobrable", severidad: "media" }, async () => {
       const r = resumirCC(ccFacturas, { ...PARAMS_DEFAULT, fechaCorte: hoyISO() });
+      // El aging está en scope COBRABLE (como los resúmenes del Excel): debe sumar el
+      // cobrable, que a su vez = vencido + por vencer.
       const ag = r.aging.reduce((s, a) => s + a.neto, 0);
-      const ok = casi(ag, r.totalNeto, 2) && casi(r.cobrable + r.incobrable, r.totalNeto, 2);
-      return { ok, valor: M(r.totalNeto), detalle: ok ? "Σaging = cobrable + incobrable = neto" : "el aging no suma el neto" };
+      const ok = casi(ag, r.cobrable, 2) && casi(r.cobrable, r.vencido + r.porVencer, 2);
+      return { ok, valor: M(r.cobrable), detalle: ok ? "Σaging = cobrable = vencido + por vencer" : `el aging (${M(ag)}) no suma el cobrable (${M(r.cobrable)})` };
     }));
     checks.push(safe({ id: "cc-maestro", persona: "Vale", seccion: "Cuentas Corrientes", titulo: "Maestro sin franquiciados partidos", severidad: "media" }, async () => {
       const p = { ...PARAMS_DEFAULT, fechaCorte: hoyISO() };
