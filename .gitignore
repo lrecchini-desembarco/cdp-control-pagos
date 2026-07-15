@@ -11,3 +11,6 @@ Instructivo_Cierres_Grupo_Desembarco.pdf
 
 .vercel
 .env*
+
+# Logs de runtime del bridge/push (no versionar)
+*.log
