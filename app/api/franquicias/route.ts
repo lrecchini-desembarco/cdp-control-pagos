@@ -115,12 +115,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, total: next.length });
     }
     if (body.clienteEstado && typeof body.clienteEstado === "object" && typeof body.clienteEstado.clienteId === "string") {
-      const { clienteId, estado, nota, telefono, email } = body.clienteEstado as { clienteId: string } & ClienteCC;
+      const { clienteId, estado, nota, telefono, email, cuit } = body.clienteEstado as { clienteId: string } & ClienteCC;
       const cur = await leerClientes();
       const next: ClienteCC = {
         ...(cur[clienteId] ?? {}),
         ...(estado !== undefined ? { estado } : {}), ...(nota !== undefined ? { nota } : {}),
         ...(telefono !== undefined ? { telefono } : {}), ...(email !== undefined ? { email } : {}),
+        ...(cuit !== undefined ? { cuit } : {}),
       };
       (Object.keys(next) as (keyof ClienteCC)[]).forEach((k) => { if (!next[k]) delete next[k]; });
       if (Object.keys(next).length) cur[clienteId] = next; else delete cur[clienteId];

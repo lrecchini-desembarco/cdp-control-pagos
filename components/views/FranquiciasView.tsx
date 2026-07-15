@@ -6,7 +6,9 @@ import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
   parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, claveFranq, canonicalEmpresa, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
+  maestro, proyeccionCobranza, morosidad,
   type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC, type CobroCC,
+  type MaestroCliente, type MorosidadFranq, type CobranzaBucket, type NivelMora,
 } from "@/lib/franquicias";
 
 // Cuentas Corrientes de Franquicias. Subís el estado de cuenta (CSV/Excel) y la app
@@ -25,9 +27,12 @@ const fechaLabel = (iso: string) => { if (!iso) return "—"; const [y, m, d] = 
 const normTxt = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const BUCKET_TONE: Record<string, string> = { "Por vencer": "bg-ink/25", "1–30 días": "bg-ok/70", "31–60 días": "bg-warn/70", "61–90 días": "bg-bad/60", "+90 días": "bg-bad" };
 
-type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion" | "cobros";
+type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion" | "cobros" | "maestro" | "cobranza" | "morosidad";
 type DimKey = "cliente" | "empresa" | "local" | "detalle" | "contacto";
-const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"], ["cobros", "Cobros"]];
+// Los primeros 5 son desgloses de la misma tabla; los últimos 4 son herramientas
+// (panels propios). El divisor visual arranca en "cobros".
+const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"], ["cobros", "Cobros"], ["maestro", "Maestro"], ["cobranza", "Cobranza semanal"], ["morosidad", "Morosidad"]];
+const TABS_ESPECIALES = new Set<Tab>(["cobros", "maestro", "cobranza", "morosidad"]);
 
 export default function FranquiciasView() {
   const [facturas, setFacturas] = useState<FacturaCC[]>([]);
@@ -129,7 +134,7 @@ export default function FranquiciasView() {
 
   // Filas de la pestaña activa (usan el resumen FILTRADO + orden elegido)
   const filas = useMemo(() => {
-    if (!resumenTabla || tab === "cobros") return [];
+    if (!resumenTabla || TABS_ESPECIALES.has(tab)) return [];
     const base = tab === "franquiciado" ? resumenTabla.porFranquiciado : tab === "empresa" ? resumenTabla.porEmpresa
       : tab === "local" ? resumenTabla.porLocal : tab === "detalle" ? resumenTabla.porDetalle : resumenTabla.porContacto;
     const t = normTxt(q.trim());
@@ -325,13 +330,22 @@ export default function FranquiciasView() {
 
           {/* Desglose */}
           <Card className="overflow-hidden p-0">
-            <div data-tour="fr-tabs" className="flex flex-wrap gap-1 border-b border-line px-3 py-2">
+            <div data-tour="fr-tabs" className="flex flex-wrap items-center gap-1 border-b border-line px-3 py-2">
               {TABS.map(([k, l]) => (
-                <button key={k} onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
+                <span key={k} className="flex items-center gap-1">
+                  {k === "cobros" && <span className="mx-1 hidden h-4 w-px bg-line sm:block" title="Herramientas" />}
+                  <button onClick={() => setTab(k)} className={`rounded-md px-2.5 py-1 text-2xs font-medium ${tab === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{l}</button>
+                </span>
               ))}
             </div>
             {tab === "cobros" ? (
               <CobrosPanel cobros={cobros} onBorrar={borrarCobro} />
+            ) : tab === "maestro" ? (
+              <MaestroPanel facturas={facturas} params={params} clientes={clientes} onCliente={updateCliente} />
+            ) : tab === "cobranza" ? (
+              <CobranzaPanel facturas={facturas} params={params} />
+            ) : tab === "morosidad" ? (
+              <MorosidadPanel facturas={facturas} params={params} onVer={(clave, nombre) => setDetalle({ titulo: nombre, dimKey: "cliente", val: clave })} />
             ) : (
             <>
             {/* Filtros rápidos (scopean la lista) + orden + export */}
@@ -585,6 +599,152 @@ function FilaFactura({ c, corte, exp, onToggle, onGestion, onCobro, onBorrar, ed
           </td>
         </tr>
       )}
+    </>
+  );
+}
+
+// ── Maestro de clientes: ficha por franquiciado (código/CUIT/locales/empresas/contacto) ──
+function MaestroPanel({ facturas, params, clientes, onCliente }: { facturas: FacturaCC[]; params: ParamsCC; clientes: Record<string, ClienteCC>; onCliente: (clave: string, patch: Partial<ClienteCC>) => void }) {
+  const [q, setQ] = useState("");
+  const filas = useMemo(() => maestro(facturas, params), [facturas, params]);
+  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? filas.filter((f) => normTxt(f.nombre + " " + f.codigo + " " + f.locales.join(" ") + " " + (clientes[f.clave]?.cuit ?? "")).includes(t)) : filas; }, [filas, q, clientes]);
+  function exportar() {
+    descargarCSV("maestro-franquiciados.csv",
+      ["Código", "CUIT", "Franquiciado", "Empresas", "Locales", "Teléfono", "Email", "Estado", "Facturas", "Saldo"],
+      vis.map((f) => { const c = clientes[f.clave] ?? {}; return [f.codigo, c.cuit ?? "", f.nombre, f.empresas.join(" / "), f.locales.join(" / "), c.telefono ?? "", c.email ?? "", c.estado ?? "", String(f.nFacturas), String(Math.round(f.saldo))]; }));
+  }
+  const inp = "w-full rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink placeholder:text-faint focus:border-action";
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
+        <span className="text-muted"><b className="text-ink">{filas.length}</b> franquiciados · ficha maestra (CUIT/teléfono/email se editan acá y se guardan)</span>
+        <div className="flex items-center gap-2">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar franquiciado, CUIT, local…" className="w-56 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink placeholder:text-faint" />
+          <button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
+            <th className="px-4 py-1.5 font-medium">Código</th>
+            <th className="px-3 py-1.5 font-medium">Franquiciado</th>
+            <th className="px-3 py-1.5 font-medium">CUIT</th>
+            <th className="px-3 py-1.5 font-medium">Empresa · Local</th>
+            <th className="px-3 py-1.5 font-medium">Teléfono</th>
+            <th className="px-3 py-1.5 font-medium">Email</th>
+            <th className="px-3 py-1.5 text-right font-medium">Saldo</th>
+          </tr></thead>
+          <tbody>
+            {vis.map((f) => { const c = clientes[f.clave] ?? {}; return (
+              <tr key={f.clave} className="border-b border-line/60 align-top hover:bg-ink/[0.02]">
+                <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{f.codigo || "—"}</td>
+                <td className="px-3 py-1.5 text-2xs font-medium text-ink">{f.nombre}<div className="text-[10px] font-normal text-faint">{f.nFacturas} fc</div></td>
+                <td className="px-3 py-1.5"><input defaultValue={c.cuit ?? ""} onBlur={(e) => e.target.value !== (c.cuit ?? "") && onCliente(f.clave, { cuit: e.target.value.trim() })} placeholder="CUIT" className={`${inp} w-32 font-mono`} /></td>
+                <td className="px-3 py-1.5 text-2xs text-muted">{f.empresas.join(" / ") || "—"}<div className="text-[10px] text-faint">{f.locales.join(" · ") || "—"}</div></td>
+                <td className="px-3 py-1.5"><input defaultValue={c.telefono ?? ""} onBlur={(e) => e.target.value !== (c.telefono ?? "") && onCliente(f.clave, { telefono: e.target.value.trim() })} placeholder="Teléfono" className={`${inp} w-28`} /></td>
+                <td className="px-3 py-1.5"><input defaultValue={c.email ?? ""} onBlur={(e) => e.target.value !== (c.email ?? "") && onCliente(f.clave, { email: e.target.value.trim() })} placeholder="Email" className={`${inp} w-40`} /></td>
+                <td className="whitespace-nowrap px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(f.saldo)}</td>
+              </tr>
+            ); })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+// ── Cobranza semanal: proyección de cuánto entra por semana (según venc./promesas) ──
+function CobranzaPanel({ facturas, params }: { facturas: FacturaCC[]; params: ParamsCC }) {
+  const [semanas, setSemanas] = useState(8);
+  const proy = useMemo(() => proyeccionCobranza(facturas, params, semanas), [facturas, params, semanas]);
+  const max = Math.max(1, ...proy.buckets.map((b) => b.monto));
+  const rango = (b: CobranzaBucket) => b.tipo === "atrasado" ? `Atrasado (a cobrar ya)` : b.tipo === "sinfecha" ? "Sin fecha de cobro" : b.tipo === "masalla" ? `Después de ${fechaLabel(b.desde)}` : `${fechaLabel(b.desde)} – ${fechaLabel(b.hasta)}`;
+  const tono = (b: CobranzaBucket) => b.tipo === "atrasado" ? "bg-bad" : b.tipo === "sinfecha" ? "bg-ink/25" : b.tipo === "masalla" ? "bg-ink/40" : "bg-ok/70";
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
+        <span className="text-muted">Proyección al corte <b className="text-ink">{fechaLabel(proy.corte)}</b>: fecha esperada = promesa de pago, o el vencimiento. <b className="text-bad">Atrasado {money(proy.atrasado)}</b> · futuro {money(proy.futuro)}</span>
+        <label className="flex items-center gap-1.5 text-muted">Semanas
+          <select value={semanas} onChange={(e) => setSemanas(Number(e.target.value))} className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink">
+            {[4, 6, 8, 12, 16].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="divide-y divide-line/50">
+        {proy.buckets.filter((b) => b.n > 0 || b.tipo === "atrasado").map((b) => (
+          <div key={b.clave} className="flex items-center gap-3 px-4 py-1.5">
+            <span className={`w-44 shrink-0 text-2xs ${b.tipo === "atrasado" ? "font-semibold text-bad" : "text-ink"}`}>{rango(b)}</span>
+            <span className="w-10 shrink-0 text-right font-mono text-[10px] text-faint">{b.n}</span>
+            <div className="h-3.5 flex-1 overflow-hidden rounded bg-ink/[0.04]"><div className={`h-full rounded ${tono(b)}`} style={{ width: `${Math.max(b.monto > 0 ? 3 : 0, (b.monto / max) * 100)}%` }} /></div>
+            <span className="w-28 shrink-0 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(b.monto)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-between border-t border-line px-4 py-2 text-2xs">
+        <span className="text-muted">Total cobrable proyectado</span>
+        <span className="font-mono tnum font-semibold text-ink monto">{money(proy.total)}</span>
+      </div>
+    </>
+  );
+}
+
+const NIVEL_TONO: Record<NivelMora, string> = {
+  "Crítico": "bg-bad/10 text-bad border-bad/30", "Alto": "bg-warn/15 text-warn border-warn/40",
+  "Medio": "bg-action/10 text-action border-action/30", "Bajo": "bg-ok/10 text-ok border-ok/30",
+};
+// ── Morosidad: ranking por score de riesgo + DSO (días promedio de mora) ──
+function MorosidadPanel({ facturas, params, onVer }: { facturas: FacturaCC[]; params: ParamsCC; onVer: (clave: string, nombre: string) => void }) {
+  const [q, setQ] = useState("");
+  const filas = useMemo(() => morosidad(facturas, params), [facturas, params]);
+  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? filas.filter((f) => normTxt(f.nombre + " " + f.codigo).includes(t)) : filas; }, [filas, q]);
+  const dsoGlobal = useMemo(() => { const w = filas.reduce((s, f) => s + f.dso * f.saldo, 0), b = filas.reduce((s, f) => s + f.saldo, 0); return b > 0 ? w / b : 0; }, [filas]);
+  const conteo = useMemo(() => filas.reduce((a, f) => { a[f.nivel] = (a[f.nivel] ?? 0) + 1; return a; }, {} as Record<string, number>), [filas]);
+  function exportar() {
+    descargarCSV("morosidad-franquiciados.csv",
+      ["Franquiciado", "Código", "Score", "Nivel", "DSO (días)", "Peor mora", "Vencido", "Neto"],
+      vis.map((f) => [f.nombre, f.codigo, String(f.score), f.nivel, String(Math.round(f.dso)), String(f.maxMora), String(Math.round(f.vencido)), String(Math.round(f.neto))]));
+  }
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
+        <span className="text-muted">DSO global <b className="text-ink">{Math.round(dsoGlobal)} días</b> ·{" "}
+          {(["Crítico", "Alto", "Medio", "Bajo"] as NivelMora[]).map((n) => <span key={n} className={`ml-1 rounded border px-1 py-px text-[10px] font-medium ${NIVEL_TONO[n]}`}>{conteo[n] ?? 0} {n}</span>)}
+        </span>
+        <div className="flex items-center gap-2">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar franquiciado…" className="w-48 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink placeholder:text-faint" />
+          <button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
+            <th className="px-4 py-1.5 font-medium">#</th>
+            <th className="px-3 py-1.5 font-medium">Franquiciado</th>
+            <th className="px-3 py-1.5 font-medium">Score</th>
+            <th className="px-3 py-1.5 text-right font-medium" title="Días promedio de mora, ponderado por saldo">DSO</th>
+            <th className="px-3 py-1.5 text-right font-medium" title="La peor mora de sus facturas">Peor</th>
+            <th className="px-3 py-1.5 text-right font-medium">Vencido</th>
+            <th className="px-3 py-1.5 text-right font-medium">Neto</th>
+          </tr></thead>
+          <tbody>
+            {vis.map((f, i) => (
+              <tr key={f.clave} onClick={() => onVer(f.clave, f.nombre)} className="cursor-pointer border-b border-line/60 hover:bg-ink/[0.02]">
+                <td className="px-4 py-1.5 font-mono text-[10px] text-faint">{i + 1}</td>
+                <td className="px-3 py-1.5 text-2xs font-medium text-ink">{f.nombre}<span className="ml-1.5 font-mono text-[10px] font-normal text-faint">{f.codigo}</span></td>
+                <td className="px-3 py-1.5">
+                  <span className={`inline-flex items-center gap-1.5 rounded border px-1.5 py-px text-[11px] font-semibold ${NIVEL_TONO[f.nivel]}`}>
+                    <span className="tnum">{f.score}</span><span className="font-normal">{f.nivel}</span>
+                  </span>
+                </td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted">{Math.round(f.dso)}d</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted">{f.maxMora}d</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-bad monto">{f.vencido > 0 ? money(f.vencido) : "—"}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(f.neto)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

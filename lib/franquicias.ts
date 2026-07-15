@@ -34,7 +34,7 @@ export interface FacturaCC {
 export const ESTADOS_CC = ["En gestión", "Prometido", "Cobrada", "Refinanciada", "Incobrable", "En reclamo"];
 // Estado a nivel FRANQUICIADO (etiqueta de situación del cliente, manual).
 export const ESTADOS_FRANQ = ["Al día", "En gestión", "Moroso", "Plan de pago", "En reclamo", "Incobrable"];
-export interface ClienteCC { estado?: string; nota?: string; telefono?: string; email?: string }
+export interface ClienteCC { estado?: string; nota?: string; telefono?: string; email?: string; cuit?: string }
 export const esCobradaEstado = (estado: string) => /cobrad/i.test(estado || "");         // marcada cobrada
 export const esIncobrableEstado = (estado: string) => /incobrable/i.test(estado || "");
 
@@ -107,6 +107,12 @@ export const esIncobrable = (detalle: string) => /incobrable/i.test(detalle || "
 export const gestionado = (contacto: string) => /contactad/i.test(contacto || "");
 
 const DIA = 86400000;
+/** Suma n días a una fecha ISO y devuelve ISO (para armar ventanas de semanas). */
+export function sumarDias(iso: string, n: number): string {
+  const t = Date.parse(iso + "T00:00:00Z");
+  if (!Number.isFinite(t)) return iso;
+  return new Date(t + n * DIA).toISOString().slice(0, 10);
+}
 export function diasEntre(desdeISO: string, hastaISO: string): number {
   if (!desdeISO || !hastaISO) return 0;
   const a = Date.parse(hastaISO + "T00:00:00Z"), b = Date.parse(desdeISO + "T00:00:00Z");
@@ -219,6 +225,103 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     porLocal: agg((c) => c.local),
     porContacto: agg((c) => c.contacto),
   };
+}
+
+// ── Maestro de clientes (hoja "Auxiliar" del Excel) ───────────────────────────
+// Ficha por franquiciado derivada de las facturas (código/locales/empresas/saldo)
+// + datos maestros editables en la app (CUIT/teléfono/email/estado) guardados por clave.
+export interface MaestroCliente {
+  clave: string; nombre: string; codigo: string;
+  locales: string[]; empresas: string[];
+  nFacturas: number; saldo: number; neto: number;
+}
+function nombreRep(nombres: Map<string, number>, fallback: string): string {
+  return Array.from(nombres.entries()).sort((x, y) => y[1] - x[1] || y[0].length - x[0].length)[0]?.[0] ?? fallback;
+}
+export function maestro(facturas: FacturaCC[], p: ParamsCC): MaestroCliente[] {
+  const cs = facturas.map((f) => costear(f, p));
+  const m = new Map<string, { clave: string; nombres: Map<string, number>; codigo: string; locales: Set<string>; empresas: Set<string>; n: number; saldo: number; neto: number }>();
+  for (const c of cs) {
+    const clave = claveFranq(c.cliente);
+    let a = m.get(clave);
+    if (!a) { a = { clave, nombres: new Map(), codigo: c.clienteId || "", locales: new Set(), empresas: new Set(), n: 0, saldo: 0, neto: 0 }; m.set(clave, a); }
+    a.n++; a.saldo += c.saldo; a.neto += c.neto;
+    if (c.local) a.locales.add(c.local);
+    if (c.empresa) a.empresas.add(c.empresa);
+    if (!a.codigo && c.clienteId) a.codigo = c.clienteId;
+    a.nombres.set(c.cliente, (a.nombres.get(c.cliente) ?? 0) + 1);
+  }
+  return Array.from(m.values()).map((a) => ({
+    clave: a.clave, nombre: nombreRep(a.nombres, a.clave), codigo: a.codigo,
+    locales: Array.from(a.locales).sort(), empresas: Array.from(a.empresas).sort(),
+    nFacturas: a.n, saldo: a.saldo, neto: a.neto,
+  })).sort((x, y) => x.nombre.localeCompare(y.nombre, "es"));
+}
+
+// ── Cobranza semanal/diaria (proyección de cash-flow) ─────────────────────────
+// Cada factura cobrable se ubica en el tiempo por su fecha esperada de cobro =
+// promesa de pago si la hay, si no el vencimiento. Lo que ya venció cae en "Atrasado
+// (a cobrar ya)"; el resto se agrupa por semana desde la fecha de corte.
+export interface CobranzaBucket { clave: string; desde: string; hasta: string; n: number; monto: number; tipo: "atrasado" | "semana" | "masalla" | "sinfecha" }
+export interface ProyeccionCobranza { corte: string; buckets: CobranzaBucket[]; total: number; atrasado: number; futuro: number; sinFecha: number }
+export function proyeccionCobranza(facturas: FacturaCC[], p: ParamsCC, semanas = 8): ProyeccionCobranza {
+  const corte = p.fechaCorte || new Date().toISOString().slice(0, 10);
+  const cs = facturas.map((f) => costear(f, p)).filter((c) => c.saldo > 1 && !c.cobradaManual && !c.incobrable);
+  const atrasado: CobranzaBucket = { clave: "atrasado", desde: "", hasta: corte, n: 0, monto: 0, tipo: "atrasado" };
+  const sinFecha: CobranzaBucket = { clave: "sinfecha", desde: "", hasta: "", n: 0, monto: 0, tipo: "sinfecha" };
+  const finVentana = sumarDias(corte, semanas * 7);
+  const masAlla: CobranzaBucket = { clave: "masalla", desde: finVentana, hasta: "", n: 0, monto: 0, tipo: "masalla" };
+  const semanaB: CobranzaBucket[] = [];
+  for (let i = 0; i < semanas; i++) semanaB.push({ clave: `w${i}`, desde: sumarDias(corte, i * 7), hasta: sumarDias(corte, i * 7 + 6), n: 0, monto: 0, tipo: "semana" });
+  for (const c of cs) {
+    const fecha = c.promesa || c.vencimiento;
+    const monto = c.neto; // a cobrar con punitorios a la fecha de corte
+    if (!fecha) { sinFecha.n++; sinFecha.monto += monto; continue; }
+    if (fecha < corte) { atrasado.n++; atrasado.monto += monto; continue; }
+    const wi = Math.floor(diasEntre(corte, fecha) / 7);
+    if (wi >= 0 && wi < semanas) { semanaB[wi].n++; semanaB[wi].monto += monto; }
+    else { masAlla.n++; masAlla.monto += monto; }
+  }
+  const buckets = [atrasado, ...semanaB, masAlla, sinFecha];
+  const total = buckets.reduce((s, b) => s + b.monto, 0);
+  return { corte, buckets, total, atrasado: atrasado.monto, futuro: semanaB.reduce((s, b) => s + b.monto, 0) + masAlla.monto, sinFecha: sinFecha.monto };
+}
+
+// ── Morosidad: días promedio de mora (DSO) + score de riesgo (hoja Calculo_Aux) ─
+// DSO por franquiciado = promedio de días de mora PONDERADO por saldo. El score (0–100,
+// más alto = peor) combina: % del neto vencido, DSO, la peor mora y si tiene incobrables.
+export type NivelMora = "Bajo" | "Medio" | "Alto" | "Crítico";
+export const nivelMora = (score: number): NivelMora => score >= 75 ? "Crítico" : score >= 50 ? "Alto" : score >= 20 ? "Medio" : "Bajo";
+export interface MorosidadFranq {
+  clave: string; nombre: string; codigo: string; nFacturas: number;
+  neto: number; vencido: number; saldo: number; incobrable: number;
+  dso: number; maxMora: number; score: number; nivel: NivelMora;
+}
+export function morosidad(facturas: FacturaCC[], p: ParamsCC): MorosidadFranq[] {
+  const cs = facturas.map((f) => costear(f, p));
+  const m = new Map<string, { clave: string; nombres: Map<string, number>; codigo: string; neto: number; vencido: number; saldo: number; incobrable: number; n: number; maxMora: number; wMora: number; wBase: number }>();
+  for (const c of cs) {
+    const clave = claveFranq(c.cliente);
+    let a = m.get(clave);
+    if (!a) { a = { clave, nombres: new Map(), codigo: c.clienteId || "", neto: 0, vencido: 0, saldo: 0, incobrable: 0, n: 0, maxMora: 0, wMora: 0, wBase: 0 }; m.set(clave, a); }
+    a.n++; a.neto += c.neto; a.saldo += c.saldo;
+    if (c.vencida) a.vencido += c.neto;
+    if (c.incobrable) a.incobrable += c.neto;
+    if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
+    if (c.saldo > 0) { a.wMora += c.diasMora * c.saldo; a.wBase += c.saldo; }
+    if (!a.codigo && c.clienteId) a.codigo = c.clienteId;
+    a.nombres.set(c.cliente, (a.nombres.get(c.cliente) ?? 0) + 1);
+  }
+  return Array.from(m.values()).map((a) => {
+    const dso = a.wBase > 0 ? a.wMora / a.wBase : 0;
+    const pctVencido = a.neto > 0 ? a.vencido / a.neto : 0;
+    const score = Math.min(100, Math.round(40 * pctVencido + 30 * Math.min(1, dso / 90) + 20 * Math.min(1, a.maxMora / 180) + 10 * (a.incobrable > 0 ? 1 : 0)));
+    return {
+      clave: a.clave, nombre: nombreRep(a.nombres, a.clave), codigo: a.codigo, nFacturas: a.n,
+      neto: a.neto, vencido: a.vencido, saldo: a.saldo, incobrable: a.incobrable,
+      dso, maxMora: a.maxMora, score, nivel: nivelMora(score),
+    };
+  }).sort((x, y) => y.score - x.score || y.neto - x.neto);
 }
 
 // ── Parsing del CSV/Excel (tolerante a columnas) ──────────────────────────────

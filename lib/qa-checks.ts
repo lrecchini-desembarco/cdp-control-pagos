@@ -3,7 +3,7 @@ import { readStore } from "./store";
 import { getFacturacion } from "./facturacion";
 import { getCruce } from "./cruce";
 import { resumirBancos, canonicalLocal, type MovBanco } from "./bancos";
-import { resumir as resumirCC, aplicarGestion, claveFranq, PARAMS_DEFAULT, type FacturaCC, type Gestion } from "./franquicias";
+import { resumir as resumirCC, aplicarGestion, claveFranq, maestro, proyeccionCobranza, morosidad, PARAMS_DEFAULT, type FacturaCC, type Gestion } from "./franquicias";
 
 // Bot de QA diario. Cada check es una "persona" del panel controlando su sección:
 // re-corre las auditorías reales (reconciliación, margen, identidad, mapeo, frescura)
@@ -94,6 +94,30 @@ export async function correrChecks(): Promise<QaCheck[]> {
       const ag = r.aging.reduce((s, a) => s + a.neto, 0);
       const ok = casi(ag, r.totalNeto, 2) && casi(r.cobrable + r.incobrable, r.totalNeto, 2);
       return { ok, valor: M(r.totalNeto), detalle: ok ? "Σaging = cobrable + incobrable = neto" : "el aging no suma el neto" };
+    }));
+    checks.push(safe({ id: "cc-maestro", persona: "Vale", seccion: "Cuentas Corrientes", titulo: "Maestro sin franquiciados partidos", severidad: "media" }, async () => {
+      const p = { ...PARAMS_DEFAULT, fechaCorte: hoyISO() };
+      const mae = maestro(ccFacturas, p);
+      const claves = new Set(ccFacturas.map((f) => claveFranq(f.cliente)));
+      // el maestro debe tener una ficha por clave estable (ni duplica ni pierde)
+      const ok = mae.length === claves.size;
+      return { ok, valor: mae.length + " fichas", detalle: ok ? `${mae.length} franquiciados en el maestro, 1 por identidad` : `desajuste: ${mae.length} fichas vs ${claves.size} identidades` };
+    }));
+    checks.push(safe({ id: "cc-cobranza", persona: "Marina", seccion: "Cuentas Corrientes", titulo: "La proyección no pierde plata", severidad: "media" }, async () => {
+      const p = { ...PARAMS_DEFAULT, fechaCorte: hoyISO() };
+      const proy = proyeccionCobranza(ccFacturas, p, 8);
+      // el cobrable proyectado (atrasado+futuro+sinfecha) debe igualar la suma de los buckets
+      const sum = proy.buckets.reduce((s, b) => s + b.monto, 0);
+      const ok = casi(sum, proy.total, 2) && proy.total >= 0;
+      return { ok, valor: M(proy.total), detalle: ok ? "Σsemanas + atrasado + sin fecha = total cobrable proyectado" : "la proyección no cuadra con sus buckets" };
+    }));
+    checks.push(safe({ id: "cc-morosidad", persona: "Ramiro", seccion: "Cuentas Corrientes", titulo: "Score de morosidad válido", severidad: "media" }, async () => {
+      const p = { ...PARAMS_DEFAULT, fechaCorte: hoyISO() };
+      const mor = morosidad(ccFacturas, p);
+      const malos = mor.filter((m) => m.score < 0 || m.score > 100 || m.dso < 0 || !Number.isFinite(m.score) || !Number.isFinite(m.dso));
+      const ok = malos.length === 0 && mor.length > 0;
+      const criticos = mor.filter((m) => m.nivel === "Crítico").length;
+      return { ok, valor: criticos + " críticos", detalle: ok ? `${mor.length} franquiciados scoreados (0–100), ${criticos} en nivel crítico` : `${malos.length} scores fuera de rango o inválidos` };
     }));
   }
 
