@@ -506,7 +506,7 @@ function FilaFactura({ c, corte, exp, onToggle, onGestion, onBorrar, editable }:
           {c.estado && <span className={`ml-1.5 rounded px-1 py-px text-[10px] font-medium ${c.cobradaManual ? "bg-ok/10 text-ok" : c.incobrable ? "bg-bad/10 text-bad" : "bg-ink/[0.06] text-muted"}`}>{c.estado}</span>}
           {!c.estado && c.incobrable && <span className="ml-1.5 rounded bg-bad/10 px-1 py-px text-[10px] font-medium text-bad">incobrable</span>}
           <span className="ml-1.5 font-mono text-[10px] text-faint">{c.nro}</span></td>
-        <td className="px-3 py-1.5 text-right font-mono text-2xs text-muted">{c.diasMora > 0 ? `${c.diasMora}d` : "—"}</td>
+        <td className="px-3 py-1.5 text-right font-mono text-2xs text-muted" title={c.diasMora > 0 ? `${c.diasMora} días de mora` : c.diasMoraRaw < 0 ? `faltan ${-c.diasMoraRaw} días para vencer` : "vence hoy"}>{c.diasMora > 0 ? `${c.diasMora}d` : c.diasMoraRaw < 0 ? <span className="text-faint">en {-c.diasMoraRaw}d</span> : "hoy"}</td>
         <td className="px-3 py-1.5 text-right font-mono tnum font-medium text-ink monto">{money(c.neto)}</td>
         <td className="px-3 py-1.5">
           {editable ? (

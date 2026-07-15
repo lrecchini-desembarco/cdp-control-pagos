@@ -74,7 +74,8 @@ export const PARAMS_DEFAULT: ParamsCC = {
 
 export interface FacturaCosteada extends FacturaCC {
   saldo: number;
-  diasMora: number;
+  diasMora: number;    // días de atraso (0 si no venció)
+  diasMoraRaw: number; // corte − vencimiento SIN recortar: negativo = faltan N días para vencer
   tasa: number;        // %
   punitorios: number;
   neto: number;
@@ -100,12 +101,13 @@ export function diasEntre(desdeISO: string, hastaISO: string): number {
 /** Recalcula los derivados de una factura con los parámetros dados. */
 export function costear(f: FacturaCC, p: ParamsCC): FacturaCosteada {
   const saldo = f.importe - f.cobrado;
-  const diasMora = Math.max(0, diasEntre(f.vencimiento, p.fechaCorte));
+  const diasMoraRaw = diasEntre(f.vencimiento, p.fechaCorte);
+  const diasMora = Math.max(0, diasMoraRaw);
   const tasa = diasMora > 0 ? p.baseAnual + p.diaria * diasMora : 0;
   const base = p.baseCalc === "saldo" ? saldo : f.importe;
   const punitorios = diasMora > 0 && p.divisor > 0 ? base * (tasa / 100) / p.divisor * diasMora : 0;
   return {
-    ...f, saldo, diasMora, tasa, punitorios,
+    ...f, saldo, diasMora, diasMoraRaw, tasa, punitorios,
     neto: saldo + punitorios,
     vencida: diasMora > 0,
     incobrable: esIncobrable(f.detalle) || esIncobrableEstado(f.estado ?? ""),
