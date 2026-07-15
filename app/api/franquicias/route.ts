@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
-import { PARAMS_DEFAULT, aplicarGestion, aplicarCobros, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC, type CobroCC } from "@/lib/franquicias";
+import { franquiciasTangoDesdeCache } from "@/lib/tango-cache";
+import { PARAMS_DEFAULT, aplicarGestion, aplicarCobros, facturasDesdeTango, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC, type CobroCC } from "@/lib/franquicias";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -21,9 +22,23 @@ const META = "franquicias-meta";
 const pack = (o: unknown) => gzipSync(Buffer.from(JSON.stringify(o), "utf8")).toString("base64");
 const unpack = <T,>(s: string): T => JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T;
 
-async function leer(): Promise<FacturaCC[]> {
+async function leerSnapshot(): Promise<FacturaCC[]> {
   const packed = await readStore<string | null>(KEY, null);
   return packed ? unpack<FacturaCC[]>(packed) : [];
+}
+// Base de facturas: en vivo desde Tango si FRANQUICIAS_SOURCE=live Y hay dato pusheado;
+// si no (flag apagado o el push todavía no trajo nada), el estado de cuenta subido a mano.
+// Así el conector queda listo pero DORMIDO hasta que Sistemas otorgue la vista + se prenda
+// el flag; y si se prende antes de que fluya el dato, NO rompe (cae al Excel).
+async function leerBase(): Promise<{ facturas: FacturaCC[]; fuente: "live" | "upload" }> {
+  const live = (process.env.FRANQUICIAS_SOURCE ?? process.env.DATA_SOURCE) === "live";
+  if (live) {
+    try {
+      const rows = await franquiciasTangoDesdeCache();
+      if (rows && rows.length) return { facturas: facturasDesdeTango(rows), fuente: "live" };
+    } catch { /* cae al snapshot */ }
+  }
+  return { facturas: await leerSnapshot(), fuente: "upload" };
 }
 async function leerGestion(): Promise<Record<string, Gestion>> {
   return (await readStore<Record<string, Gestion> | null>(GKEY, null)) ?? {};
@@ -45,13 +60,13 @@ async function leerParams(): Promise<ParamsCC> {
 export async function GET() {
   const g = await guard("/franquicias");
   if ("res" in g) return g.res;
-  const [facturas, manuales, gestion, clientes, cobros, params, meta] = await Promise.all([
-    leer(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
+  const [base, manuales, gestion, clientes, cobros, params, meta] = await Promise.all([
+    leerBase(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
   ]);
-  // Snapshot + facturas manuales; se aplican los cobros registrados (bajan el saldo) y
-  // se superpone la gestión. Se devuelve todo crudo para editar.
-  const todas = [...facturas, ...manuales.map((m) => ({ ...m, manual: true }))];
-  return NextResponse.json({ ok: true, facturas: aplicarGestion(aplicarCobros(todas, cobros), gestion), gestion, clientes, cobros, params, meta });
+  // Base (vivo de Tango o Excel subido) + facturas manuales; se aplican los cobros
+  // registrados (bajan el saldo) y se superpone la gestión. Se devuelve todo crudo para editar.
+  const todas = [...base.facturas, ...manuales.map((m) => ({ ...m, manual: true }))];
+  return NextResponse.json({ ok: true, facturas: aplicarGestion(aplicarCobros(todas, cobros), gestion), gestion, clientes, cobros, params, meta: { ...(meta ?? {}), fuente: base.fuente } });
 }
 
 // POST:
@@ -65,7 +80,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     if (Array.isArray(body.facturas)) {
-      const previas = await leer();
+      const previas = await leerSnapshot();
       const nuevas = body.facturas as FacturaCC[];
       const setPrev = new Set(previas.map(gestionKey));
       const setNew = new Set(nuevas.map(gestionKey));

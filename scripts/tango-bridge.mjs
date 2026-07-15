@@ -132,6 +132,20 @@ const RECETAS_QUERY = `
   ORDER BY sku_venta, codigo_insumo;
 `;
 
+// Cuenta corriente de FRANQUICIAS (estado de cuenta): una fila por comprobante
+// pendiente. Reemplaza el Excel que hoy se sube a mano. Requiere la vista
+// dbo.vw_FranquiciasCtaCte + permiso de lectura para cdp_lectura (la crea Sistemas;
+// ver docs/sql/tango-franquicias.sql). Hasta que exista + tenga GRANT, responde 502.
+// Columnas: clienteId, cliente, vencimiento, tipo, nro, importe, cobrado, empresa,
+// local, detalle. El saldo/mora/punitorio los calcula la app.
+const FRANQUICIAS_QUERY = `
+  SELECT clienteId, cliente,
+         CONVERT(varchar(10), vencimiento, 23) AS vencimiento,
+         tipo, nro, importe, cobrado, empresa, local, detalle
+  FROM dbo.vw_FranquiciasCtaCte
+  ORDER BY cliente, vencimiento;
+`;
+
 // Maestro de sucursales tal como las nombra Tango (DESC_SUCURSAL). Sirve para que
 // otras apps reconcilien su propio namespace (ej. store_id de Mercado Pago) por nombre.
 // Nota: la vista NO expone ID_SUCURSAL (solo el nombre); el ID firme sale de vw_CobrosDiarios.
@@ -167,6 +181,7 @@ const server = createServer(async (req, res) => {
       "GET /precios",
       "GET /sucursales",
       "GET /recetas  (requiere vista vw_RecetasVenta)",
+      "GET /franquicias  (cta cte; requiere vista vw_FranquiciasCtaCte)",
       "GET /cobros?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_CobrosDiarios)",
       "GET /ventas-horas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_VentasPorHora)",
       "GET /ventas-articulos?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_VentasPorArticulo)",
@@ -225,6 +240,18 @@ const server = createServer(async (req, res) => {
     } catch (e) {
       // 502 con "Invalid object name" hasta que exista dbo.vw_RecetasVenta.
       console.error("recetas error:", e.message);
+      return json(502, { error: e.message });
+    }
+  }
+
+  if (url.pathname === "/franquicias") {
+    try {
+      const pool = await getPool();
+      const r = await pool.request().query(FRANQUICIAS_QUERY);
+      return json(200, r.recordset);
+    } catch (e) {
+      // 502 con "Invalid object name" hasta que exista dbo.vw_FranquiciasCtaCte + GRANT.
+      console.error("franquicias error:", e.message);
       return json(502, { error: e.message });
     }
   }

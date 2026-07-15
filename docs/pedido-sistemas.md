@@ -68,7 +68,33 @@ cuál, pero necesitamos saberlo para comparar consistente contra costos.
 
 ---
 
-## 3) Para más adelante (opcional)
+## 3) Cuenta corriente de FRANQUICIAS en vivo (reemplaza un Excel)
+
+Hoy la pantalla "Franquicias · Cuentas Corrientes" funciona subiendo a mano el Excel
+"ESTADO DE CTA. CTE. FRANQUICIAS". La deuda de cada franquiciado es contabilidad de
+**Tango** (los franquiciados son clientes). Con **una vista** el estado de cuenta se
+lee solo, y la app le calcula encima mora, punitorios, aging, morosidad, DSO, gestión
+de cobranza y cobros — sin subir nada.
+
+La composición de saldos relevada está en `AXV_LIVE_COMPOSICION_SALDOS_CLIENTES`
+(+ `AXV_CLIENTE` para los nombres). **Ojo:** parece vivir en las bases **por sociedad**
+(Mr_Tasty_SRL, El_Desembarco_2026…), no en `CENTRAL_ESTADISTICA`. La vista (una por
+base, o unidas) debe exponer, una fila por comprobante pendiente:
+
+`clienteId, cliente, vencimiento, tipo, nro, importe (total), cobrado (aplicado),
+empresa, local, detalle`  → **el SQL completo con notas está en
+`docs/sql/tango-franquicias.sql`**.
+
+```sql
+GRANT SELECT ON dbo.vw_FranquiciasCtaCte TO cdp_lectura;
+```
+
+**Desbloquea:** que Cobranzas deje de armar el Excel — la cta cte, los punitorios, el
+ranking de morosos y la proyección de cobranza salen solos de Tango. `importe`/`local`/
+`detalle`: ver las 4 confirmaciones en el .sql (empresa suele ser constante por base;
+local/detalle son best-effort, la app funciona sin ellos).
+
+## 4) Para más adelante (opcional)
 
 Si más adelante quieren, con el mismo patrón (vista + `GRANT ... TO cdp_lectura`):
 

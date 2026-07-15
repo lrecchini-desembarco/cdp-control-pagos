@@ -39,7 +39,7 @@ export default function FranquiciasView() {
   const [clientes, setClientes] = useState<Record<string, ClienteCC>>({});
   const [cobros, setCobros] = useState<CobroCC[]>([]);
   const [params, setParams] = useState<ParamsCC>({ ...PARAMS_DEFAULT, fechaCorte: hoyISO() });
-  const [meta, setMeta] = useState<{ actualizado?: string } | null>(null);
+  const [meta, setMeta] = useState<{ actualizado?: string; fuente?: "live" | "upload" } | null>(null);
   const [estado, setEstado] = useState<"loading" | "idle" | "saving">("loading");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
@@ -219,6 +219,7 @@ export default function FranquiciasView() {
           <p className="mt-0.5 max-w-2xl text-sm text-muted">Lo que cada franquiciado le debe al grupo. Subís el estado de cuenta y la app recalcula mora, punitorios y neto — vos controlás cómo se suma.</p>
         </div>
         <div className="flex items-center gap-2">
+          {meta?.fuente === "live" && <span className="inline-flex items-center gap-1 rounded-full border border-ok/30 bg-ok/5 px-2 py-0.5 text-2xs font-medium text-ok" title="La cuenta corriente se lee en vivo desde Tango (no hace falta subir el Excel)"><span className="h-1.5 w-1.5 rounded-full bg-ok" />en vivo · Tango</span>}
           {meta?.actualizado && <span className="text-2xs text-faint">actualizado {new Date(meta.actualizado).toLocaleDateString("es-AR")}</span>}
           {hayDatos && <button onClick={() => setFormAbierto(true)} disabled={cargando} className="rounded-md border border-action/40 bg-action/5 px-3 py-1.5 text-xs font-medium text-action hover:bg-action/10 disabled:opacity-50">+ Agregar factura</button>}
           <label className={`cursor-pointer rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-ink/[0.03] ${cargando ? "pointer-events-none opacity-50" : ""}`}>

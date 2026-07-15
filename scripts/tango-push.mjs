@@ -82,6 +82,7 @@ const SQL_Q = {
   anulados: `SELECT CONVERT(varchar(10),fecha,23) fecha, id_sucursal, tipo, hora, responsable, autoriza, sku, producto, cantidad, importe, n FROM dbo.vw_Anulados WHERE fecha BETWEEN @desde AND @hasta`,
   sucursales: `SELECT ID_SUCURSAL id, DESC_SUCURSAL nombre FROM dbo.vw_Sucursales`,
   recetas: `SELECT COD_ARTICU sku, NOM_ARTICU nombre, COD_INSUMO insumoCod, NOM_INSUMO insumoDesc, CANTIDAD cant, CLASIF_INSUMO clasif FROM dbo.V_QS_Recetas_Insumo_Final`,
+  franquicias: `SELECT clienteId, cliente, CONVERT(varchar(10),vencimiento,23) vencimiento, tipo, nro, importe, cobrado, empresa, local, detalle FROM dbo.vw_FranquiciasCtaCte`,
 };
 async function sqlQuery(kind, desde, hasta) {
   const { default: sql } = await import("mssql");
@@ -167,9 +168,21 @@ async function ciclo() {
     } catch (e) { log(`recetas no empujadas: ${e instanceof Error ? e.message : e}`); }
   }
 
+  // Cta cte de FRANQUICIAS (snapshot; estado de cuenta) -> solo en ciclos completos.
+  // Tolerante: hasta que exista la vista dbo.vw_FranquiciasCtaCte, el bridge/SQL da
+  // error y NO se empuja (la app sigue con el Excel subido a mano). Ver docs/sql.
+  let nFranq = 0;
+  if (full) {
+    try {
+      const franq = await traer("franquicias", `/franquicias`);
+      await push({ tipo: "franquicias", data: pack(franq) });
+      nFranq = franq.length;
+    } catch (e) { log(`franquicias no empujadas (¿falta la vista/grant?): ${e instanceof Error ? e.message : e}`); }
+  }
+
   await push({ tipo: "fresh", dias: ultimosDias(DIAS) });
 
-  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} ventas + ${precios.length} precios + ${nCobros} cobros + ${nHoras} horas + ${nMozos} mozos + ${nAnul} anulados + ${nRec} recetas`);
+  log(`push OK ${full ? "(completo)" : "(2 días)"}: ${ventas.length} ventas + ${precios.length} precios + ${nCobros} cobros + ${nHoras} horas + ${nMozos} mozos + ${nAnul} anulados + ${nRec} recetas + ${nFranq} franquicias`);
   ciclos++;
 }
 

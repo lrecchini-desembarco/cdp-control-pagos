@@ -1,0 +1,645 @@
+2026-07-08T14:38:42.137Z tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-08T14:39:03.091Z push OK (completo): 213227 filas ventas + 17209 precios
+2026-07-08T14:49:09.149Z push OK (2 días): 7322 filas ventas + 17209 precios
+2026-07-08T14:59:15.103Z push OK (2 días): 7417 filas ventas + 17209 precios
+2026-07-08T15:09:20.439Z push OK (2 días): 7502 filas ventas + 17209 precios
+2026-07-08T15:19:24.253Z push OK (2 días): 7642 filas ventas + 17209 precios
+2026-07-08T15:26:02.957Z [pid 3460] arranco (cwd=C:\Windows\system32)
+2026-07-08T15:26:02.979Z [pid 3460] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-08T15:26:03.515Z [pid 3460] error en push: fetch failed
+2026-07-08T15:36:26.519Z [pid 3460] push OK (completo): 213791 filas ventas + 17209 precios
+2026-07-08T15:46:30.013Z [pid 3460] push OK (2 días): 7905 filas ventas + 17210 precios
+2026-07-08T15:56:33.454Z [pid 3460] push OK (2 días): 8013 filas ventas + 17211 precios
+2026-07-08T16:06:44.436Z [pid 3460] push OK (2 días): 8129 filas ventas + 17213 precios
+2026-07-08T16:42:05.535Z [pid 3460] push OK (2 días): 8474 filas ventas + 17215 precios
+2026-07-08T16:52:17.334Z [pid 3460] push OK (2 días): 8579 filas ventas + 17216 precios
+2026-07-08T17:02:40.579Z [pid 3460] push OK (completo): 214633 filas ventas + 17216 precios
+2026-07-08T17:12:45.244Z [pid 3460] push OK (2 días): 8741 filas ventas + 17216 precios
+2026-07-08T17:22:49.238Z [pid 3460] push OK (2 días): 8815 filas ventas + 17217 precios
+2026-07-08T17:32:53.855Z [pid 3460] push OK (2 días): 8877 filas ventas + 17218 precios
+2026-07-08T17:57:31.560Z [pid 3460] push OK (2 días): 9024 filas ventas + 17219 precios
+2026-07-08T18:07:36.120Z [pid 3460] push OK (2 días): 9089 filas ventas + 17220 precios
+2026-07-08T18:17:58.375Z [pid 3460] push OK (completo): 215099 filas ventas + 17222 precios
+2026-07-08T18:28:04.117Z [pid 3460] push OK (2 días): 9189 filas ventas + 17226 precios
+2026-07-08T18:38:08.017Z [pid 3460] push OK (2 días): 9238 filas ventas + 17226 precios
+2026-07-08T18:48:37.130Z [pid 3460] push OK (2 días): 9268 filas ventas + 17226 precios
+2026-07-08T18:58:41.005Z [pid 3460] push OK (2 días): 9308 filas ventas + 17226 precios
+2026-07-08T22:06:47.604Z [pid 3460] error en push: bridge /ventas?desde=2026-07-07&hasta=2026-07-08 -> 502
+2026-07-10T11:06:01.434Z [pid 3460] error en push: bridge /ventas?desde=2026-07-09&hasta=2026-07-10 -> 502
+2026-07-10T11:16:06.337Z [pid 3460] push OK (2 días): 7929 filas ventas + 17186 precios
+2026-07-10T11:26:29.582Z [pid 3460] push OK (completo): 215508 filas ventas + 17186 precios
+2026-07-10T11:36:38.595Z [pid 3460] push OK (2 días): 7929 filas ventas + 17186 precios
+2026-07-10T11:55:46.408Z [pid 3460] push OK (2 días): 7929 filas ventas + 17186 precios
+2026-07-10T12:13:05.818Z [pid 3460] push OK (2 días): 7932 filas ventas + 17186 precios
+2026-07-10T12:23:10.882Z [pid 3460] push OK (2 días): 7932 filas ventas + 17186 precios
+2026-07-10T12:33:10.057Z [pid 3460] push OK (2 días): 7932 filas ventas + 17186 precios
+2026-07-10T12:43:31.513Z [pid 3460] push OK (completo): 215511 filas ventas + 17186 precios
+2026-07-10T12:53:35.481Z [pid 3460] push OK (2 días): 7932 filas ventas + 17186 precios
+2026-07-10T13:03:39.508Z [pid 3460] push OK (2 días): 7933 filas ventas + 17186 precios
+2026-07-10T13:13:47.756Z [pid 3460] push OK (2 días): 7935 filas ventas + 17186 precios
+2026-07-10T13:23:52.351Z [pid 3460] push OK (2 días): 7939 filas ventas + 17186 precios
+2026-07-10T13:33:55.575Z [pid 3460] push OK (2 días): 7943 filas ventas + 17186 precios
+2026-07-10T13:44:22.199Z [pid 3460] push OK (completo): 215526 filas ventas + 17186 precios
+2026-07-10T13:54:25.997Z [pid 3460] push OK (2 días): 7961 filas ventas + 17186 precios
+2026-07-10T14:04:30.429Z [pid 3460] push OK (2 días): 7966 filas ventas + 17186 precios
+2026-07-10T14:14:35.226Z [pid 3460] push OK (2 días): 7988 filas ventas + 17186 precios
+2026-07-10T14:24:38.787Z [pid 3460] push OK (2 días): 8018 filas ventas + 17186 precios
+2026-07-10T14:34:42.154Z [pid 3460] push OK (2 días): 8053 filas ventas + 17186 precios
+2026-07-10T14:45:03.418Z [pid 3460] push OK (completo): 215679 filas ventas + 17186 precios
+2026-07-10T14:55:06.236Z [pid 3460] push OK (2 días): 8144 filas ventas + 17186 precios
+2026-07-10T15:05:09.484Z [pid 3460] push OK (2 días): 8238 filas ventas + 17186 precios
+2026-07-10T15:15:13.092Z [pid 3460] push OK (2 días): 8301 filas ventas + 17186 precios
+2026-07-10T15:25:16.252Z [pid 3460] push OK (2 días): 8378 filas ventas + 17186 precios
+2026-07-10T15:35:20.735Z [pid 3460] push OK (2 días): 8474 filas ventas + 17188 precios
+2026-07-10T15:45:43.341Z [pid 3460] push OK (completo): 216131 filas ventas + 17189 precios
+2026-07-10T15:58:17.597Z [pid 3460] push OK (2 días): 8671 filas ventas + 17190 precios
+2026-07-10T16:08:20.876Z [pid 3460] push OK (2 días): 8765 filas ventas + 17190 precios
+2026-07-10T16:18:24.844Z [pid 3460] push OK (2 días): 8876 filas ventas + 17190 precios
+2026-07-10T16:28:28.374Z [pid 3460] push OK (2 días): 8992 filas ventas + 17190 precios
+2026-07-10T16:38:31.845Z [pid 3460] push OK (2 días): 9088 filas ventas + 17191 precios
+2026-07-10T16:48:56.197Z [pid 3460] push OK (completo): 216766 filas ventas + 17191 precios
+2026-07-10T16:59:00.159Z [pid 3460] push OK (2 días): 9271 filas ventas + 17191 precios
+2026-07-10T17:09:03.695Z [pid 3460] push OK (2 días): 9377 filas ventas + 17192 precios
+2026-07-10T17:19:07.562Z [pid 3460] push OK (2 días): 9450 filas ventas + 17193 precios
+2026-07-10T17:20:54.920Z [pid 19896] arranco (cwd=C:\Windows\system32)
+2026-07-10T17:20:54.921Z [pid 19896] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-10T17:21:18.657Z [pid 19896] push OK (completo): 217049 filas ventas + 17193 precios
+2026-07-10T17:24:41.837Z [pid 14608] arranco (cwd=C:\Windows\system32)
+2026-07-10T17:24:41.838Z [pid 14608] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-10T17:25:04.987Z [pid 14608] push OK (completo): 217079 filas ventas + 17193 precios
+2026-07-10T17:28:03.598Z [pid 7144] arranco (cwd=C:\Windows\system32)
+2026-07-10T17:28:03.599Z [pid 7144] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-10T17:28:26.848Z [pid 7144] push OK (completo): 217107 filas ventas + 17193 precios
+2026-07-10T17:38:30.630Z [pid 7144] push OK (2 días): 9600 filas ventas + 17193 precios
+2026-07-10T17:48:34.603Z [pid 7144] push OK (2 días): 9668 filas ventas + 17193 precios
+2026-07-10T17:58:38.289Z [pid 7144] push OK (2 días): 9729 filas ventas + 17195 precios
+2026-07-10T18:08:42.324Z [pid 7144] push OK (2 días): 9790 filas ventas + 17196 precios
+2026-07-10T18:18:46.536Z [pid 7144] push OK (2 días): 9844 filas ventas + 17197 precios
+2026-07-10T18:29:12.937Z [pid 7144] push OK (completo): 217487 filas ventas + 17200 precios
+2026-07-10T18:39:17.457Z [pid 7144] push OK (2 días): 9976 filas ventas + 17200 precios
+2026-07-10T18:49:42.847Z [pid 7144] push OK (2 días): 10020 filas ventas + 17200 precios
+2026-07-10T18:59:47.224Z [pid 7144] push OK (2 días): 10054 filas ventas + 17200 precios
+2026-07-10T22:08:18.530Z [pid 7144] error en push: bridge /ventas?desde=2026-07-09&hasta=2026-07-10 -> 502
+2026-07-11T11:59:46.420Z [pid 7144] error en push: bridge /ventas?desde=2026-07-10&hasta=2026-07-11 -> 502
+2026-07-11T12:10:23.029Z [pid 7144] push OK (2 días): 7999 filas ventas + 17136 precios
+2026-07-11T12:20:26.913Z [pid 7144] push OK (2 días): 7999 filas ventas + 17136 precios
+2026-07-11T12:30:51.647Z [pid 7144] push OK (completo): 216899 filas ventas + 17136 precios
+2026-07-11T12:40:55.376Z [pid 7144] push OK (2 días): 8002 filas ventas + 17136 precios
+2026-07-11T12:50:58.574Z [pid 7144] push OK (2 días): 8002 filas ventas + 17136 precios
+2026-07-11T13:01:02.261Z [pid 7144] push OK (2 días): 8003 filas ventas + 17136 precios
+2026-07-11T13:11:06.227Z [pid 7144] push OK (2 días): 8003 filas ventas + 17136 precios
+2026-07-11T13:21:10.090Z [pid 7144] push OK (2 días): 8008 filas ventas + 17136 precios
+2026-07-11T13:31:33.441Z [pid 7144] push OK (completo): 216907 filas ventas + 17136 precios
+2026-07-11T13:42:23.640Z [pid 7144] push OK (2 días): 8010 filas ventas + 17136 precios
+2026-07-11T13:52:27.508Z [pid 7144] push OK (2 días): 8017 filas ventas + 17136 precios
+2026-07-11T14:02:31.404Z [pid 7144] push OK (2 días): 8028 filas ventas + 17136 precios
+2026-07-11T14:12:34.931Z [pid 7144] push OK (2 días): 8039 filas ventas + 17136 precios
+2026-07-11T14:22:38.563Z [pid 7144] push OK (2 días): 8094 filas ventas + 17136 precios
+2026-07-11T14:34:11.305Z [pid 7144] push OK (completo): 217022 filas ventas + 17136 precios
+2026-07-11T14:44:14.747Z [pid 7144] push OK (2 días): 8177 filas ventas + 17136 precios
+2026-07-11T14:54:18.034Z [pid 7144] push OK (2 días): 8212 filas ventas + 17136 precios
+2026-07-11T15:04:21.686Z [pid 7144] push OK (2 días): 8263 filas ventas + 17137 precios
+2026-07-11T15:14:25.115Z [pid 7144] push OK (2 días): 8354 filas ventas + 17137 precios
+2026-07-11T15:24:28.058Z [pid 7144] push OK (2 días): 8432 filas ventas + 17137 precios
+2026-07-11T15:34:52.506Z [pid 7144] push OK (completo): 217387 filas ventas + 17138 precios
+2026-07-11T15:44:56.447Z [pid 7144] push OK (2 días): 8564 filas ventas + 17138 precios
+2026-07-11T15:54:59.944Z [pid 7144] push OK (2 días): 8653 filas ventas + 17138 precios
+2026-07-11T16:05:03.341Z [pid 7144] push OK (2 días): 8748 filas ventas + 17138 precios
+2026-07-11T16:16:24.522Z [pid 7144] push OK (2 días): 8868 filas ventas + 17140 precios
+2026-07-11T16:26:27.883Z [pid 7144] push OK (2 días): 8970 filas ventas + 17140 precios
+2026-07-11T16:36:52.414Z [pid 7144] push OK (completo): 217971 filas ventas + 17141 precios
+2026-07-11T16:46:56.898Z [pid 7144] push OK (2 días): 9158 filas ventas + 17141 precios
+2026-07-11T16:57:01.172Z [pid 7144] push OK (2 días): 9249 filas ventas + 17141 precios
+2026-07-11T17:07:05.062Z [pid 7144] push OK (2 días): 9330 filas ventas + 17142 precios
+2026-07-13T10:58:36.389Z [pid 7144] error en push: bridge /ventas?desde=2026-07-12&hasta=2026-07-13 -> 502
+2026-07-13T11:08:37.527Z [pid 7144] push OK (2 días): 6799 filas ventas + 17088 precios
+2026-07-13T11:18:41.517Z [pid 7144] push OK (2 días): 6800 filas ventas + 17088 precios
+2026-07-13T11:29:04.827Z [pid 7144] push OK (completo): 216646 filas ventas + 17088 precios
+2026-07-13T11:39:08.794Z [pid 7144] push OK (2 días): 6800 filas ventas + 17088 precios
+2026-07-13T11:49:12.609Z [pid 7144] push OK (2 días): 6803 filas ventas + 17088 precios
+2026-07-13T11:59:16.216Z [pid 7144] push OK (2 días): 6803 filas ventas + 17088 precios
+2026-07-13T12:09:20.155Z [pid 7144] push OK (2 días): 6803 filas ventas + 17088 precios
+2026-07-13T12:19:24.358Z [pid 7144] push OK (2 días): 6803 filas ventas + 17088 precios
+2026-07-13T12:29:47.742Z [pid 7144] error en push: fetch failed
+2026-07-13T12:43:18.751Z [pid 7144] push OK (completo): 216649 filas ventas + 17088 precios
+2026-07-13T12:54:37.666Z [pid 7144] push OK (2 días): 6804 filas ventas + 17088 precios
+2026-07-13T13:04:41.671Z [pid 7144] push OK (2 días): 6804 filas ventas + 17088 precios
+2026-07-13T13:15:24.418Z [pid 7144] push OK (2 días): 6806 filas ventas + 17088 precios
+2026-07-13T13:25:28.671Z [pid 7144] push OK (2 días): 6810 filas ventas + 17088 precios
+2026-07-13T13:35:32.285Z [pid 7144] push OK (2 días): 6812 filas ventas + 17088 precios
+2026-07-13T13:46:08.490Z [pid 7144] push OK (completo): 216664 filas ventas + 17088 precios
+2026-07-13T13:56:11.957Z [pid 7144] push OK (2 días): 6830 filas ventas + 17089 precios
+2026-07-13T14:06:15.965Z [pid 7144] push OK (2 días): 6853 filas ventas + 17089 precios
+2026-07-13T14:16:18.991Z [pid 7144] push OK (2 días): 6881 filas ventas + 17089 precios
+2026-07-13T14:26:22.897Z [pid 7144] push OK (2 días): 6915 filas ventas + 17090 precios
+2026-07-13T14:36:25.860Z [pid 7144] push OK (2 días): 6963 filas ventas + 17091 precios
+2026-07-13T14:39:14.118Z [pid 26844] arranco (cwd=C:\Windows\system32)
+2026-07-13T14:39:14.119Z [pid 26844] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-13T14:39:53.505Z [pid 26844] push OK (completo): 216820 ventas + 17091 precios + 16808 cobros + 38522 horas
+2026-07-13T14:49:57.984Z [pid 26844] push OK (2 días): 7025 ventas + 17094 precios + 579 cobros + 1218 horas
+2026-07-13T15:00:03.048Z [pid 26844] push OK (2 días): 7089 ventas + 17095 precios + 589 cobros + 1226 horas
+2026-07-13T15:10:07.418Z [pid 26844] push OK (2 días): 7158 ventas + 17097 precios + 599 cobros + 1260 horas
+2026-07-13T15:20:12.950Z [pid 26844] push OK (2 días): 7247 ventas + 17101 precios + 611 cobros + 1279 horas
+2026-07-13T15:30:18.864Z [pid 26844] push OK (2 días): 7335 ventas + 17104 precios + 621 cobros + 1291 horas
+2026-07-13T15:41:09.176Z [pid 26844] push OK (completo): 217290 ventas + 17106 precios + 16879 cobros + 38618 horas
+2026-07-13T15:51:14.848Z [pid 26844] push OK (2 días): 7540 ventas + 17107 precios + 652 cobros + 1303 horas
+2026-07-13T16:01:20.125Z [pid 26844] push OK (2 días): 7609 ventas + 17107 precios + 661 cobros + 1306 horas
+2026-07-13T16:11:26.340Z [pid 26844] push OK (2 días): 7719 ventas + 17109 precios + 675 cobros + 1360 horas
+2026-07-13T16:27:54.889Z [pid 26844] push OK (2 días): 7869 ventas + 17116 precios + 696 cobros + 1379 horas
+2026-07-13T16:41:00.456Z [pid 26844] push OK (2 días): 7984 ventas + 17118 precios + 711 cobros + 1382 horas
+2026-07-13T16:49:46.269Z [pid 29800] arranco (cwd=C:\Windows\system32)
+2026-07-13T16:49:46.270Z [pid 29800] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-13T16:50:12.590Z [pid 29800] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T16:50:31.700Z [pid 29800] push OK (completo): 217901 ventas + 17119 precios + 16964 cobros + 38707 horas
+2026-07-13T17:01:06.941Z [pid 29800] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T17:01:08.966Z [pid 29800] push OK (2 días): 8185 ventas + 17125 precios + 732 cobros + 1393 horas
+2026-07-13T17:11:13.818Z [pid 29800] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T17:11:15.703Z [pid 29800] push OK (2 días): 8270 ventas + 17128 precios + 746 cobros + 1447 horas
+2026-07-13T17:21:20.312Z [pid 29800] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T17:21:22.603Z [pid 29800] push OK (2 días): 8325 ventas + 17128 precios + 759 cobros + 1460 horas
+2026-07-13T17:30:07.149Z [pid 26568] arranco (cwd=C:\Windows\system32)
+2026-07-13T17:30:07.150Z [pid 26568] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-13T17:30:35.932Z [pid 26568] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T17:30:53.532Z [pid 26568] bridge /mozos?desde=2026-06-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-06-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T17:31:00.549Z [pid 26568] push OK (completo): 218229 ventas + 17134 precios + 17001 cobros + 38781 horas + 2584 mozos
+2026-07-13T17:41:04.928Z [pid 26568] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T17:41:07.617Z [pid 26568] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T17:41:08.291Z [pid 26568] push OK (2 días): 8451 ventas + 17136 precios + 770 cobros + 1467 horas + 106 mozos
+2026-07-13T17:41:24.666Z [pid 16076] arranco (cwd=C:\Windows\system32)
+2026-07-13T17:41:24.667Z [pid 16076] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-13T17:41:49.544Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T17:42:07.090Z [pid 16076] bridge /mozos?desde=2026-06-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-06-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T17:42:15.985Z [pid 16076] push OK (completo): 218300 ventas + 17136 precios + 17010 cobros + 38787 horas + 2585 mozos
+2026-07-13T17:52:19.095Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T17:52:21.121Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T17:52:23.073Z [pid 16076] push OK (2 días): 8513 ventas + 17136 precios + 782 cobros + 1472 horas + 106 mozos
+2026-07-13T18:02:27.021Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T18:02:29.384Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T18:02:31.346Z [pid 16076] push OK (2 días): 8557 ventas + 17137 precios + 789 cobros + 1486 horas + 106 mozos
+2026-07-13T18:12:36.077Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T18:12:38.358Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T18:12:40.431Z [pid 16076] push OK (2 días): 8597 ventas + 17137 precios + 792 cobros + 1519 horas + 107 mozos
+2026-07-13T18:22:43.613Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T18:22:45.397Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T18:22:47.438Z [pid 16076] push OK (2 días): 8654 ventas + 17138 precios + 798 cobros + 1539 horas + 108 mozos
+2026-07-13T18:32:51.703Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T18:32:53.484Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T18:32:55.483Z [pid 16076] push OK (2 días): 8690 ventas + 17139 precios + 803 cobros + 1545 horas + 109 mozos
+2026-07-13T18:43:19.171Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T18:43:36.664Z [pid 16076] bridge /mozos?desde=2026-06-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-06-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T18:43:45.017Z [pid 16076] push OK (completo): 218561 ventas + 17140 precios + 17052 cobros + 38868 horas + 2589 mozos
+2026-07-13T18:53:48.308Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T18:53:50.149Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T18:53:53.074Z [pid 16076] push OK (2 días): 8758 ventas + 17142 precios + 821 cobros + 1557 horas + 111 mozos
+2026-07-13T19:03:57.302Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T19:03:59.290Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T19:04:01.371Z [pid 16076] push OK (2 días): 8810 ventas + 17142 precios + 832 cobros + 1571 horas + 111 mozos
+2026-07-13T19:17:29.633Z [pid 16076] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T19:17:31.269Z [pid 16076] bridge /mozos?desde=2026-07-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-07-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T19:17:33.353Z [pid 16076] push OK (2 días): 8965 ventas + 17142 precios + 844 cobros + 1615 horas + 111 mozos
+2026-07-13T19:18:32.554Z [pid 24160] arranco (cwd=C:\Windows\system32)
+2026-07-13T19:18:32.555Z [pid 24160] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-13T19:18:55.498Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-13T19:19:13.556Z [pid 24160] bridge /mozos?desde=2026-06-12&hasta=2026-07-13 falló (bridge /mozos?desde=2026-06-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T19:19:22.064Z [pid 24160] bridge /anulados?desde=2026-06-12&hasta=2026-07-13 falló (bridge /anulados?desde=2026-06-12&hasta=2026-07-13 -> 404); voy por SQL directo
+2026-07-13T19:19:29.288Z [pid 24160] push OK (completo): 218815 ventas + 17142 precios + 17084 cobros + 38936 horas + 2590 mozos + 3939 anulados
+2026-07-14T10:50:59.399Z [pid 24160] bridge /ventas?desde=2026-07-13&hasta=2026-07-14 falló (bridge /ventas?desde=2026-07-13&hasta=2026-07-14 -> 502); voy por SQL directo
+2026-07-14T10:51:00.403Z [pid 24160] error en push: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-14T11:01:04.804Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T11:01:06.699Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:01:08.560Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:01:09.501Z [pid 24160] push OK (2 días): 6118 ventas + 17123 precios + 502 cobros + 1179 horas + 80 mozos + 75 anulados
+2026-07-14T11:11:13.362Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T11:11:15.198Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:11:16.970Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:11:17.875Z [pid 24160] push OK (2 días): 6118 ventas + 17123 precios + 502 cobros + 1180 horas + 80 mozos + 75 anulados
+2026-07-14T11:21:21.377Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T11:21:23.224Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:21:25.066Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:21:25.878Z [pid 24160] push OK (2 días): 6118 ventas + 17123 precios + 502 cobros + 1180 horas + 80 mozos + 75 anulados
+2026-07-14T11:31:29.047Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T11:31:31.119Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:31:32.898Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:31:33.701Z [pid 24160] push OK (2 días): 6122 ventas + 17123 precios + 503 cobros + 1181 horas + 81 mozos + 75 anulados
+2026-07-14T11:41:36.855Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T11:41:39.817Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:41:41.662Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:41:42.498Z [pid 24160] push OK (2 días): 6122 ventas + 17123 precios + 503 cobros + 1181 horas + 81 mozos + 75 anulados
+2026-07-14T11:52:06.764Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T11:52:24.051Z [pid 24160] bridge /mozos?desde=2026-06-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:52:32.198Z [pid 24160] bridge /anulados?desde=2026-06-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T11:52:39.900Z [pid 24160] push OK (completo): 214780 ventas + 17123 precios + 16691 cobros + 38341 horas + 2544 mozos + 3801 anulados
+2026-07-14T12:02:43.819Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T12:02:45.595Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:02:47.398Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:02:48.205Z [pid 24160] push OK (2 días): 6122 ventas + 17123 precios + 503 cobros + 1181 horas + 81 mozos + 75 anulados
+2026-07-14T12:12:51.950Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T12:12:53.772Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:12:55.577Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:12:56.362Z [pid 24160] push OK (2 días): 6122 ventas + 17123 precios + 503 cobros + 1182 horas + 81 mozos + 75 anulados
+2026-07-14T12:23:00.146Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T12:23:01.842Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:23:03.782Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:23:04.639Z [pid 24160] push OK (2 días): 6123 ventas + 17123 precios + 503 cobros + 1182 horas + 81 mozos + 75 anulados
+2026-07-14T12:33:07.567Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T12:33:09.475Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:33:11.527Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:33:12.338Z [pid 24160] push OK (2 días): 6124 ventas + 17123 precios + 503 cobros + 1183 horas + 81 mozos + 75 anulados
+2026-07-14T12:43:16.684Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T12:43:19.153Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:43:22.373Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:43:23.178Z [pid 24160] push OK (2 días): 6124 ventas + 17123 precios + 503 cobros + 1183 horas + 81 mozos + 75 anulados
+2026-07-14T12:53:48.492Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T12:54:06.169Z [pid 24160] bridge /mozos?desde=2026-06-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:54:14.406Z [pid 24160] bridge /anulados?desde=2026-06-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T12:54:22.129Z [pid 24160] push OK (completo): 214786 ventas + 17123 precios + 16692 cobros + 38344 horas + 2544 mozos + 3801 anulados
+2026-07-14T13:04:25.852Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T13:04:27.614Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:04:29.695Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:04:30.493Z [pid 24160] push OK (2 días): 6129 ventas + 17123 precios + 505 cobros + 1184 horas + 81 mozos + 75 anulados
+2026-07-14T13:14:34.311Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T13:14:36.142Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:14:38.122Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:14:39.017Z [pid 24160] push OK (2 días): 6136 ventas + 17123 precios + 507 cobros + 1187 horas + 81 mozos + 75 anulados
+2026-07-14T13:24:42.161Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T13:24:44.093Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:24:46.030Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:24:46.918Z [pid 24160] push OK (2 días): 6146 ventas + 17123 precios + 508 cobros + 1193 horas + 81 mozos + 75 anulados
+2026-07-14T13:34:50.175Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T13:34:51.856Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:34:53.744Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:34:54.987Z [pid 24160] push OK (2 días): 6152 ventas + 17123 precios + 509 cobros + 1196 horas + 81 mozos + 75 anulados
+2026-07-14T13:44:58.939Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T13:45:00.901Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:45:03.007Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:45:03.828Z [pid 24160] push OK (2 días): 6164 ventas + 17123 precios + 514 cobros + 1202 horas + 81 mozos + 75 anulados
+2026-07-14T13:55:27.153Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T13:55:44.414Z [pid 24160] bridge /mozos?desde=2026-06-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:55:52.708Z [pid 24160] bridge /anulados?desde=2026-06-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T13:56:00.443Z [pid 24160] push OK (completo): 214833 ventas + 17123 precios + 16703 cobros + 38363 horas + 2544 mozos + 3801 anulados
+2026-07-14T14:06:03.859Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T14:06:05.587Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:06:07.483Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:06:08.880Z [pid 24160] push OK (2 días): 6194 ventas + 17123 precios + 520 cobros + 1213 horas + 81 mozos + 75 anulados
+2026-07-14T14:16:12.457Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T14:16:14.579Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:16:16.445Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:16:18.083Z [pid 24160] push OK (2 días): 6233 ventas + 17123 precios + 527 cobros + 1226 horas + 81 mozos + 75 anulados
+2026-07-14T14:26:21.221Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T14:26:23.149Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:26:24.956Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:26:26.008Z [pid 24160] push OK (2 días): 6263 ventas + 17123 precios + 534 cobros + 1236 horas + 81 mozos + 75 anulados
+2026-07-14T14:36:28.912Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T14:36:30.707Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:36:32.546Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:36:33.444Z [pid 24160] push OK (2 días): 6313 ventas + 17123 precios + 539 cobros + 1247 horas + 81 mozos + 75 anulados
+2026-07-14T14:46:36.780Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T14:46:38.507Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:46:40.384Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:46:41.219Z [pid 24160] push OK (2 días): 6362 ventas + 17123 precios + 548 cobros + 1252 horas + 81 mozos + 75 anulados
+2026-07-14T14:57:04.232Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T14:57:21.938Z [pid 24160] bridge /mozos?desde=2026-06-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:57:30.232Z [pid 24160] bridge /anulados?desde=2026-06-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T14:57:37.303Z [pid 24160] push OK (completo): 215077 ventas + 17124 precios + 16748 cobros + 38420 horas + 2544 mozos + 3802 anulados
+2026-07-14T15:07:40.065Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T15:07:41.986Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:07:43.780Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:07:44.549Z [pid 24160] push OK (2 días): 6496 ventas + 17124 precios + 580 cobros + 1289 horas + 81 mozos + 76 anulados
+2026-07-14T15:17:47.459Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T15:17:49.221Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:17:51.145Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:17:52.016Z [pid 24160] push OK (2 días): 6597 ventas + 17125 precios + 598 cobros + 1314 horas + 83 mozos + 77 anulados
+2026-07-14T15:27:55.082Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T15:27:56.967Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:27:58.906Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:27:59.804Z [pid 24160] push OK (2 días): 6695 ventas + 17125 precios + 607 cobros + 1326 horas + 83 mozos + 78 anulados
+2026-07-14T15:38:03.131Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T15:38:04.903Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:38:06.681Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:38:07.547Z [pid 24160] push OK (2 días): 6785 ventas + 17125 precios + 620 cobros + 1333 horas + 83 mozos + 81 anulados
+2026-07-14T15:48:10.691Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T15:48:12.295Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:48:14.093Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:48:15.004Z [pid 24160] push OK (2 días): 6865 ventas + 17126 precios + 640 cobros + 1334 horas + 83 mozos + 81 anulados
+2026-07-14T15:58:37.743Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T15:58:55.561Z [pid 24160] bridge /mozos?desde=2026-06-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:59:03.951Z [pid 24160] bridge /anulados?desde=2026-06-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T15:59:11.717Z [pid 24160] push OK (completo): 215599 ventas + 17127 precios + 16838 cobros + 38497 horas + 2546 mozos + 3807 anulados
+2026-07-14T16:09:14.774Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T16:09:16.841Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:09:18.657Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:09:19.503Z [pid 24160] push OK (2 días): 7051 ventas + 17128 precios + 661 cobros + 1383 horas + 88 mozos + 81 anulados
+2026-07-14T16:19:22.667Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T16:19:24.632Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:19:26.646Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:19:27.558Z [pid 24160] push OK (2 días): 7140 ventas + 17128 precios + 671 cobros + 1406 horas + 90 mozos + 81 anulados
+2026-07-14T16:29:31.971Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T16:29:33.966Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:29:35.868Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:29:36.641Z [pid 24160] push OK (2 días): 7236 ventas + 17128 precios + 681 cobros + 1411 horas + 95 mozos + 81 anulados
+2026-07-14T16:39:40.274Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T16:39:42.030Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:39:43.957Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:39:44.778Z [pid 24160] push OK (2 días): 7331 ventas + 17128 precios + 692 cobros + 1414 horas + 97 mozos + 81 anulados
+2026-07-14T16:49:48.051Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T16:49:49.712Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:49:51.660Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T16:49:52.714Z [pid 24160] push OK (2 días): 7430 ventas + 17129 precios + 708 cobros + 1419 horas + 99 mozos + 83 anulados
+2026-07-14T17:00:17.127Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T17:00:35.269Z [pid 24160] bridge /mozos?desde=2026-06-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:00:43.639Z [pid 24160] bridge /anulados?desde=2026-06-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:00:51.554Z [pid 24160] push OK (completo): 216172 ventas + 17130 precios + 16903 cobros + 38581 horas + 2563 mozos + 3809 anulados
+2026-07-14T17:10:55.475Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T17:10:57.059Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:10:59.153Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:11:00.005Z [pid 24160] push OK (2 días): 7597 ventas + 17131 precios + 724 cobros + 1471 horas + 100 mozos + 84 anulados
+2026-07-14T17:21:03.180Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T17:21:05.066Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:21:06.979Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:21:07.765Z [pid 24160] push OK (2 días): 7676 ventas + 17131 precios + 736 cobros + 1485 horas + 101 mozos + 84 anulados
+2026-07-14T17:31:11.514Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T17:31:14.183Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:31:16.163Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:31:17.005Z [pid 24160] push OK (2 días): 7759 ventas + 17132 precios + 743 cobros + 1497 horas + 101 mozos + 84 anulados
+2026-07-14T17:41:20.817Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T17:41:22.720Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:41:24.635Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:41:25.430Z [pid 24160] push OK (2 días): 7813 ventas + 17132 precios + 750 cobros + 1502 horas + 102 mozos + 84 anulados
+2026-07-14T17:51:29.227Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T17:51:31.245Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:51:33.146Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T17:51:34.551Z [pid 24160] push OK (2 días): 7869 ventas + 17133 precios + 756 cobros + 1509 horas + 104 mozos + 84 anulados
+2026-07-14T18:02:02.118Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T18:02:20.500Z [pid 24160] bridge /mozos?desde=2026-06-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:02:29.804Z [pid 24160] bridge /anulados?desde=2026-06-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-06-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:02:37.590Z [pid 24160] push OK (completo): 216575 ventas + 17134 precios + 16951 cobros + 38681 horas + 2568 mozos + 3810 anulados
+2026-07-14T18:12:40.634Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T18:12:42.001Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:12:43.780Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:12:44.694Z [pid 24160] push OK (2 días): 7968 ventas + 17134 precios + 767 cobros + 1562 horas + 105 mozos + 85 anulados
+2026-07-14T18:22:48.256Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T18:22:50.132Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:22:51.914Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:22:52.954Z [pid 24160] push OK (2 días): 8015 ventas + 17135 precios + 771 cobros + 1576 horas + 105 mozos + 85 anulados
+2026-07-14T18:32:56.910Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T18:32:58.796Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:33:00.657Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:33:01.468Z [pid 24160] push OK (2 días): 8062 ventas + 17135 precios + 778 cobros + 1579 horas + 105 mozos + 85 anulados
+2026-07-14T18:43:04.796Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T18:43:06.725Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:43:08.559Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:43:09.579Z [pid 24160] push OK (2 días): 8107 ventas + 17135 precios + 787 cobros + 1584 horas + 106 mozos + 85 anulados
+2026-07-14T18:53:12.843Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-14T18:53:15.065Z [pid 24160] bridge /mozos?desde=2026-07-13&hasta=2026-07-14 falló (bridge /mozos?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:53:16.986Z [pid 24160] bridge /anulados?desde=2026-07-13&hasta=2026-07-14 falló (bridge /anulados?desde=2026-07-13&hasta=2026-07-14 -> 404); voy por SQL directo
+2026-07-14T18:53:17.933Z [pid 24160] push OK (2 días): 8139 ventas + 17136 precios + 793 cobros + 1592 horas + 106 mozos + 85 anulados
+2026-07-14T23:34:46.382Z [pid 24160] bridge /ventas?desde=2026-06-13&hasta=2026-07-14 falló (bridge /ventas?desde=2026-06-13&hasta=2026-07-14 -> 502); voy por SQL directo
+2026-07-14T23:36:44.352Z [pid 24160] error en push: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T04:44:13.700Z [pid 24160] bridge /ventas?desde=2026-06-14&hasta=2026-07-15 falló (bridge /ventas?desde=2026-06-14&hasta=2026-07-15 -> 502); voy por SQL directo
+2026-07-15T05:12:13.671Z [pid 24160] error en push: Failed to connect to SRVTANGO:1433 in 10000ms
+2026-07-15T06:18:25.918Z [pid 24160] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T06:18:43.944Z [pid 24160] bridge /mozos?desde=2026-06-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T06:18:52.230Z [pid 24160] bridge /anulados?desde=2026-06-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T06:19:00.787Z [pid 24160] push OK (completo): 212902 ventas + 17100 precios + 16591 cobros + 38251 horas + 2523 mozos + 3731 anulados
+2026-07-15T07:04:15.424Z [pid 6196] arranco (cwd=C:\Windows\system32)
+2026-07-15T07:04:15.562Z [pid 6196] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-15T07:04:15.726Z [pid 6196] bridge /ventas?desde=2026-06-14&hasta=2026-07-15 falló (fetch failed); voy por SQL directo
+2026-07-15T07:05:16.984Z [pid 6196] error en push: Failed to connect to SRVTANGO:1433 in 10000ms
+2026-07-15T07:06:19.873Z [pid 3316] arranco (cwd=C:\Windows\system32)
+2026-07-15T07:06:19.926Z [pid 3316] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-15T07:06:20.029Z [pid 3316] bridge /ventas?desde=2026-06-14&hasta=2026-07-15 falló (fetch failed); voy por SQL directo
+2026-07-15T07:06:22.427Z [pid 3316] error en push: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:07:04.464Z [pid 3300] arranco (cwd=C:\Windows\system32)
+2026-07-15T07:07:04.504Z [pid 3300] tango-push -> https://cdp-control-pagos.vercel.app/api/tango-push cada 10 min (ventana 32 días)
+2026-07-15T07:07:04.660Z [pid 3300] bridge /ventas?desde=2026-06-14&hasta=2026-07-15 falló (fetch failed); voy por SQL directo
+2026-07-15T07:07:07.256Z [pid 3300] error en push: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:17:30.839Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T07:17:30.841Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:17:47.282Z [pid 3300] bridge /mozos?desde=2026-06-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:17:47.283Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:17:47.285Z [pid 3300] bridge /anulados?desde=2026-06-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:17:47.285Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:17:47.310Z [pid 3300] bridge /recetas falló (bridge /recetas -> 502); voy por SQL directo
+2026-07-15T07:17:47.310Z [pid 3300] recetas no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:17:47.506Z [pid 3300] push OK (completo): 212902 ventas + 17100 precios + 16591 cobros + 38251 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T07:27:50.953Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T07:27:50.954Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:27:52.312Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:27:52.313Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:27:52.328Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:27:52.328Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:27:52.532Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T07:37:55.831Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T07:37:55.832Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:37:56.994Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:37:56.994Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:37:57.004Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:37:57.005Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:37:57.213Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T07:48:00.601Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T07:48:00.602Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:48:02.151Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:48:02.152Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:48:02.164Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:48:02.165Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:48:02.382Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T07:58:05.977Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T07:58:05.978Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:58:07.168Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:58:07.169Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:58:07.185Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T07:58:07.186Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T07:58:07.523Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T08:08:10.925Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T08:08:10.926Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:08:12.096Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:08:12.097Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:08:12.102Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:08:12.102Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:08:12.314Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T08:18:31.994Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T08:18:31.995Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:18:48.501Z [pid 3300] bridge /mozos?desde=2026-06-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:18:48.502Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:18:48.503Z [pid 3300] bridge /anulados?desde=2026-06-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:18:48.504Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:18:48.542Z [pid 3300] bridge /recetas falló (bridge /recetas -> 502); voy por SQL directo
+2026-07-15T08:18:48.543Z [pid 3300] recetas no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:18:48.732Z [pid 3300] push OK (completo): 212902 ventas + 17100 precios + 16591 cobros + 38251 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T08:28:52.155Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T08:28:52.156Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:28:53.321Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:28:53.322Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:28:53.338Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:28:53.339Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:28:53.547Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T08:38:56.725Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T08:38:56.726Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:38:57.879Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:38:57.879Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:38:57.892Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:38:57.892Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:38:58.095Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T08:49:01.464Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T08:49:01.465Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:49:02.782Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:49:02.782Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:49:02.796Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:49:02.796Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:49:03.000Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T08:59:06.093Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T08:59:06.094Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:59:07.415Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:59:07.415Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:59:07.425Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T08:59:07.426Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T08:59:07.633Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T09:09:11.141Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T09:09:11.142Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:09:12.214Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:09:12.214Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:09:12.230Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:09:12.230Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:09:12.450Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T09:19:33.678Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T09:19:33.679Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:19:51.114Z [pid 3300] bridge /mozos?desde=2026-06-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:19:51.114Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:19:51.116Z [pid 3300] bridge /anulados?desde=2026-06-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:19:51.116Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:19:51.148Z [pid 3300] bridge /recetas falló (bridge /recetas -> 502); voy por SQL directo
+2026-07-15T09:19:51.148Z [pid 3300] recetas no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:19:51.452Z [pid 3300] push OK (completo): 212902 ventas + 17100 precios + 16591 cobros + 38251 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T09:29:54.569Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T09:29:54.570Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:29:55.770Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:29:55.771Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:29:55.787Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:29:55.787Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:29:55.995Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T09:39:59.725Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T09:39:59.725Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:40:01.090Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:40:01.091Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:40:01.105Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:40:01.105Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:40:01.307Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T09:50:04.699Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T09:50:04.700Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:50:05.794Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:50:05.795Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:50:05.808Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T09:50:05.809Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T09:50:06.024Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T10:00:09.409Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T10:00:09.410Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:00:10.650Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:00:10.651Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:00:10.667Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:00:10.667Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:00:10.875Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1193 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T10:10:14.345Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T10:10:14.345Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:10:15.381Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:10:15.381Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:10:15.392Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:10:15.392Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:10:15.597Z [pid 3300] push OK (2 días): 6125 ventas + 17100 precios + 493 cobros + 1194 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T10:20:36.021Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T10:20:36.022Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:20:52.715Z [pid 3300] bridge /mozos?desde=2026-06-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:20:52.716Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:20:52.717Z [pid 3300] bridge /anulados?desde=2026-06-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:20:52.718Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:20:52.741Z [pid 3300] bridge /recetas falló (bridge /recetas -> 502); voy por SQL directo
+2026-07-15T10:20:52.741Z [pid 3300] recetas no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:20:52.959Z [pid 3300] push OK (completo): 212903 ventas + 17100 precios + 16592 cobros + 38252 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T10:30:56.355Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T10:30:56.356Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:30:57.409Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:30:57.410Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:30:57.423Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:30:57.424Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:30:57.641Z [pid 3300] push OK (2 días): 6126 ventas + 17100 precios + 494 cobros + 1194 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T10:41:01.055Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T10:41:01.056Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:41:02.367Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:41:02.368Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:41:02.383Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:41:02.383Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:41:02.592Z [pid 3300] push OK (2 días): 6126 ventas + 17100 precios + 494 cobros + 1194 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T10:51:06.012Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T10:51:06.012Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:51:07.103Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:51:07.104Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:51:07.118Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T10:51:07.118Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T10:51:07.305Z [pid 3300] push OK (2 días): 6127 ventas + 17100 precios + 494 cobros + 1194 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T11:01:13.548Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T11:01:13.549Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:01:15.407Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:01:15.410Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:01:15.420Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:01:15.421Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:01:15.647Z [pid 3300] push OK (2 días): 6127 ventas + 17100 precios + 494 cobros + 1194 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T11:11:55.276Z [pid 3300] error en push: fetch failed
+2026-07-15T11:21:59.003Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T11:21:59.003Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:22:00.242Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:22:00.243Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:22:00.248Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:22:00.249Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:22:00.458Z [pid 3300] push OK (2 días): 6127 ventas + 17100 precios + 494 cobros + 1195 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T11:32:20.543Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T11:32:20.544Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:32:36.740Z [pid 3300] bridge /mozos?desde=2026-06-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:32:36.741Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:32:36.742Z [pid 3300] bridge /anulados?desde=2026-06-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:32:36.743Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:32:36.779Z [pid 3300] bridge /recetas falló (bridge /recetas -> 502); voy por SQL directo
+2026-07-15T11:32:36.780Z [pid 3300] recetas no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:32:36.971Z [pid 3300] push OK (completo): 212904 ventas + 17100 precios + 16592 cobros + 38253 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T11:42:40.159Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T11:42:40.160Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:42:41.390Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:42:41.391Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:42:41.402Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:42:41.402Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:42:41.606Z [pid 3300] push OK (2 días): 6127 ventas + 17100 precios + 494 cobros + 1195 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T11:52:45.091Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T11:52:45.092Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:52:46.374Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:52:46.375Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:52:46.386Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T11:52:46.386Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T11:52:46.632Z [pid 3300] push OK (2 días): 6131 ventas + 17100 precios + 495 cobros + 1196 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T12:02:50.746Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T12:02:50.747Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:02:52.170Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:02:52.170Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:02:52.172Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:02:52.172Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:02:52.418Z [pid 3300] push OK (2 días): 6132 ventas + 17100 precios + 496 cobros + 1196 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T12:12:55.587Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T12:12:55.587Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:12:56.781Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:12:56.782Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:12:56.797Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:12:56.797Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:12:57.010Z [pid 3300] push OK (2 días): 6132 ventas + 17100 precios + 496 cobros + 1197 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T12:23:00.119Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T12:23:00.119Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:23:01.303Z [pid 3300] bridge /mozos?desde=2026-07-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:23:01.303Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:23:01.316Z [pid 3300] bridge /anulados?desde=2026-07-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-07-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:23:01.316Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:23:01.532Z [pid 3300] push OK (2 días): 6132 ventas + 17100 precios + 496 cobros + 1197 horas + 0 mozos + 0 anulados + 0 recetas
+2026-07-15T12:33:27.229Z [pid 3300] bridge /sucursales-map falló (bridge /sucursales-map -> 404); voy por SQL directo
+2026-07-15T12:33:27.230Z [pid 3300] sucursales no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:33:43.975Z [pid 3300] bridge /mozos?desde=2026-06-14&hasta=2026-07-15 falló (bridge /mozos?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:33:43.975Z [pid 3300] mozos no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:33:43.978Z [pid 3300] bridge /anulados?desde=2026-06-14&hasta=2026-07-15 falló (bridge /anulados?desde=2026-06-14&hasta=2026-07-15 -> 404); voy por SQL directo
+2026-07-15T12:33:43.978Z [pid 3300] anulados no empujados: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:33:44.041Z [pid 3300] bridge /recetas falló (bridge /recetas -> 502); voy por SQL directo
+2026-07-15T12:33:44.042Z [pid 3300] recetas no empujadas: Failed to connect to SRVTANGO:1433 - getaddrinfo ENOTFOUND srvtango
+2026-07-15T12:33:44.239Z [pid 3300] push OK (completo): 212911 ventas + 17100 precios + 16595 cobros + 38256 horas + 0 mozos + 0 anulados + 0 recetas

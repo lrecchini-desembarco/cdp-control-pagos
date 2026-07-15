@@ -75,3 +75,10 @@ export async function recetasTangoDesdeCache(): Promise<any[] | null> {
   const packed = await readStore<string | null>("tango-recetas", null);
   return packed ? unpack<any[]>(packed) : null;
 }
+
+/** Cta cte de franquicias en vivo (filas de vw_FranquiciasCtaCte), desde el cache KV.
+ *  null si no está pusheada todavía (=> la app usa el estado de cuenta subido a mano). */
+export async function franquiciasTangoDesdeCache(): Promise<any[] | null> {
+  const packed = await readStore<string | null>("tango-franquicias", null);
+  return packed ? unpack<any[]>(packed) : null;
+}

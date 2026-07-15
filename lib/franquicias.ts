@@ -392,6 +392,35 @@ export interface ResultadoParse {
   error?: string;
 }
 
+// Fila cruda de la vista de Tango (dbo.vw_FranquiciasCtaCte) -> FacturaCC. Las columnas
+// ya vienen aliasadas por la vista; acá solo normalizamos tipos, empresa y el mes.
+// Tolerante a que falten local/detalle (son enriquecimiento, la app funciona sin ellos).
+export function tangoRowAFactura(row: Record<string, unknown>): FacturaCC {
+  const venc = isoFecha(row.vencimiento);
+  const clienteRaw = String(row.cliente ?? "").trim();
+  const mCli = clienteRaw.match(/^(\d+)\s*[-–]\s*(.+)$/); // por si el nombre viene "2003 - NOMBRE"
+  return {
+    clienteId: String(row.clienteId ?? (mCli ? mCli[1] : "")).trim(),
+    cliente: mCli ? mCli[2].trim() : clienteRaw,
+    vencimiento: venc,
+    tipo: String(row.tipo ?? "").trim() || "FAC",
+    nro: String(row.nro ?? "").trim(),
+    importe: parseNum(row.importe),
+    cobrado: parseNum(row.cobrado),
+    empresa: canonicalEmpresa(String(row.empresa ?? "")),
+    local: String(row.local ?? "").trim(),
+    detalle: String(row.detalle ?? "").trim(),
+    contacto: "", obs: "",
+    mes: venc ? venc.slice(0, 7) : "",
+  };
+}
+/** Mapea el snapshot vivo de Tango (varias filas) a FacturaCC, descartando basura. */
+export function facturasDesdeTango(rows: unknown[]): FacturaCC[] {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((r) => tangoRowAFactura(r as Record<string, unknown>))
+    .filter((f) => f.cliente && (f.importe || f.cobrado));
+}
+
 export const parseFranquiciasCSV = (txt: string): ResultadoParse => parseFranquiciasMatriz(csvAMatriz(txt));
 
 /** Parser principal: matriz de filas (viene de CSV o de Excel vía SheetJS). */
