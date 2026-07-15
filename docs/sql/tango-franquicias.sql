@@ -16,6 +16,7 @@
      clienteId    VARCHAR  -> código del cliente en Tango (ID/COD)
      cliente      VARCHAR  -> razón social del franquiciado
      vencimiento  DATE     -> fecha de vencimiento del comprobante
+     emision      DATE     -> fecha de EMISIÓN del comprobante (columna aparte)
      tipo         VARCHAR  -> tipo de comprobante (FAC, N/C, REC, …)
      nro          VARCHAR  -> número de comprobante (formateado)
      importe      DECIMAL  -> importe ORIGINAL de la deuda (total del comprobante)
@@ -54,6 +55,7 @@ SELECT
     CAST(c.ID_GVA12 AS varchar(20))                         AS clienteId,
     LTRIM(RTRIM(cli.RAZON_SOCI))                            AS cliente,
     CAST(c.FECHA_VTO AS date)                               AS vencimiento,
+    CAST(c.FECHA_EMIS AS date)                              AS emision,   -- fecha de emisión (ajustar nombre real del campo)
     LTRIM(RTRIM(c.T_COMP))                                  AS tipo,
     LTRIM(RTRIM(c.N_COMP))                                  AS nro,
     ISNULL(c.IMPORTE, 0)                                    AS importe,

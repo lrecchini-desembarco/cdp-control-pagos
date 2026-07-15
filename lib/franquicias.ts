@@ -27,6 +27,8 @@ export interface FacturaCC {
   mes: string;
   promesa?: string;    // fecha de promesa de pago (gestión en la app), ISO
   estado?: string;     // estado de cobranza puesto A MANO (ver ESTADOS_CC); "" = automático
+  bloqueo?: string;    // "SI" | "NO" | "" — si el local está bloqueado (gestión en la app)
+  emision?: string;    // fecha de emisión del comprobante (ISO); "" si no vino del origen
   manual?: boolean;    // factura cargada a mano (no vino del estado de cuenta)
 }
 
@@ -62,7 +64,7 @@ export function aplicarCobros(facturas: FacturaCC[], cobros: CobroCC[]): Factura
 
 // Capa de GESTIÓN de cobranza — se edita en la app y se guarda APARTE de las facturas
 // (keyed por comprobante), así sobrevive a re-subir el estado de cuenta. Se superpone.
-export interface Gestion { contacto?: string; promesa?: string; nota?: string; estado?: string }
+export interface Gestion { contacto?: string; promesa?: string; nota?: string; estado?: string; bloqueo?: string }
 export const gestionKey = (f: { clienteId: string; nro: string }) => (f.nro ? `${f.clienteId}|${f.nro}` : "");
 
 /** Superpone la gestión guardada (por comprobante) sobre las facturas del snapshot. */
@@ -71,7 +73,7 @@ export function aplicarGestion(facturas: FacturaCC[], g: Record<string, Gestion>
   return facturas.map((f) => {
     const o = g[gestionKey(f)];
     if (!o) return f;
-    return { ...f, contacto: o.contacto ?? f.contacto, promesa: o.promesa ?? f.promesa, obs: o.nota ?? f.obs, estado: o.estado ?? f.estado };
+    return { ...f, contacto: o.contacto ?? f.contacto, promesa: o.promesa ?? f.promesa, obs: o.nota ?? f.obs, estado: o.estado ?? f.estado, bloqueo: o.bloqueo ?? f.bloqueo };
   });
 }
 
@@ -241,7 +243,7 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     porEmpresa: agg((c) => c.empresa, true),
     porDetalle: agg((c) => c.detalle),
     porFranquiciado,
-    porLocal: agg((c) => c.local, true),
+    porLocal: agg((c) => canonicalLocal(c.local), true),
     porContacto: agg((c) => c.contacto),
   };
 }
@@ -346,7 +348,7 @@ export interface CobroLocal { local: string; empresa: string; vencida: number; n
 export function cobroPorLocal(facturas: FacturaCC[], p: ParamsCC, cobros: { local?: string; importe: number; fecha?: string }[] = []): CobroLocal[] {
   const cs = facturas.map((f) => costear(f, p)).filter((c) => c.cobrable);
   const m = new Map<string, CobroLocal>();
-  const key = (s?: string) => (s || "(sin local)");
+  const key = (s?: string) => (canonicalLocal(s || "") || "(sin local)");
   for (const c of cs) {
     const k = key(c.local);
     let a = m.get(k);
@@ -385,7 +387,7 @@ export function morosidad(facturas: FacturaCC[], p: ParamsCC, por: MoraPor = "fr
   type Acc = { clave: string; nombres: Map<string, number>; codigo: string; empresa: string; neto: number; vencido: number; saldo: number; incobrable: number; n: number; maxMora: number; wMora: number; wBase: number; comprobMora: number; sumDiasMora: number; capitalMora: number; punitMora: number };
   const m = new Map<string, Acc>();
   for (const c of cs) {
-    const clave = por === "local" ? (c.local || "(sin local)") : claveFranq(c.cliente);
+    const clave = por === "local" ? (canonicalLocal(c.local) || "(sin local)") : claveFranq(c.cliente);
     let a = m.get(clave);
     if (!a) { a = { clave, nombres: new Map(), codigo: c.clienteId || "", empresa: c.empresa, neto: 0, vencido: 0, saldo: 0, incobrable: 0, n: 0, maxMora: 0, wMora: 0, wBase: 0, comprobMora: 0, sumDiasMora: 0, capitalMora: 0, punitMora: 0 }; m.set(clave, a); }
     a.n++; a.neto += c.neto; a.saldo += c.saldo;
@@ -430,7 +432,7 @@ export function moraGlobal(facturas: FacturaCC[], p: ParamsCC): MoraGlobal {
   let sumDias = 0, deuda = 0;
   for (const c of cs) {
     sumDias += c.diasMora; deuda += c.neto;
-    if (c.local) locales.add(c.local);
+    if (c.local) locales.add(canonicalLocal(c.local));
     const e = emp.get(c.empresa) ?? { comprob: 0, sumDias: 0, deuda: 0 };
     e.comprob++; e.sumDias += c.diasMora; e.deuda += c.neto; emp.set(c.empresa, e);
   }
@@ -448,6 +450,29 @@ const EMP_ALIAS: Record<string, string> = { "mr tasty": "Mr Tasty", "desembarco"
 export function canonicalEmpresa(s: string): string {
   const k = norm(s);
   return EMP_ALIAS[k] ?? (s || "").trim();
+}
+
+// LOCALES: Tango y Raven (y el propio Excel) nombran distinto al mismo local
+// ("MRT FLORES" vs "MR TASTY FLORES", "DDR ..." vs "DESEMBARCO ..."). Esto lo unifica:
+// normaliza (mayúsculas, sin acentos, espacios simples, sin puntuación al final) y
+// expande abreviaturas de marca conocidas. El mapa LOCAL_ALIAS es EXTENSIBLE: a medida
+// que aparezcan pares Tango/Raven que no matcheen solos, se agregan acá (clave = nombre
+// ya normalizado con canonicalLocalRaw, valor = nombre canónico final).
+const LOCAL_ALIAS: Record<string, string> = {
+  // ej: "MR TASTY VILLA REAL": "MR TASTY VILLA DEL PARQUE",   // ← cargar pares reales
+};
+function canonicalLocalRaw(s: string): string {
+  let t = String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/\s+/g, " ").replace(/[.\s-]+$/, "").trim();
+  if (!t) return "";
+  // Abreviaturas de marca al inicio (confiables): MRT / M.R.T. -> MR TASTY · DDR -> DESEMBARCO.
+  t = t.replace(/^M\.?\s?R\.?\s?T\.?(\s|$)/, "MR TASTY$1").replace(/^DDR(\s|$)/, "DESEMBARCO$1");
+  return t.replace(/\s+/g, " ").trim();
+}
+/** Nombre canónico de un local (unifica Tango/Raven/Excel). Aplicar SIEMPRE al agrupar
+ *  o filtrar por local, así el mismo local es UNO solo aunque venga escrito distinto. */
+export function canonicalLocal(s: string): string {
+  const t = canonicalLocalRaw(s);
+  return LOCAL_ALIAS[t] ?? t;
 }
 
 function parseNum(v: unknown): number {
@@ -486,9 +511,10 @@ export function csvAMatriz(txt: string): string[][] {
   return rows;
 }
 
-const SINONIMOS: Record<keyof Omit<FacturaCC, "clienteId" | "importe" | "cobrado" | "promesa" | "estado" | "manual">, RegExp> & { importe: RegExp; cobrado: RegExp } = {
+const SINONIMOS: Record<keyof Omit<FacturaCC, "clienteId" | "importe" | "cobrado" | "promesa" | "estado" | "bloqueo" | "emision" | "manual">, RegExp> & { importe: RegExp; cobrado: RegExp; emision: RegExp } = {
   cliente: /cliente|razon social|franquicia/,
   vencimiento: /vencimiento|vto|fecha.*venc/,
+  emision: /emisi[oó]n|fecha.*emis/,
   tipo: /tipo.*comprob|tipo comp/,
   nro: /nro|n[°º]|numero.*comp/,
   importe: /importe pendiente|pendiente|importe$|deuda/,
@@ -520,12 +546,13 @@ export function tangoRowAFactura(row: Record<string, unknown>): FacturaCC {
     clienteId: String(row.clienteId ?? (mCli ? mCli[1] : "")).trim(),
     cliente: mCli ? mCli[2].trim() : clienteRaw,
     vencimiento: venc,
+    emision: isoFecha(row.emision),
     tipo: String(row.tipo ?? "").trim() || "FAC",
     nro: String(row.nro ?? "").trim(),
     importe: parseNum(row.importe),
     cobrado: parseNum(row.cobrado),
     empresa: canonicalEmpresa(String(row.empresa ?? "")),
-    local: String(row.local ?? "").trim(),
+    local: canonicalLocal(String(row.local ?? "")),
     detalle: String(row.detalle ?? "").trim(),
     contacto: "", obs: "",
     mes: venc ? venc.slice(0, 7) : "",
@@ -579,12 +606,13 @@ export function parseFranquiciasMatriz(matriz: string[][]): ResultadoParse {
       clienteId: mCli ? mCli[1] : "",
       cliente: mCli ? mCli[2].trim() : clienteRaw,
       vencimiento: venc,
+      emision: isoFecha(G(row, "emision")),
       tipo: String(G(row, "tipo") ?? "").trim() || "FAC",
       nro: String(G(row, "nro") ?? "").trim(),
       importe,
       cobrado: parseNum(G(row, "cobrado")),
       empresa: canonicalEmpresa(String(G(row, "empresa") ?? "")),
-      local: String(G(row, "local") ?? "").trim(),
+      local: canonicalLocal(String(G(row, "local") ?? "")),
       detalle: String(G(row, "detalle") ?? "").trim(),
       contacto: String(G(row, "contacto") ?? "").trim(),
       obs: String(G(row, "obs") ?? "").trim(),

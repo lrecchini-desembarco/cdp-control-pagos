@@ -82,7 +82,7 @@ const SQL_Q = {
   anulados: `SELECT CONVERT(varchar(10),fecha,23) fecha, id_sucursal, tipo, hora, responsable, autoriza, sku, producto, cantidad, importe, n FROM dbo.vw_Anulados WHERE fecha BETWEEN @desde AND @hasta`,
   sucursales: `SELECT ID_SUCURSAL id, DESC_SUCURSAL nombre FROM dbo.vw_Sucursales`,
   recetas: `SELECT COD_ARTICU sku, NOM_ARTICU nombre, COD_INSUMO insumoCod, NOM_INSUMO insumoDesc, CANTIDAD cant, CLASIF_INSUMO clasif FROM dbo.V_QS_Recetas_Insumo_Final`,
-  franquicias: `SELECT clienteId, cliente, CONVERT(varchar(10),vencimiento,23) vencimiento, tipo, nro, importe, cobrado, empresa, local, detalle FROM dbo.vw_FranquiciasCtaCte`,
+  franquicias: `SELECT clienteId, cliente, CONVERT(varchar(10),vencimiento,23) vencimiento, CONVERT(varchar(10),emision,23) emision, tipo, nro, importe, cobrado, empresa, local, detalle FROM dbo.vw_FranquiciasCtaCte`,
 };
 async function sqlQuery(kind, desde, hasta) {
   const { default: sql } = await import("mssql");

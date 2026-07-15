@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
-  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, claveFranq, canonicalEmpresa, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
+  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, claveFranq, canonicalEmpresa, canonicalLocal, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
   maestro, morosidad, moraGlobal, cobranzaCalendario, cobroPorLocal,
   type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC, type CobroCC,
   type MaestroCliente, type MorosidadFila, type MoraPor, type Granularidad, type NivelMora,
@@ -154,7 +154,7 @@ export default function FranquiciasView() {
   // Guarda la gestión de una factura (optimista + persiste). Sobrevive a re-subir.
   async function updateGestion(key: string, patch: Gestion) {
     setFacturas((prev) => prev.map((f) => gestionKey(f) === key
-      ? { ...f, ...(patch.contacto !== undefined ? { contacto: patch.contacto } : {}), ...(patch.promesa !== undefined ? { promesa: patch.promesa } : {}), ...(patch.nota !== undefined ? { obs: patch.nota } : {}) }
+      ? { ...f, ...(patch.contacto !== undefined ? { contacto: patch.contacto } : {}), ...(patch.promesa !== undefined ? { promesa: patch.promesa } : {}), ...(patch.nota !== undefined ? { obs: patch.nota } : {}), ...(patch.estado !== undefined ? { estado: patch.estado } : {}), ...(patch.bloqueo !== undefined ? { bloqueo: patch.bloqueo } : {}) }
       : f));
     try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ gestionKey: key, gestion: patch }) }); }
     catch { /* silencioso: el estado local ya quedó */ }
@@ -483,7 +483,7 @@ function DetalleModal({ titulo, facturas, dimKey, val, params, cliente, onClient
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null); // key de la fila expandida
   const esFranq = dimKey === "cliente" && !!onCliente;
-  const propio = (f: FacturaCC) => (dimKey === "cliente" ? claveFranq(f.cliente) : dimKey === "empresa" ? f.empresa : dimKey === "local" ? f.local : dimKey === "detalle" ? f.detalle : f.contacto);
+  const propio = (f: FacturaCC) => (dimKey === "cliente" ? claveFranq(f.cliente) : dimKey === "empresa" ? f.empresa : dimKey === "local" ? canonicalLocal(f.local) : dimKey === "detalle" ? f.detalle : f.contacto);
   const cs = useMemo(() => facturas.filter((f) => propio(f) === val).map((f) => costear(f, params)).sort((a, b) => b.neto - a.neto), [facturas, val, params]); // eslint-disable-line react-hooks/exhaustive-deps
   const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? cs.filter((c) => normTxt(c.detalle + " " + c.nro + " " + (c.obs ?? "")).includes(t)) : cs; }, [cs, q]);
   const tot = cs.reduce((s, c) => ({ neto: s.neto + c.neto, saldo: s.saldo + c.saldo, pun: s.pun + c.punitorios }), { neto: 0, saldo: 0, pun: 0 });
@@ -532,9 +532,10 @@ function DetalleModal({ titulo, facturas, dimKey, val, params, cliente, onClient
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 bg-surface"><tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
-              <th className="px-4 py-2 font-medium">Vence</th><th className="px-3 py-2 font-medium">Concepto</th>
+              <th className="px-4 py-2 font-medium">Emisión</th><th className="px-3 py-2 font-medium">Vence</th><th className="px-3 py-2 font-medium">Concepto</th>
               <th className="px-3 py-2 text-right font-medium">Mora</th><th className="px-3 py-2 text-right font-medium">Neto</th>
-              <th className="px-3 py-2 font-medium">Cobranza</th>
+              <th className="px-3 py-2 font-medium">Contacto</th>
+              <th className="px-3 py-2 font-medium">Bloqueos</th>
             </tr></thead>
             <tbody>
               {vis.map((c) => {
@@ -565,7 +566,8 @@ function FilaFactura({ c, corte, exp, onToggle, onGestion, onCobro, onBorrar, ed
   return (
     <>
       <tr onClick={onToggle} className={`cursor-pointer border-b border-line/60 hover:bg-ink/[0.02] ${c.cobradaManual ? "opacity-60" : ""}`}>
-        <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{fechaLabel(c.vencimiento)}</td>
+        <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-faint" title={c.emision ? "Fecha de emisión" : "La fecha de emisión llega cuando se conecte Tango/Raven"}>{c.emision ? fechaLabel(c.emision) : "—"}</td>
+        <td className="whitespace-nowrap px-3 py-1.5 font-mono text-2xs text-muted">{fechaLabel(c.vencimiento)}</td>
         <td className="px-3 py-1.5 text-2xs text-ink">{c.detalle || "—"}
           {c.manual && <span className="ml-1.5 rounded bg-action/10 px-1 py-px text-[10px] font-medium text-action">manual</span>}
           {c.estado && <span className={`ml-1.5 rounded px-1 py-px text-[10px] font-medium ${c.cobradaManual ? "bg-ok/10 text-ok" : c.incobrable ? "bg-bad/10 text-bad" : "bg-ink/[0.06] text-muted"}`}>{c.estado}</span>}
@@ -586,10 +588,19 @@ function FilaFactura({ c, corte, exp, onToggle, onGestion, onCobro, onBorrar, ed
             ? <span className="ml-1.5 rounded bg-bad/10 px-1 py-px text-[10px] font-medium text-bad" title="La promesa de pago venció y no se cobró">💰 venció {fechaLabel(c.promesa)}</span>
             : <span className="ml-1.5 rounded bg-action/10 px-1 py-px text-[10px] text-action">💰 {fechaLabel(c.promesa)}</span>)}
         </td>
+        <td className="px-3 py-1.5">
+          {editable ? (
+            <select value={c.bloqueo === "SI" ? "SI" : c.bloqueo === "NO" ? "NO" : ""} onClick={stop} onChange={(e) => onGestion({ bloqueo: e.target.value })} className={`rounded-md border px-1.5 py-0.5 text-[11px] ${c.bloqueo === "SI" ? "border-bad/40 bg-bad/5 font-medium text-bad" : c.bloqueo === "NO" ? "border-ok/40 bg-ok/5 text-ok" : "border-line bg-surface text-muted"}`}>
+              <option value="">—</option>
+              <option value="SI">Sí</option>
+              <option value="NO">No</option>
+            </select>
+          ) : <span className="text-2xs text-faint">—</span>}
+        </td>
       </tr>
       {exp && editable && (
         <tr className="border-b border-line/60 bg-ink/[0.015]">
-          <td colSpan={5} className="px-4 py-2">
+          <td colSpan={7} className="px-4 py-2">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-2xs">
               <span className="text-faint">saldo <b className="text-ink monto">{money(c.saldo)}</b> · punitorio <b className="text-warn monto">{money(c.punitorios)}</b> ({c.tasa.toFixed(1)}%)</span>
               <label className="flex items-center gap-1.5 text-muted">🏷️ Estado

@@ -141,6 +141,7 @@ const RECETAS_QUERY = `
 const FRANQUICIAS_QUERY = `
   SELECT clienteId, cliente,
          CONVERT(varchar(10), vencimiento, 23) AS vencimiento,
+         CONVERT(varchar(10), emision, 23) AS emision,
          tipo, nro, importe, cobrado, empresa, local, detalle
   FROM dbo.vw_FranquiciasCtaCte
   ORDER BY cliente, vencimiento;
