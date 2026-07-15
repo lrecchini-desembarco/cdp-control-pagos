@@ -6,9 +6,9 @@ import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
   parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, claveFranq, canonicalEmpresa, canonicalLocal, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
-  maestro, morosidad, moraGlobal, cobranzaCalendario, cobroPorLocal,
+  maestro, morosidad, moraGlobal, cobranzaCalendario, cobroPorLocal, resumirRaven,
   type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC, type CobroCC,
-  type MaestroCliente, type MorosidadFila, type MoraPor, type Granularidad, type NivelMora,
+  type MaestroCliente, type MorosidadFila, type MoraPor, type Granularidad, type NivelMora, type RavenFranq,
 } from "@/lib/franquicias";
 
 // Cuentas Corrientes de Franquicias. Subís el estado de cuenta (CSV/Excel) y la app
@@ -27,18 +27,19 @@ const fechaLabel = (iso: string) => { if (!iso) return "—"; const [y, m, d] = 
 const normTxt = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const BUCKET_TONE: Record<string, string> = { "Por vencer": "bg-ink/25", "1–30 días": "bg-ok/70", "31–60 días": "bg-warn/70", "61–90 días": "bg-bad/60", "+90 días": "bg-bad" };
 
-type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion" | "cobros" | "cobrolocal" | "maestro" | "cobranza" | "morosidad";
+type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion" | "cobros" | "cobrolocal" | "maestro" | "cobranza" | "morosidad" | "raven";
 type DimKey = "cliente" | "empresa" | "local" | "detalle" | "contacto";
 // Los primeros 5 son desgloses de la misma tabla; los últimos son herramientas
 // (panels propios). El divisor visual arranca en "cobros".
-const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"], ["cobros", "Cobros"], ["cobrolocal", "Cobro x local"], ["maestro", "Maestro"], ["cobranza", "Cobranza"], ["morosidad", "Morosidad"]];
-const TABS_ESPECIALES = new Set<Tab>(["cobros", "cobrolocal", "maestro", "cobranza", "morosidad"]);
+const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"], ["cobros", "Cobros"], ["cobrolocal", "Cobro x local"], ["maestro", "Maestro"], ["cobranza", "Cobranza"], ["morosidad", "Morosidad"], ["raven", "Raven (CDP)"]];
+const TABS_ESPECIALES = new Set<Tab>(["cobros", "cobrolocal", "maestro", "cobranza", "morosidad", "raven"]);
 
 export default function FranquiciasView() {
   const [facturas, setFacturas] = useState<FacturaCC[]>([]);
   const [clientes, setClientes] = useState<Record<string, ClienteCC>>({});
   const [cobros, setCobros] = useState<CobroCC[]>([]);
   const [cobrosHist, setCobrosHist] = useState<CobroCC[]>([]);
+  const [raven, setRaven] = useState<{ franqs: RavenFranq[]; meta: { cuando?: string; desde?: string; hasta?: string; nComprob?: number } }>({ franqs: [], meta: {} });
   const [params, setParams] = useState<ParamsCC>({ ...PARAMS_DEFAULT, fechaCorte: hoyISO() });
   const [meta, setMeta] = useState<{ actualizado?: string; fuente?: "live" | "upload" } | null>(null);
   const [estado, setEstado] = useState<"loading" | "idle" | "saving">("loading");
@@ -66,6 +67,7 @@ export default function FranquiciasView() {
         setClientes(j.clientes ?? {});
         setCobros(j.cobros ?? []);
         setCobrosHist(j.cobrosHist ?? []);
+        setRaven(j.raven ?? { franqs: [], meta: {} });
         setParams((prev) => ({ ...PARAMS_DEFAULT, ...j.params, fechaCorte: j.params?.fechaCorte || prev.fechaCorte || hoyISO() }));
         setMeta(j.meta ?? null);
       }
@@ -124,6 +126,26 @@ export default function FranquiciasView() {
   async function guardarParams() {
     setProgreso("Guardando parámetros…"); setEstado("saving");
     try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) }); }
+    finally { setEstado("idle"); setProgreso(""); }
+  }
+
+  // Sube el export fiscal de Raven ("mis-comprobantes"): lo parsea en el navegador,
+  // lo resume por CUIT y lo guarda APARTE de la cta cte. Fuente = Raven, no Tango.
+  async function subirRaven(files: FileList | null) {
+    const f = files?.[0]; if (!f) return;
+    setError(""); setEstado("saving"); setProgreso(`Leyendo ${f.name}…`);
+    try {
+      const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const objs = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { raw: false, defval: "" });
+      const franqs = resumirRaven(objs);
+      if (!franqs.length) throw new Error("no encontré comprobantes con CUIT en el archivo");
+      const fechas = objs.map((o) => String(o["Fecha"] ?? "").slice(0, 10)).filter(Boolean).sort();
+      const r = await (await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ravenBulk: franqs, ravenMeta: { desde: fechas[0] ?? "", hasta: fechas[fechas.length - 1] ?? "", nComprob: objs.length } }) })).json();
+      if (!r.ok) throw new Error(r.error);
+      setInfo(`Raven cargado: ${int(objs.length)} comprobantes de ${franqs.length} franquiciados (por CUIT).`);
+      await cargar();
+    } catch (e) { setError(e instanceof Error ? e.message : "no se pudo leer el archivo de Raven"); }
     finally { setEstado("idle"); setProgreso(""); }
   }
 
@@ -351,11 +373,13 @@ export default function FranquiciasView() {
             ) : tab === "cobrolocal" ? (
               <CobroLocalPanel facturas={facturas} params={params} cobros={cobrosTodos} />
             ) : tab === "maestro" ? (
-              <MaestroPanel facturas={facturas} params={params} clientes={clientes} onCliente={updateCliente} />
+              <MaestroPanel facturas={facturas} params={params} clientes={clientes} onCliente={updateCliente} raven={raven.franqs} />
             ) : tab === "cobranza" ? (
               <CobranzaPanel facturas={facturas} params={params} />
             ) : tab === "morosidad" ? (
               <MorosidadPanel facturas={facturas} params={params} onVer={(clave, nombre) => setDetalle({ titulo: nombre, dimKey: "cliente", val: clave })} />
+            ) : tab === "raven" ? (
+              <RavenPanel raven={raven} clientes={clientes} onSubir={subirRaven} cargando={cargando} />
             ) : (
             <>
             {/* Filtros rápidos (scopean la lista) + orden + export */}
@@ -636,9 +660,11 @@ function FilaFactura({ c, corte, exp, onToggle, onGestion, onCobro, onBorrar, ed
 }
 
 // ── Maestro de clientes: ficha por franquiciado (código/CUIT/locales/empresas/contacto) ──
-function MaestroPanel({ facturas, params, clientes, onCliente }: { facturas: FacturaCC[]; params: ParamsCC; clientes: Record<string, ClienteCC>; onCliente: (clave: string, patch: Partial<ClienteCC>) => void }) {
+function MaestroPanel({ facturas, params, clientes, onCliente, raven }: { facturas: FacturaCC[]; params: ParamsCC; clientes: Record<string, ClienteCC>; onCliente: (clave: string, patch: Partial<ClienteCC>) => void; raven: RavenFranq[] }) {
   const [q, setQ] = useState("");
   const filas = useMemo(() => maestro(facturas, params), [facturas, params]);
+  // Nombre de local de Raven por CUIT (para comparar contra el nombre de Tango).
+  const localRavenPorCuit = useMemo(() => { const m = new Map<string, string>(); for (const r of raven) if (r.cuit && r.localRaven) m.set(r.cuit.replace(/\D/g, ""), r.localRaven); return m; }, [raven]);
   const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? filas.filter((f) => normTxt(f.nombre + " " + f.codigo + " " + f.locales.join(" ") + " " + (clientes[f.clave]?.cuit ?? "")).includes(t)) : filas; }, [filas, q, clientes]);
   function exportar() {
     descargarCSV("maestro-franquiciados.csv",
@@ -675,7 +701,8 @@ function MaestroPanel({ facturas, params, clientes, onCliente }: { facturas: Fac
                 <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-muted">{f.codigo || "—"}</td>
                 <td className="px-3 py-1.5 text-2xs font-medium text-ink">{f.nombre}<div className="text-[10px] font-normal text-faint">{f.nFacturas} fc</div></td>
                 <td className="px-3 py-1.5"><input defaultValue={c.cuit ?? ""} onBlur={(e) => e.target.value !== (c.cuit ?? "") && onCliente(f.clave, { cuit: e.target.value.trim() })} placeholder="CUIT" className={`${inp} w-32 font-mono`} /></td>
-                <td className="px-3 py-1.5 text-2xs text-muted">{f.empresas.join(" / ") || "—"}<div className="text-[10px] text-faint">{f.locales.join(" · ") || "—"}</div></td>
+                <td className="px-3 py-1.5 text-2xs text-muted">{f.empresas.join(" / ") || "—"}<div className="text-[10px] text-faint">{f.locales.join(" · ") || "—"}</div>
+                  {(() => { const lr = localRavenPorCuit.get((c.cuit ?? "").replace(/\D/g, "")); return lr ? <div className="text-[10px] text-action" title="Nombre del local según Raven">Raven: {lr}</div> : null; })()}</td>
                 <td className="px-3 py-1.5"><input defaultValue={c.telefono ?? ""} onBlur={(e) => e.target.value !== (c.telefono ?? "") && onCliente(f.clave, { telefono: e.target.value.trim() })} placeholder="Teléfono" className={`${inp} w-28`} /></td>
                 <td className="px-3 py-1.5"><input defaultValue={c.email ?? ""} onBlur={(e) => e.target.value !== (c.email ?? "") && onCliente(f.clave, { email: e.target.value.trim() })} placeholder="Email" className={`${inp} w-40`} /></td>
                 <td className="whitespace-nowrap px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(f.saldo)}</td>
@@ -851,6 +878,78 @@ function MorosidadPanel({ facturas, params, onVer }: { facturas: FacturaCC[]; pa
           </tbody>
         </table>
       </div>
+    </>
+  );
+}
+
+// ── Raven (export fiscal del CDP) — FUENTE APARTE de la cta cte, cruzada por CUIT ──
+function RavenPanel({ raven, clientes, onSubir, cargando }: { raven: { franqs: RavenFranq[]; meta: { cuando?: string; desde?: string; hasta?: string; nComprob?: number } }; clientes: Record<string, ClienteCC>; onSubir: (files: FileList | null) => void; cargando: boolean }) {
+  const [q, setQ] = useState("");
+  const soloDig = (s?: string) => String(s ?? "").replace(/\D/g, "");
+  const cuitsMaestro = useMemo(() => new Set(Object.values(clientes).map((c) => soloDig(c.cuit)).filter(Boolean)), [clientes]);
+  const franqs = raven.franqs ?? [];
+  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? franqs.filter((f) => normTxt(f.denominacion + " " + f.cuit + " " + f.localRaven).includes(t)) : franqs; }, [franqs, q]);
+  const tot = useMemo(() => franqs.reduce((a, f) => ({ total: a.total + f.total, cdp: a.cdp + f.cdp, serv: a.serv + f.servicios }), { total: 0, cdp: 0, serv: 0 }), [franqs]);
+  const enCta = (f: RavenFranq) => cuitsMaestro.has(soloDig(f.cuit));
+  const cruzan = useMemo(() => franqs.filter(enCta).length, [franqs, cuitsMaestro]);
+  function exportar() {
+    descargarCSV("raven-por-franquiciado.csv",
+      ["Franquiciado", "CUIT", "Local (Raven)", "Comprobantes", "Total facturado", "CDP (mercadería)", "Servicios", "En cta cte", "Desde", "Hasta"],
+      vis.map((f) => [f.denominacion, f.cuit, f.localRaven, f.n, Math.round(f.total), Math.round(f.cdp), Math.round(f.servicios), enCta(f) ? "Sí" : "No", f.desde, f.hasta]));
+  }
+  const subirBtn = (
+    <label className={`cursor-pointer rounded-md border border-action/40 bg-action/5 px-2.5 py-1 text-[11px] font-medium text-action hover:bg-action/10 ${cargando ? "pointer-events-none opacity-50" : ""}`}>
+      {franqs.length ? "Actualizar Raven" : "Subir export de Raven"}
+      <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => onSubir(e.target.files)} />
+    </label>
+  );
+  return (
+    <>
+      <InfoNota tone="warn">
+        <b>De dónde llega esto:</b> es el export fiscal de <b>Raven</b> (la pantalla «mis-comprobantes» del CDP), <b>NO es la deuda</b> (la deuda sale del estado de cuenta de Tango, en las otras solapas). Muestra <b>qué le facturó el CDP</b> a cada franquiciado. Se cruza por <b>CUIT</b> (no por número, porque la numeración fiscal no coincide con la de la cta cte). <b>Con remito = mercadería/CDP · sin remito = servicios</b> (regalías, etc.).
+      </InfoNota>
+      {!franqs.length ? (
+        <div className="px-4 py-10 text-center">
+          <p className="text-2xs text-muted">Todavía no subiste el export de Raven.</p>
+          <p className="mx-auto mt-1 max-w-md text-2xs text-faint">Bajá «mis-comprobantes» de Raven (admin.ravenfood.app/fiscal/comprobantes) y subilo acá. Se resume por franquiciado (CUIT) y queda separado de la deuda.</p>
+          <div className="mt-3 flex justify-center">{subirBtn}</div>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
+            <span className="text-muted"><b className="text-ink">{franqs.length}</b> franquiciados · facturado <b className="text-ink monto">{money(tot.total)}</b> (<b className="text-ok">CDP {money(tot.cdp)}</b> · servicios {money(tot.serv)}) · <b className="text-ink">{cruzan}</b> cruzan con el maestro{raven.meta?.desde ? <span className="text-faint"> · {fechaLabel(raven.meta.desde)}–{fechaLabel(raven.meta.hasta || "")} · {int(raven.meta.nComprob || 0)} comprob.</span> : null}</span>
+            <div className="flex items-center gap-2">{subirBtn}<input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar…" className="w-40 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink placeholder:text-faint" /><button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button></div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
+                <th className="px-4 py-1.5 font-medium">Franquiciado (Raven)</th>
+                <th className="px-3 py-1.5 font-medium">CUIT</th>
+                <th className="px-3 py-1.5 font-medium">Local (Raven)</th>
+                <th className="px-3 py-1.5 text-right font-medium">Comprob.</th>
+                <th className="px-3 py-1.5 text-right font-medium">Facturado</th>
+                <th className="px-3 py-1.5 text-right font-medium" title="Comprobantes con remito = mercadería">CDP</th>
+                <th className="px-3 py-1.5 text-right font-medium" title="Sin remito = regalías/servicios">Servicios</th>
+                <th className="px-3 py-1.5 font-medium" title="¿El CUIT está en el maestro / la cta cte?">En cta cte</th>
+              </tr></thead>
+              <tbody>
+                {vis.map((f) => (
+                  <tr key={f.cuit} className="border-b border-line/60 hover:bg-ink/[0.02]">
+                    <td className="px-4 py-1.5 text-2xs font-medium text-ink">{f.denominacion || "—"}</td>
+                    <td className="px-3 py-1.5 font-mono text-2xs text-muted">{f.cuit}</td>
+                    <td className="px-3 py-1.5 text-2xs text-muted">{f.localRaven || "—"}</td>
+                    <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-faint">{f.n}</td>
+                    <td className="px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(f.total)}</td>
+                    <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-ok monto">{f.cdp > 0 ? money(f.cdp) : "—"}</td>
+                    <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted monto">{f.servicios > 0 ? money(f.servicios) : "—"}</td>
+                    <td className="px-3 py-1.5">{enCta(f) ? <span className="rounded bg-ok/10 px-1.5 py-px text-[10px] font-medium text-ok">✓ sí</span> : <span className="rounded bg-ink/[0.06] px-1.5 py-px text-[10px] text-faint">no</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </>
   );
 }

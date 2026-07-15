@@ -565,6 +565,43 @@ export function facturasDesdeTango(rows: unknown[]): FacturaCC[] {
     .filter((f) => f.cliente && (f.importe || f.cobrado));
 }
 
+// ── Datos de RAVEN (export fiscal "mis-comprobantes") ─────────────────────────
+// FUENTE DISTINTA a la cta cte: son los comprobantes fiscales que emite el CDP,
+// cruzados con el franquiciado por CUIT (no por número — la numeración fiscal AFIP
+// no coincide con la de la cta cte). Sirve para ver qué facturó el CDP a cada uno y
+// separar mercadería (con remito = CDP) de servicios (sin remito = regalías/otros).
+export interface RavenFranq {
+  cuit: string; denominacion: string; localRaven: string;
+  n: number; total: number; cdp: number; servicios: number; desde: string; hasta: string;
+}
+const soloDigitos = (s: unknown) => String(s ?? "").replace(/\D/g, "");
+/** Agrega el export fiscal de Raven por CUIT del receptor (franquiciado). Lee por
+ *  nombre de columna (los encabezados reales del export) para ser tolerante. */
+export function resumirRaven(comprobantes: Record<string, unknown>[]): RavenFranq[] {
+  const g = (c: Record<string, unknown>, ...keys: string[]) => { for (const k of keys) if (c[k] != null && String(c[k]).trim() !== "") return c[k]; return ""; };
+  const m = new Map<string, { cuit: string; denoms: Map<string, number>; locales: Map<string, number>; n: number; total: number; cdp: number; servicios: number; desde: string; hasta: string }>();
+  for (const c of comprobantes) {
+    const cuit = soloDigitos(g(c, "Nro. Doc. Receptor", "cuit", "CUIT"));
+    if (!cuit) continue;
+    const total = parseNum(g(c, "Imp. Total", "total", "importe"));
+    const conRemito = String(g(c, "Número de remito", "remito")).trim() !== "";
+    const fecha = isoFecha(g(c, "Fecha", "fecha", "emision"));
+    const local = String(g(c, "Nombre Comercial", "local")).trim();
+    const denom = String(g(c, "Denominación Receptor", "denominacion", "cliente")).trim();
+    let a = m.get(cuit);
+    if (!a) { a = { cuit, denoms: new Map(), locales: new Map(), n: 0, total: 0, cdp: 0, servicios: 0, desde: fecha, hasta: fecha }; m.set(cuit, a); }
+    a.n++; a.total += total; if (conRemito) a.cdp += total; else a.servicios += total;
+    if (fecha) { if (!a.desde || fecha < a.desde) a.desde = fecha; if (!a.hasta || fecha > a.hasta) a.hasta = fecha; }
+    if (local) a.locales.set(local, (a.locales.get(local) ?? 0) + 1);
+    if (denom) a.denoms.set(denom, (a.denoms.get(denom) ?? 0) + 1);
+  }
+  const top = (mm: Map<string, number>) => Array.from(mm.entries()).sort((x, y) => y[1] - x[1])[0]?.[0] ?? "";
+  return Array.from(m.values()).map((a) => ({
+    cuit: a.cuit, denominacion: top(a.denoms), localRaven: top(a.locales),
+    n: a.n, total: a.total, cdp: a.cdp, servicios: a.servicios, desde: a.desde, hasta: a.hasta,
+  })).sort((x, y) => y.total - x.total);
+}
+
 export const parseFranquiciasCSV = (txt: string): ResultadoParse => parseFranquiciasMatriz(csvAMatriz(txt));
 
 /** Parser principal: matriz de filas (viene de CSV o de Excel vía SheetJS). */

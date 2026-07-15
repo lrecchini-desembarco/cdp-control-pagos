@@ -3,7 +3,7 @@ import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
 import { franquiciasTangoDesdeCache } from "@/lib/tango-cache";
-import { PARAMS_DEFAULT, aplicarGestion, aplicarCobros, facturasDesdeTango, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC, type CobroCC } from "@/lib/franquicias";
+import { PARAMS_DEFAULT, aplicarGestion, aplicarCobros, facturasDesdeTango, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC, type CobroCC, type RavenFranq } from "@/lib/franquicias";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -19,6 +19,7 @@ const MANK = "franquicias-manuales";   // facturas cargadas a mano (se guardan a
 const CLIK = "franquicias-clientes";   // estado/nota a nivel franquiciado (keyed por clienteId)
 const COBK = "franquicias-cobros";     // registro de cobros NUEVOS (bajan el saldo)
 const COBHK = "franquicias-cobros-hist"; // cobros HISTÓRICOS (ya aplicados en el snapshot; solo display: Total cobrado / Último cobro por local)
+const RAVK = "franquicias-raven";      // datos de Raven (export fiscal) resumidos por CUIT — FUENTE APARTE de la cta cte
 const META = "franquicias-meta";
 const pack = (o: unknown) => gzipSync(Buffer.from(JSON.stringify(o), "utf8")).toString("base64");
 const unpack = <T,>(s: string): T => JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T;
@@ -57,6 +58,9 @@ async function leerCobrosHist(): Promise<CobroCC[]> {
   const packed = await readStore<string | null>(COBHK, null);
   return packed ? unpack<CobroCC[]>(packed) : [];
 }
+async function leerRaven(): Promise<{ franqs: RavenFranq[]; meta: { cuando?: string; desde?: string; hasta?: string; nComprob?: number } }> {
+  return (await readStore<{ franqs: RavenFranq[]; meta: Record<string, unknown> } | null>(RAVK, null)) ?? { franqs: [], meta: {} };
+}
 async function leerParams(): Promise<ParamsCC> {
   const p = await readStore<ParamsCC | null>(PKEY, null);
   return { ...PARAMS_DEFAULT, ...(p ?? {}) };
@@ -65,14 +69,14 @@ async function leerParams(): Promise<ParamsCC> {
 export async function GET() {
   const g = await guard("/franquicias");
   if ("res" in g) return g.res;
-  const [base, manuales, gestion, clientes, cobros, cobrosHist, params, meta] = await Promise.all([
-    leerBase(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerCobrosHist(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
+  const [base, manuales, gestion, clientes, cobros, cobrosHist, raven, params, meta] = await Promise.all([
+    leerBase(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerCobrosHist(), leerRaven(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
   ]);
   // Base (vivo de Tango o Excel subido) + facturas manuales; se aplican los cobros
   // NUEVOS (bajan el saldo) y se superpone la gestión. Los cobros históricos van aparte
   // (ya están aplicados en el snapshot) y sirven para Total cobrado / Último cobro.
   const todas = [...base.facturas, ...manuales.map((m) => ({ ...m, manual: true }))];
-  return NextResponse.json({ ok: true, facturas: aplicarGestion(aplicarCobros(todas, cobros), gestion), gestion, clientes, cobros, cobrosHist, params, meta: { ...(meta ?? {}), fuente: base.fuente } });
+  return NextResponse.json({ ok: true, facturas: aplicarGestion(aplicarCobros(todas, cobros), gestion), gestion, clientes, cobros, cobrosHist, raven, params, meta: { ...(meta ?? {}), fuente: base.fuente } });
 }
 
 // POST:
@@ -142,6 +146,12 @@ export async function POST(req: NextRequest) {
       const hist = (body.cobrosHist as CobroCC[]).filter((c) => Number(c.importe) > 0);
       await writeStore(COBHK, pack(hist));
       return NextResponse.json({ ok: true, total: hist.length });
+    }
+    // Datos de Raven (export fiscal) resumidos por CUIT. REEMPLAZA. Fuente aparte.
+    if (Array.isArray(body.ravenBulk)) {
+      const franqs = body.ravenBulk as RavenFranq[];
+      await writeStore(RAVK, { franqs, meta: { cuando: new Date().toISOString(), desde: body.ravenMeta?.desde ?? "", hasta: body.ravenMeta?.hasta ?? "", nComprob: body.ravenMeta?.nComprob ?? 0 } });
+      return NextResponse.json({ ok: true, total: franqs.length });
     }
     // Semilla en lote de datos de clientes (CUIT/teléfono/email) por clave. MERGEA.
     if (Array.isArray(body.clientesBulk)) {
