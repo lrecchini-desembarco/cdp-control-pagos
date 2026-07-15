@@ -6,9 +6,9 @@ import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
   parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, claveFranq, canonicalEmpresa, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
-  maestro, proyeccionCobranza, morosidad,
+  maestro, morosidad, moraGlobal, cobranzaCalendario, cobroPorLocal,
   type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC, type CobroCC,
-  type MaestroCliente, type MorosidadFranq, type CobranzaBucket, type NivelMora,
+  type MaestroCliente, type MorosidadFila, type MoraPor, type Granularidad, type NivelMora,
 } from "@/lib/franquicias";
 
 // Cuentas Corrientes de Franquicias. Subís el estado de cuenta (CSV/Excel) y la app
@@ -27,17 +27,18 @@ const fechaLabel = (iso: string) => { if (!iso) return "—"; const [y, m, d] = 
 const normTxt = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const BUCKET_TONE: Record<string, string> = { "Por vencer": "bg-ink/25", "1–30 días": "bg-ok/70", "31–60 días": "bg-warn/70", "61–90 días": "bg-bad/60", "+90 días": "bg-bad" };
 
-type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion" | "cobros" | "maestro" | "cobranza" | "morosidad";
+type Tab = "franquiciado" | "empresa" | "local" | "detalle" | "gestion" | "cobros" | "cobrolocal" | "maestro" | "cobranza" | "morosidad";
 type DimKey = "cliente" | "empresa" | "local" | "detalle" | "contacto";
-// Los primeros 5 son desgloses de la misma tabla; los últimos 4 son herramientas
+// Los primeros 5 son desgloses de la misma tabla; los últimos son herramientas
 // (panels propios). El divisor visual arranca en "cobros".
-const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"], ["cobros", "Cobros"], ["maestro", "Maestro"], ["cobranza", "Cobranza semanal"], ["morosidad", "Morosidad"]];
-const TABS_ESPECIALES = new Set<Tab>(["cobros", "maestro", "cobranza", "morosidad"]);
+const TABS: [Tab, string][] = [["franquiciado", "Por franquiciado"], ["empresa", "Por empresa"], ["local", "Por local"], ["detalle", "Por concepto"], ["gestion", "Por gestión"], ["cobros", "Cobros"], ["cobrolocal", "Cobro x local"], ["maestro", "Maestro"], ["cobranza", "Cobranza"], ["morosidad", "Morosidad"]];
+const TABS_ESPECIALES = new Set<Tab>(["cobros", "cobrolocal", "maestro", "cobranza", "morosidad"]);
 
 export default function FranquiciasView() {
   const [facturas, setFacturas] = useState<FacturaCC[]>([]);
   const [clientes, setClientes] = useState<Record<string, ClienteCC>>({});
   const [cobros, setCobros] = useState<CobroCC[]>([]);
+  const [cobrosHist, setCobrosHist] = useState<CobroCC[]>([]);
   const [params, setParams] = useState<ParamsCC>({ ...PARAMS_DEFAULT, fechaCorte: hoyISO() });
   const [meta, setMeta] = useState<{ actualizado?: string; fuente?: "live" | "upload" } | null>(null);
   const [estado, setEstado] = useState<"loading" | "idle" | "saving">("loading");
@@ -64,6 +65,7 @@ export default function FranquiciasView() {
         setFacturas(j.facturas ?? []);
         setClientes(j.clientes ?? {});
         setCobros(j.cobros ?? []);
+        setCobrosHist(j.cobrosHist ?? []);
         setParams((prev) => ({ ...PARAMS_DEFAULT, ...j.params, fechaCorte: j.params?.fechaCorte || prev.fechaCorte || hoyISO() }));
         setMeta(j.meta ?? null);
       }
@@ -73,6 +75,8 @@ export default function FranquiciasView() {
 
   const hayDatos = facturas.length > 0;
   const costeadas = useMemo(() => facturas.map((f) => costear(f, params)), [facturas, params]);
+  // Cobros para "Cobro x local" = histórico (ya aplicado en el snapshot) + nuevos.
+  const cobrosTodos = useMemo(() => [...cobrosHist, ...cobros].map((c) => ({ local: c.local, importe: c.importe, fecha: c.fecha })), [cobrosHist, cobros]);
   const empresas = useMemo(() => Array.from(new Set(facturas.map((f) => f.empresa).filter(Boolean))).sort(), [facturas]);
   // KPIs + aging: SIEMPRE del total (la foto completa). Los filtros scopean la LISTA.
   const resumen: ResumenCC | null = useMemo(() => hayDatos ? resumir(costeadas, params) : null, [costeadas, hayDatos, params]);
@@ -262,7 +266,7 @@ export default function FranquiciasView() {
           {/* KPIs */}
           <div data-tour="fr-kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi label="Neto a cobrar" value={moneyC(resumen.totalNeto)} full={money(resumen.totalNeto)} tone="ink" sub={`${int(resumen.nFacturas)} facturas`} big />
-            <Kpi label="Cobrable real" value={moneyC(resumen.cobrable)} full={money(resumen.cobrable)} tone="ok" sub={params.incluirIncobrables ? "incluye incobrables" : "sin incobrables"} />
+            <Kpi label="Cobrable real" value={moneyC(resumen.cobrable)} full={money(resumen.cobrable)} tone="ok" sub={params.incluirIncobrables ? "incluye incobrables · sin toma local" : "sin incobrables ni toma local"} />
             <Kpi label="Vencido" value={moneyC(resumen.vencido)} full={money(resumen.vencido)} tone="bad" sub={`${int(resumen.nVencidas)} fc vencidas`} />
             <Kpi label="Por vencer" value={moneyC(resumen.porVencer)} full={money(resumen.porVencer)} tone="muted" sub="al día" />
           </div>
@@ -283,7 +287,7 @@ export default function FranquiciasView() {
                 <b className="text-ink">Cómo se arma cada número</b> (recalcula solo al cambiar un parámetro):<br />
                 • <b>Días de mora</b> = fecha de corte − vencimiento · <b>Tasa</b> = {params.baseAnual}% + {params.diaria}% × días.<br />
                 • <b>Punitorio</b> = {params.baseCalc} × (tasa ÷ 100) ÷ {params.divisor} × días · <b>Saldo</b> = importe − cobrado · <b>Neto</b> = saldo + punitorio.<br />
-                • <b>Cobrable real</b> = neto {params.incluirIncobrables ? "incluyendo" : "excluyendo"} los «INCOBRABLES» ({money(resumen.incobrable)}).
+                • <b>Cobrable real</b> = neto {params.incluirIncobrables ? "incluyendo" : "excluyendo"} los «INCOBRABLES» ({money(resumen.incobrable)}) y siempre sin la «DEUDA TOMA LOCAL» ({money(resumen.tomaLocal)}) — igual que el Excel. <b>Vencido + Por vencer = Cobrable real.</b>
               </div>
             )}
             {ajustar && (
@@ -311,11 +315,11 @@ export default function FranquiciasView() {
           <Card className="p-3">
             <div data-tour="fr-aging" className="mb-2 flex items-center justify-between">
               <p className="text-2xs font-medium uppercase tracking-wide text-faint">Antigüedad de la deuda (aging)</p>
-              <p className="text-2xs text-faint">neto por tramo de mora</p>
+              <p className="text-2xs text-faint">cobrable por tramo de mora</p>
             </div>
             <div className="flex h-3 w-full overflow-hidden rounded-full bg-ink/5">
               {resumen.aging.filter((a) => a.neto > 0).map((a) => (
-                <div key={a.bucket} className={BUCKET_TONE[a.bucket]} style={{ width: `${(a.neto / Math.max(1, resumen.totalNeto)) * 100}%` }} title={`${a.bucket}: ${money(a.neto)}`} />
+                <div key={a.bucket} className={BUCKET_TONE[a.bucket]} style={{ width: `${(a.neto / Math.max(1, resumen.cobrable)) * 100}%` }} title={`${a.bucket}: ${money(a.neto)}`} />
               ))}
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -341,6 +345,8 @@ export default function FranquiciasView() {
             </div>
             {tab === "cobros" ? (
               <CobrosPanel cobros={cobros} onBorrar={borrarCobro} />
+            ) : tab === "cobrolocal" ? (
+              <CobroLocalPanel facturas={facturas} params={params} cobros={cobrosTodos} />
             ) : tab === "maestro" ? (
               <MaestroPanel facturas={facturas} params={params} clientes={clientes} onCliente={updateCliente} />
             ) : tab === "cobranza" ? (
@@ -655,35 +661,96 @@ function MaestroPanel({ facturas, params, clientes, onCliente }: { facturas: Fac
 }
 
 // ── Cobranza semanal: proyección de cuánto entra por semana (según venc./promesas) ──
+const CAL_ESTADO_TONO: Record<string, string> = { "Cobrada": "bg-ink/[0.04] text-faint", "En curso": "bg-ok/10 text-ok", "Próxima": "bg-action/5 text-action" };
 function CobranzaPanel({ facturas, params }: { facturas: FacturaCC[]; params: ParamsCC }) {
-  const [semanas, setSemanas] = useState(8);
-  const proy = useMemo(() => proyeccionCobranza(facturas, params, semanas), [facturas, params, semanas]);
-  const max = Math.max(1, ...proy.buckets.map((b) => b.monto));
-  const rango = (b: CobranzaBucket) => b.tipo === "atrasado" ? `Atrasado (a cobrar ya)` : b.tipo === "sinfecha" ? "Sin fecha de cobro" : b.tipo === "masalla" ? `Después de ${fechaLabel(b.desde)}` : `${fechaLabel(b.desde)} – ${fechaLabel(b.hasta)}`;
-  const tono = (b: CobranzaBucket) => b.tipo === "atrasado" ? "bg-bad" : b.tipo === "sinfecha" ? "bg-ink/25" : b.tipo === "masalla" ? "bg-ink/40" : "bg-ok/70";
+  const [gran, setGran] = useState<Granularidad>("semana");
+  const cal = useMemo(() => cobranzaCalendario(facturas, params, gran), [facturas, params, gran]);
+  const max = Math.max(1, ...cal.buckets.map((b) => b.total));
+  const rango = (b: typeof cal.buckets[number]) => gran === "semana" ? `${fechaLabel(b.desde)} – ${fechaLabel(b.hasta)}` : fechaLabel(b.desde);
+  const emps = cal.empresas;
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
-        <span className="text-muted">Proyección al corte <b className="text-ink">{fechaLabel(proy.corte)}</b>: fecha esperada = promesa de pago, o el vencimiento. <b className="text-bad">Atrasado {money(proy.atrasado)}</b> · futuro {money(proy.futuro)}</span>
-        <label className="flex items-center gap-1.5 text-muted">Semanas
-          <select value={semanas} onChange={(e) => setSemanas(Number(e.target.value))} className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink">
-            {[4, 6, 8, 12, 16].map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </label>
+        <span className="text-muted">Cobranza por <b className="text-ink">{gran === "semana" ? "semana" : "día"}</b> de vencimiento al corte <b className="text-ink">{fechaLabel(cal.corte)}</b> · excluye incobrables y toma local. <span className="text-faint">Cobrada = ya pasó · En curso = esta {gran === "semana" ? "semana" : "fecha"} · Próxima = futura.</span></span>
+        <div className="flex overflow-hidden rounded-md border border-line text-[11px]">
+          {(["semana", "dia"] as Granularidad[]).map((g) => <button key={g} onClick={() => setGran(g)} className={`px-2 py-0.5 font-medium ${gran === g ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{g === "semana" ? "Semanal" : "Diaria"}</button>)}
+        </div>
       </div>
-      <div className="divide-y divide-line/50">
-        {proy.buckets.filter((b) => b.n > 0 || b.tipo === "atrasado").map((b) => (
-          <div key={b.clave} className="flex items-center gap-3 px-4 py-1.5">
-            <span className={`w-44 shrink-0 text-2xs ${b.tipo === "atrasado" ? "font-semibold text-bad" : "text-ink"}`}>{rango(b)}</span>
-            <span className="w-10 shrink-0 text-right font-mono text-[10px] text-faint">{b.n}</span>
-            <div className="h-3.5 flex-1 overflow-hidden rounded bg-ink/[0.04]"><div className={`h-full rounded ${tono(b)}`} style={{ width: `${Math.max(b.monto > 0 ? 3 : 0, (b.monto / max) * 100)}%` }} /></div>
-            <span className="w-28 shrink-0 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(b.monto)}</span>
-          </div>
-        ))}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
+            <th className="px-4 py-1.5 font-medium">{gran === "semana" ? "Semana" : "Fecha"} (vencimiento)</th>
+            <th className="px-3 py-1.5 font-medium">Estado</th>
+            {emps.map((e) => <th key={e} className="px-3 py-1.5 text-right font-medium">{e}</th>)}
+            <th className="px-3 py-1.5 text-right font-medium">Total</th>
+            <th className="w-32 px-3 py-1.5"></th>
+          </tr></thead>
+          <tbody>
+            {cal.buckets.map((b) => (
+              <tr key={b.clave} className={`border-b border-line/60 ${b.estado === "En curso" ? "bg-ok/[0.03]" : ""}`}>
+                <td className="whitespace-nowrap px-4 py-1.5 font-mono text-2xs text-ink">{rango(b)}</td>
+                <td className="px-3 py-1.5"><span className={`rounded px-1.5 py-px text-[10px] font-medium ${CAL_ESTADO_TONO[b.estado]}`}>{b.estado}</span></td>
+                {emps.map((e) => <td key={e} className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted monto">{b.porEmpresa[e] ? money(b.porEmpresa[e]) : "—"}</td>)}
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(b.total)}</td>
+                <td className="px-3 py-1.5"><div className="h-2.5 overflow-hidden rounded bg-ink/[0.04]"><div className={`h-full rounded ${b.estado === "En curso" ? "bg-ok/70" : b.estado === "Próxima" ? "bg-action/50" : "bg-ink/25"}`} style={{ width: `${Math.max(3, (b.total / max) * 100)}%` }} /></div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <div className="flex justify-between border-t border-line px-4 py-2 text-2xs">
-        <span className="text-muted">Total cobrable proyectado</span>
-        <span className="font-mono tnum font-semibold text-ink monto">{money(proy.total)}</span>
+        <span className="text-muted">Total cobrable (por vencimiento)</span>
+        <span className="font-mono tnum font-semibold text-ink monto">{money(cal.total)}</span>
+      </div>
+    </>
+  );
+}
+
+// ── Cobro por Local (hoja "Cobro por Local"): deuda + cobros por local ──
+function CobroLocalPanel({ facturas, params, cobros }: { facturas: FacturaCC[]; params: ParamsCC; cobros: { local?: string; importe: number; fecha?: string }[] }) {
+  const [q, setQ] = useState("");
+  const filas = useMemo(() => cobroPorLocal(facturas, params, cobros), [facturas, params, cobros]);
+  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? filas.filter((f) => normTxt(f.local + " " + f.empresa).includes(t)) : filas; }, [filas, q]);
+  const tot = useMemo(() => filas.reduce((a, f) => ({ saldo: a.saldo + f.saldo, cobrado: a.cobrado + f.totalCobrado }), { saldo: 0, cobrado: 0 }), [filas]);
+  function exportar() {
+    descargarCSV("cobro-por-local.csv",
+      ["Local", "Empresa", "Deuda vencida", "Deuda no vencida", "Saldo pendiente", "Total cobrado", "Último cobro", "Facturas"],
+      vis.map((f) => [f.local, f.empresa, Math.round(f.vencida), Math.round(f.noVencida), Math.round(f.saldo), Math.round(f.totalCobrado), f.ultimoCobro || "", f.nFacturas]));
+  }
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
+        <span className="text-muted"><b className="text-ink">{filas.length}</b> locales · saldo pendiente <b className="text-ink monto">{money(tot.saldo)}</b> · total cobrado <b className="text-ok monto">{money(tot.cobrado)}</b></span>
+        <div className="flex items-center gap-2">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar local…" className="w-44 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink placeholder:text-faint" />
+          <button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
+            <th className="px-4 py-1.5 font-medium">Local</th>
+            <th className="px-3 py-1.5 font-medium">Empresa</th>
+            <th className="px-3 py-1.5 text-right font-medium">Vencida</th>
+            <th className="px-3 py-1.5 text-right font-medium">No vencida</th>
+            <th className="px-3 py-1.5 text-right font-medium">Saldo</th>
+            <th className="px-3 py-1.5 text-right font-medium">Cobrado</th>
+            <th className="px-3 py-1.5 text-right font-medium">Últ. cobro</th>
+          </tr></thead>
+          <tbody>
+            {vis.map((f) => (
+              <tr key={f.local} className="border-b border-line/60 hover:bg-ink/[0.02]">
+                <td className="px-4 py-1.5 text-2xs font-medium text-ink">{f.local}<span className="ml-1.5 text-[10px] font-normal text-faint">{f.nFacturas} fc</span></td>
+                <td className="px-3 py-1.5 text-2xs text-muted">{f.empresa || "—"}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-bad monto">{f.vencida > 0 ? money(f.vencida) : "—"}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted monto">{f.noVencida > 0 ? money(f.noVencida) : "—"}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(f.saldo)}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-ok monto">{f.totalCobrado > 0 ? money(f.totalCobrado) : "—"}</td>
+                <td className="whitespace-nowrap px-3 py-1.5 text-right font-mono text-2xs text-faint">{f.ultimoCobro ? fechaLabel(f.ultimoCobro) : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );
@@ -693,26 +760,27 @@ const NIVEL_TONO: Record<NivelMora, string> = {
   "Crítico": "bg-bad/10 text-bad border-bad/30", "Alto": "bg-warn/15 text-warn border-warn/40",
   "Medio": "bg-action/10 text-action border-action/30", "Bajo": "bg-ok/10 text-ok border-ok/30",
 };
-// ── Morosidad: ranking por score de riesgo + DSO (días promedio de mora) ──
+// ── Morosidad: ranking por $ en mora (hoja Análisis de Mora) + días promedio (Días Promedio) ──
 function MorosidadPanel({ facturas, params, onVer }: { facturas: FacturaCC[]; params: ParamsCC; onVer: (clave: string, nombre: string) => void }) {
   const [q, setQ] = useState("");
-  const filas = useMemo(() => morosidad(facturas, params), [facturas, params]);
-  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? filas.filter((f) => normTxt(f.nombre + " " + f.codigo).includes(t)) : filas; }, [filas, q]);
-  const dsoGlobal = useMemo(() => { const w = filas.reduce((s, f) => s + f.dso * f.saldo, 0), b = filas.reduce((s, f) => s + f.saldo, 0); return b > 0 ? w / b : 0; }, [filas]);
-  const conteo = useMemo(() => filas.reduce((a, f) => { a[f.nivel] = (a[f.nivel] ?? 0) + 1; return a; }, {} as Record<string, number>), [filas]);
+  const [por, setPor] = useState<MoraPor>("local");
+  const filas = useMemo(() => morosidad(facturas, params, por).filter((f) => f.totalMora > 0 || f.vencido > 0), [facturas, params, por]);
+  const glob = useMemo(() => moraGlobal(facturas, params), [facturas, params]);
+  const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? filas.filter((f) => normTxt(f.nombre + " " + f.codigo + " " + f.empresa).includes(t)) : filas; }, [filas, q]);
   function exportar() {
-    descargarCSV("morosidad-franquiciados.csv",
-      ["Franquiciado", "Código", "Score", "Nivel", "DSO (días)", "Peor mora", "Vencido", "Neto"],
-      vis.map((f) => [f.nombre, f.codigo, String(f.score), f.nivel, String(Math.round(f.dso)), String(f.maxMora), String(Math.round(f.vencido)), String(Math.round(f.neto))]));
+    descargarCSV(`morosidad-${por}.csv`,
+      [por === "local" ? "Local" : "Franquiciado", "Empresa", "Comprob. en mora", "Días prom.", "Peor mora", "Capital", "Punitorios", "Total en mora", "Score", "Nivel"],
+      vis.map((f) => [f.nombre, f.empresa, f.comprobMora, Math.round(f.diasProm), f.diasMax, Math.round(f.capitalMora), Math.round(f.punitMora), Math.round(f.totalMora), f.score, f.nivel]));
   }
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
-        <span className="text-muted">DSO global <b className="text-ink">{Math.round(dsoGlobal)} días</b> ·{" "}
-          {(["Crítico", "Alto", "Medio", "Bajo"] as NivelMora[]).map((n) => <span key={n} className={`ml-1 rounded border px-1 py-px text-[10px] font-medium ${NIVEL_TONO[n]}`}>{conteo[n] ?? 0} {n}</span>)}
-        </span>
+        <span className="text-muted">Mora ≥30 días · promedio <b className="text-ink">{Math.round(glob.diasProm)} días</b> · <b className="text-ink">{glob.comprobMora}</b> comprobantes · <b className="text-ink">{glob.localesEnMora}</b> locales en mora · deuda en mora <b className="text-bad monto">{money(glob.deudaEnMora)}</b></span>
         <div className="flex items-center gap-2">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar franquiciado…" className="w-48 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink placeholder:text-faint" />
+          <div className="flex overflow-hidden rounded-md border border-line text-[11px]">
+            {(["local", "franquiciado"] as MoraPor[]).map((k) => <button key={k} onClick={() => setPor(k)} className={`px-2 py-0.5 font-medium ${por === k ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{k === "local" ? "Por local" : "Por franquiciado"}</button>)}
+          </div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar…" className="w-40 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink placeholder:text-faint" />
           <button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button>
         </div>
       </div>
@@ -720,27 +788,27 @@ function MorosidadPanel({ facturas, params, onVer }: { facturas: FacturaCC[]; pa
         <table className="w-full text-left">
           <thead><tr className="border-b border-line text-[10px] uppercase tracking-wide text-faint">
             <th className="px-4 py-1.5 font-medium">#</th>
-            <th className="px-3 py-1.5 font-medium">Franquiciado</th>
-            <th className="px-3 py-1.5 font-medium">Score</th>
-            <th className="px-3 py-1.5 text-right font-medium" title="Días promedio de mora, ponderado por saldo">DSO</th>
-            <th className="px-3 py-1.5 text-right font-medium" title="La peor mora de sus facturas">Peor</th>
-            <th className="px-3 py-1.5 text-right font-medium">Vencido</th>
-            <th className="px-3 py-1.5 text-right font-medium">Neto</th>
+            <th className="px-3 py-1.5 font-medium">{por === "local" ? "Local" : "Franquiciado"}</th>
+            <th className="px-3 py-1.5 text-right font-medium" title="Comprobantes con ≥30 días de mora">Comp.</th>
+            <th className="px-3 py-1.5 text-right font-medium" title="Días promedio de mora (facturas ≥30d)">Días prom.</th>
+            <th className="px-3 py-1.5 text-right font-medium" title="La peor mora">Peor</th>
+            <th className="px-3 py-1.5 text-right font-medium" title="Capital + punitorios en mora — ranking">Total en mora</th>
+            <th className="px-3 py-1.5 font-medium" title="Riesgo compuesto 0–100">Score</th>
           </tr></thead>
           <tbody>
             {vis.map((f, i) => (
               <tr key={f.clave} onClick={() => onVer(f.clave, f.nombre)} className="cursor-pointer border-b border-line/60 hover:bg-ink/[0.02]">
                 <td className="px-4 py-1.5 font-mono text-[10px] text-faint">{i + 1}</td>
-                <td className="px-3 py-1.5 text-2xs font-medium text-ink">{f.nombre}<span className="ml-1.5 font-mono text-[10px] font-normal text-faint">{f.codigo}</span></td>
+                <td className="px-3 py-1.5 text-2xs font-medium text-ink">{f.nombre}<span className="ml-1.5 font-normal text-[10px] text-faint">{por === "local" ? f.empresa : f.codigo}</span></td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted">{f.comprobMora || "—"}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted">{f.comprobMora ? Math.round(f.diasProm) + "d" : "—"}</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted">{f.diasMax}d</td>
+                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-bad monto">{f.totalMora > 0 ? money(f.totalMora) : "—"}</td>
                 <td className="px-3 py-1.5">
                   <span className={`inline-flex items-center gap-1.5 rounded border px-1.5 py-px text-[11px] font-semibold ${NIVEL_TONO[f.nivel]}`}>
                     <span className="tnum">{f.score}</span><span className="font-normal">{f.nivel}</span>
                   </span>
                 </td>
-                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted">{Math.round(f.dso)}d</td>
-                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-muted">{f.maxMora}d</td>
-                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs text-bad monto">{f.vencido > 0 ? money(f.vencido) : "—"}</td>
-                <td className="px-3 py-1.5 text-right font-mono tnum text-2xs font-medium text-ink monto">{money(f.neto)}</td>
               </tr>
             ))}
           </tbody>

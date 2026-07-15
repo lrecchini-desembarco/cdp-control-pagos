@@ -103,6 +103,13 @@ export async function correrChecks(): Promise<QaCheck[]> {
       const ok = mae.length === claves.size;
       return { ok, valor: mae.length + " fichas", detalle: ok ? `${mae.length} franquiciados en el maestro, 1 por identidad` : `desajuste: ${mae.length} fichas vs ${claves.size} identidades` };
     }));
+    checks.push(safe({ id: "cc-cobrable-scope", persona: "Lucho", seccion: "Cuentas Corrientes", titulo: "Cobrable excluye incobrables y toma local", severidad: "alta" }, async () => {
+      const r = resumirCC(ccFacturas, { ...PARAMS_DEFAULT, fechaCorte: hoyISO() });
+      // El cobrable debe partirse exacto en vencido + por vencer, y dejar afuera la
+      // deuda toma local (como el Excel). Si tomaLocal se colara, no cerraría.
+      const ok = casi(r.cobrable, r.vencido + r.porVencer, 2) && r.tomaLocal >= 0 && r.cobrable <= r.totalNeto;
+      return { ok, valor: M(r.cobrable), detalle: ok ? `cobrable ${M(r.cobrable)} = vencido + por vencer · toma local ${M(r.tomaLocal)} aparte · incobrables ${M(r.incobrable)} aparte` : "el cobrable no cierra con vencido + por vencer" };
+    }));
     checks.push(safe({ id: "cc-cobranza", persona: "Marina", seccion: "Cuentas Corrientes", titulo: "La proyección no pierde plata", severidad: "media" }, async () => {
       const p = { ...PARAMS_DEFAULT, fechaCorte: hoyISO() };
       const proy = proyeccionCobranza(ccFacturas, p, 8);

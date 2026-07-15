@@ -17,7 +17,8 @@ const PKEY = "franquicias-params";
 const GKEY = "franquicias-gestion";
 const MANK = "franquicias-manuales";   // facturas cargadas a mano (se guardan aparte)
 const CLIK = "franquicias-clientes";   // estado/nota a nivel franquiciado (keyed por clienteId)
-const COBK = "franquicias-cobros";     // registro de cobros (bajan el saldo)
+const COBK = "franquicias-cobros";     // registro de cobros NUEVOS (bajan el saldo)
+const COBHK = "franquicias-cobros-hist"; // cobros HISTÓRICOS (ya aplicados en el snapshot; solo display: Total cobrado / Último cobro por local)
 const META = "franquicias-meta";
 const pack = (o: unknown) => gzipSync(Buffer.from(JSON.stringify(o), "utf8")).toString("base64");
 const unpack = <T,>(s: string): T => JSON.parse(gunzipSync(Buffer.from(s, "base64")).toString("utf8")) as T;
@@ -52,6 +53,10 @@ async function leerClientes(): Promise<Record<string, ClienteCC>> {
 async function leerCobros(): Promise<CobroCC[]> {
   return (await readStore<CobroCC[] | null>(COBK, null)) ?? [];
 }
+async function leerCobrosHist(): Promise<CobroCC[]> {
+  const packed = await readStore<string | null>(COBHK, null);
+  return packed ? unpack<CobroCC[]>(packed) : [];
+}
 async function leerParams(): Promise<ParamsCC> {
   const p = await readStore<ParamsCC | null>(PKEY, null);
   return { ...PARAMS_DEFAULT, ...(p ?? {}) };
@@ -60,13 +65,14 @@ async function leerParams(): Promise<ParamsCC> {
 export async function GET() {
   const g = await guard("/franquicias");
   if ("res" in g) return g.res;
-  const [base, manuales, gestion, clientes, cobros, params, meta] = await Promise.all([
-    leerBase(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
+  const [base, manuales, gestion, clientes, cobros, cobrosHist, params, meta] = await Promise.all([
+    leerBase(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerCobrosHist(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
   ]);
   // Base (vivo de Tango o Excel subido) + facturas manuales; se aplican los cobros
-  // registrados (bajan el saldo) y se superpone la gestión. Se devuelve todo crudo para editar.
+  // NUEVOS (bajan el saldo) y se superpone la gestión. Los cobros históricos van aparte
+  // (ya están aplicados en el snapshot) y sirven para Total cobrado / Último cobro.
   const todas = [...base.facturas, ...manuales.map((m) => ({ ...m, manual: true }))];
-  return NextResponse.json({ ok: true, facturas: aplicarGestion(aplicarCobros(todas, cobros), gestion), gestion, clientes, cobros, params, meta: { ...(meta ?? {}), fuente: base.fuente } });
+  return NextResponse.json({ ok: true, facturas: aplicarGestion(aplicarCobros(todas, cobros), gestion), gestion, clientes, cobros, cobrosHist, params, meta: { ...(meta ?? {}), fuente: base.fuente } });
 }
 
 // POST:
@@ -128,6 +134,27 @@ export async function POST(req: NextRequest) {
       const next = cur.filter((c) => c.id !== body.borrarCobro);
       await writeStore(COBK, next);
       return NextResponse.json({ ok: true, total: next.length });
+    }
+    // Semilla en lote del histórico de cobros (Registro de Cobros del Excel). REEMPLAZA.
+    // Son cobros YA aplicados en el snapshot: no bajan el saldo de nuevo, solo alimentan
+    // Total cobrado / Último cobro por local.
+    if (Array.isArray(body.cobrosHist)) {
+      const hist = (body.cobrosHist as CobroCC[]).filter((c) => Number(c.importe) > 0);
+      await writeStore(COBHK, pack(hist));
+      return NextResponse.json({ ok: true, total: hist.length });
+    }
+    // Semilla en lote de datos de clientes (CUIT/teléfono/email) por clave. MERGEA.
+    if (Array.isArray(body.clientesBulk)) {
+      const cur = await leerClientes();
+      let n = 0;
+      for (const it of body.clientesBulk as ({ clave: string } & ClienteCC)[]) {
+        if (!it?.clave) continue;
+        const next: ClienteCC = { ...(cur[it.clave] ?? {}), ...(it.cuit ? { cuit: it.cuit } : {}), ...(it.telefono ? { telefono: it.telefono } : {}), ...(it.email ? { email: it.email } : {}), ...(it.estado ? { estado: it.estado } : {}) };
+        (Object.keys(next) as (keyof ClienteCC)[]).forEach((k) => { if (!next[k]) delete next[k]; });
+        if (Object.keys(next).length) { cur[it.clave] = next; n++; }
+      }
+      await writeStore(CLIK, cur);
+      return NextResponse.json({ ok: true, total: n });
     }
     if (body.clienteEstado && typeof body.clienteEstado === "object" && typeof body.clienteEstado.clienteId === "string") {
       const { clienteId, estado, nota, telefono, email, cuit } = body.clienteEstado as { clienteId: string } & ClienteCC;

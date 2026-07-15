@@ -97,11 +97,16 @@ export interface FacturaCosteada extends FacturaCC {
   neto: number;
   vencida: boolean;
   incobrable: boolean; // por concepto "INCOBRABLES" o estado a mano "Incobrable"
+  tomaLocal: boolean;  // concepto "DEUDA TOMA LOCAL" -> tampoco es cobrable (como el Excel)
+  cobrable: boolean;   // cuenta para la cobranza real (no incobrable, no toma local, no cobrada)
   cobradaManual: boolean; // marcada "Cobrada" a mano -> ya no es cobrable
 }
 
 // "INCOBRABLES" = deuda dada por perdida; por default NO cuenta como cobrable.
 export const esIncobrable = (detalle: string) => /incobrable/i.test(detalle || "");
+// "DEUDA TOMA LOCAL" = deuda por la toma de un local; el Excel la EXCLUYE del cobrable
+// (igual que incobrables). No es plata que Cobranzas persigue en la cta cte normal.
+export const esTomaLocal = (detalle: string) => /toma\s+local/i.test(detalle || "");
 // Gestionado = ya se lo contactó (Contactado / Contactado sin respuesta). Sin gestionar
 // = vacío o "Sin contacto" -> es a quién hay que perseguir primero.
 export const gestionado = (contacto: string) => /contactad/i.test(contacto || "");
@@ -128,12 +133,17 @@ export function costear(f: FacturaCC, p: ParamsCC): FacturaCosteada {
   const tasa = diasMora > 0 ? p.baseAnual + p.diaria * diasMora : 0;
   const base = p.baseCalc === "saldo" ? saldo : f.importe;
   const punitorios = diasMora > 0 && p.divisor > 0 ? base * (tasa / 100) / p.divisor * diasMora : 0;
+  const incobrable = esIncobrable(f.detalle) || esIncobrableEstado(f.estado ?? "");
+  const tomaLocal = esTomaLocal(f.detalle);
+  const cobradaManual = esCobradaEstado(f.estado ?? "");
   return {
     ...f, saldo, diasMora, diasMoraRaw, tasa, punitorios,
     neto: saldo + punitorios,
     vencida: diasMora > 0,
-    incobrable: esIncobrable(f.detalle) || esIncobrableEstado(f.estado ?? ""),
-    cobradaManual: esCobradaEstado(f.estado ?? ""),
+    incobrable, tomaLocal, cobradaManual,
+    // Cobrable = plata que Cobranzas persigue: excluye incobrables, deuda toma local
+    // y lo marcado cobrado a mano (igual que el Excel excluye INCOBRABLES + TOMA LOCAL).
+    cobrable: !incobrable && !tomaLocal && !cobradaManual,
   };
 }
 
@@ -146,11 +156,12 @@ export interface ResumenCC {
   totalCobrado: number;
   totalSaldo: number;
   totalPunitorios: number;
-  totalNeto: number;         // saldo + punitorios de TODO
-  cobrable: number;          // neto SIN incobrables (o con, según params)
-  incobrable: number;        // neto de los INCOBRABLES
-  vencido: number;           // neto de lo vencido (díasMora>0)
-  porVencer: number;         // neto de lo no vencido
+  totalNeto: number;         // saldo + punitorios de TODO (incl. incobrables y toma local)
+  cobrable: number;          // neto COBRABLE: excl INCOBRABLES + DEUDA TOMA LOCAL + cobradas
+  incobrable: number;        // neto de los INCOBRABLES (memo)
+  tomaLocal: number;         // neto de la DEUDA TOMA LOCAL (memo)
+  vencido: number;           // neto vencido, scope COBRABLE (suma a cobrable con porVencer)
+  porVencer: number;         // neto no vencido, scope COBRABLE
   nVencidas: number;
   aging: AgingBucket[];
   porEmpresa: GrupoCC[];
@@ -165,15 +176,21 @@ export const AGING_ORDEN = ["Por vencer", "1–30 días", "31–60 días", "61�
 
 export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
   const cs = facturas.map((f) => costear(f, p));
-  const agg = (key: (c: FacturaCosteada) => string) => {
+  // Scope COBRABLE: lo que Cobranzas persigue. Excluye DEUDA TOMA LOCAL y las cobradas;
+  // los INCOBRABLES quedan afuera salvo que el usuario los incluya con el param.
+  const enCobrable = (c: FacturaCosteada) => !c.tomaLocal && !c.cobradaManual && (p.incluirIncobrables || !c.incobrable);
+  // agg({soloCobrable}): los cortes-resumen (empresa/local) se calculan en scope cobrable
+  // como el Excel; el corte por concepto usa TODO (así muestra INCOBRABLES/TOMA LOCAL).
+  const agg = (key: (c: FacturaCosteada) => string, soloCobrable = false) => {
     const m = new Map<string, GrupoCC>();
     for (const c of cs) {
+      if (soloCobrable && !enCobrable(c)) continue;
       const k = key(c) || "(sin dato)";
       const a = m.get(k) ?? { k, n: 0, saldo: 0, punitorios: 0, neto: 0, vencido: 0, maxMora: 0, netoSinGestion: 0 };
       a.n++; a.saldo += c.saldo; a.punitorios += c.punitorios; a.neto += c.neto;
       if (c.vencida) a.vencido += c.neto;
       if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
-      if (c.vencida && !gestionado(c.contacto) && !c.cobradaManual && !c.incobrable) a.netoSinGestion += c.neto; // vencido REAL a perseguir
+      if (c.vencida && !gestionado(c.contacto) && c.cobrable) a.netoSinGestion += c.neto; // vencido REAL a perseguir
       m.set(k, a);
     }
     return Array.from(m.values()).sort((x, y) => y.neto - x.neto);
@@ -190,7 +207,7 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     a.n++; a.saldo += c.saldo; a.punitorios += c.punitorios; a.neto += c.neto;
     if (c.vencida) a.vencido += c.neto;
     if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
-    if (c.vencida && !gestionado(c.contacto) && !c.cobradaManual && !c.incobrable) a.netoSinGestion += c.neto;
+    if (c.vencida && !gestionado(c.contacto) && c.cobrable) a.netoSinGestion += c.neto;
     if (!a.clienteId && c.clienteId) a.clienteId = c.clienteId;
     a.nombres.set(c.cliente, (a.nombres.get(c.cliente) ?? 0) + 1);
   }
@@ -201,9 +218,10 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
   }).sort((x, y) => y.neto - x.neto);
 
   const suma = (pred: (c: FacturaCosteada) => boolean) => cs.filter(pred).reduce((s, c) => s + c.neto, 0);
+  // Aging en scope COBRABLE (como los resúmenes del Excel): suma al cobrable.
   const agingMap = new Map<string, AgingBucket>();
   for (const b of AGING_ORDEN) agingMap.set(b, { bucket: b, n: 0, neto: 0 });
-  for (const c of cs) { const b = bucketDe(c.diasMora); const a = agingMap.get(b)!; a.n++; a.neto += c.neto; }
+  for (const c of cs) { if (!enCobrable(c)) continue; const b = bucketDe(c.diasMora); const a = agingMap.get(b)!; a.n++; a.neto += c.neto; }
 
   return {
     fechaCorte: p.fechaCorte,
@@ -213,16 +231,17 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     totalSaldo: cs.reduce((s, c) => s + c.saldo, 0),
     totalPunitorios: cs.reduce((s, c) => s + c.punitorios, 0),
     totalNeto: cs.reduce((s, c) => s + c.neto, 0),
-    cobrable: suma((c) => !c.cobradaManual && (p.incluirIncobrables || !c.incobrable)),
+    cobrable: suma(enCobrable),
     incobrable: suma((c) => c.incobrable),
-    vencido: suma((c) => c.vencida),
-    porVencer: suma((c) => !c.vencida),
-    nVencidas: cs.filter((c) => c.vencida).length,
+    tomaLocal: suma((c) => c.tomaLocal),
+    vencido: suma((c) => enCobrable(c) && c.vencida),
+    porVencer: suma((c) => enCobrable(c) && !c.vencida),
+    nVencidas: cs.filter((c) => enCobrable(c) && c.vencida).length,
     aging: AGING_ORDEN.map((b) => agingMap.get(b)!),
-    porEmpresa: agg((c) => c.empresa),
+    porEmpresa: agg((c) => c.empresa, true),
     porDetalle: agg((c) => c.detalle),
     porFranquiciado,
-    porLocal: agg((c) => c.local),
+    porLocal: agg((c) => c.local, true),
     porContacto: agg((c) => c.contacto),
   };
 }
@@ -266,7 +285,7 @@ export interface CobranzaBucket { clave: string; desde: string; hasta: string; n
 export interface ProyeccionCobranza { corte: string; buckets: CobranzaBucket[]; total: number; atrasado: number; futuro: number; sinFecha: number }
 export function proyeccionCobranza(facturas: FacturaCC[], p: ParamsCC, semanas = 8): ProyeccionCobranza {
   const corte = p.fechaCorte || new Date().toISOString().slice(0, 10);
-  const cs = facturas.map((f) => costear(f, p)).filter((c) => c.saldo > 1 && !c.cobradaManual && !c.incobrable);
+  const cs = facturas.map((f) => costear(f, p)).filter((c) => c.saldo > 1 && c.cobrable);
   const atrasado: CobranzaBucket = { clave: "atrasado", desde: "", hasta: corte, n: 0, monto: 0, tipo: "atrasado" };
   const sinFecha: CobranzaBucket = { clave: "sinfecha", desde: "", hasta: "", n: 0, monto: 0, tipo: "sinfecha" };
   const finVentana = sumarDias(corte, semanas * 7);
@@ -287,41 +306,139 @@ export function proyeccionCobranza(facturas: FacturaCC[], p: ParamsCC, semanas =
   return { corte, buckets, total, atrasado: atrasado.monto, futuro: semanaB.reduce((s, b) => s + b.monto, 0) + masAlla.monto, sinFecha: sinFecha.monto };
 }
 
-// ── Morosidad: días promedio de mora (DSO) + score de riesgo (hoja Calculo_Aux) ─
-// DSO por franquiciado = promedio de días de mora PONDERADO por saldo. El score (0–100,
-// más alto = peor) combina: % del neto vencido, DSO, la peor mora y si tiene incobrables.
+// ── Cobranza por vencimiento (hojas "Cobranza Semanal" y "Cobranza por Día") ──
+// Ubica cada factura cobrable por su SEMANA o DÍA de vencimiento (no la promesa), con el
+// neto abierto por empresa y un estado según el corte: pasada = "Cobrada", la del corte
+// = "En curso", futura = "Próxima". Reproduce las dos hojas del Excel.
+export type Granularidad = "semana" | "dia";
+export interface CalBucket { clave: string; desde: string; hasta: string; estado: "Cobrada" | "En curso" | "Próxima"; porEmpresa: Record<string, number>; total: number; n: number }
+export interface CobranzaCalendario { corte: string; empresas: string[]; buckets: CalBucket[]; total: number }
+// Lunes de la semana de una fecha ISO (semanas lunes-domingo, como el Excel).
+function lunesDe(iso: string): string {
+  const t = Date.parse(iso + "T00:00:00Z");
+  if (!Number.isFinite(t)) return iso;
+  const dow = (new Date(t).getUTCDay() + 6) % 7; // 0 = lunes
+  return new Date(t - dow * DIA).toISOString().slice(0, 10);
+}
+export function cobranzaCalendario(facturas: FacturaCC[], p: ParamsCC, gran: Granularidad = "semana"): CobranzaCalendario {
+  const corte = p.fechaCorte || new Date().toISOString().slice(0, 10);
+  const cs = facturas.map((f) => costear(f, p)).filter((c) => c.saldo > 1 && c.cobrable && c.vencimiento);
+  const empresas = Array.from(new Set(cs.map((c) => c.empresa || "(sin)"))).sort();
+  const m = new Map<string, CalBucket>();
+  for (const c of cs) {
+    const desde = gran === "semana" ? lunesDe(c.vencimiento) : c.vencimiento;
+    const hasta = gran === "semana" ? sumarDias(desde, 6) : desde;
+    let b = m.get(desde);
+    if (!b) { b = { clave: desde, desde, hasta, estado: "Próxima", porEmpresa: {}, total: 0, n: 0 }; m.set(desde, b); }
+    const emp = c.empresa || "(sin)";
+    b.porEmpresa[emp] = (b.porEmpresa[emp] ?? 0) + c.neto;
+    b.total += c.neto; b.n++;
+  }
+  const buckets = Array.from(m.values()).sort((a, b) => a.desde.localeCompare(b.desde));
+  for (const b of buckets) b.estado = b.hasta < corte ? "Cobrada" : b.desde > corte ? "Próxima" : "En curso";
+  return { corte, empresas, buckets, total: buckets.reduce((s, b) => s + b.total, 0) };
+}
+
+// ── Cobro por Local (hoja "Cobro por Local") ──
+// Por local: deuda vencida / no vencida (neta, cobrable), saldo pendiente, total cobrado
+// (de TODO el registro de cobros — histórico + nuevos) y fecha del último cobro.
+export interface CobroLocal { local: string; empresa: string; vencida: number; noVencida: number; saldo: number; totalCobrado: number; ultimoCobro: string; nFacturas: number }
+export function cobroPorLocal(facturas: FacturaCC[], p: ParamsCC, cobros: { local?: string; importe: number; fecha?: string }[] = []): CobroLocal[] {
+  const cs = facturas.map((f) => costear(f, p)).filter((c) => c.cobrable);
+  const m = new Map<string, CobroLocal>();
+  const key = (s?: string) => (s || "(sin local)");
+  for (const c of cs) {
+    const k = key(c.local);
+    let a = m.get(k);
+    if (!a) { a = { local: k, empresa: c.empresa, vencida: 0, noVencida: 0, saldo: 0, totalCobrado: 0, ultimoCobro: "", nFacturas: 0 }; m.set(k, a); }
+    if (c.vencida) a.vencida += c.neto; else a.noVencida += c.neto;
+    a.saldo += c.saldo; a.nFacturas++;
+  }
+  for (const co of cobros) {
+    const k = key(co.local);
+    const a = m.get(k) ?? { local: k, empresa: "", vencida: 0, noVencida: 0, saldo: 0, totalCobrado: 0, ultimoCobro: "", nFacturas: 0 };
+    a.totalCobrado += Number(co.importe) || 0;
+    if (co.fecha && co.fecha > a.ultimoCobro) a.ultimoCobro = co.fecha;
+    m.set(k, a);
+  }
+  return Array.from(m.values()).sort((x, y) => y.saldo - x.saldo);
+}
+
+// ── Morosidad: ranking de morosos (hojas Análisis de Mora / Calculo_Aux / Días Promedio) ─
+// Se puede agrupar por LOCAL (como el Excel) o por franquiciado. Reproduce las métricas
+// del Excel: sobre las facturas COBRABLES con ≥30 días de mora — comprobantes, días
+// promedio de mora, peor mora, capital y punitorios en mora, y el TOTAL en mora (el
+// ranking del Excel es por ese total). Suma un score de riesgo 0–100 propio como extra.
+export const MORA_MIN = 30; // días de mora desde los que el Excel considera "en mora"
 export type NivelMora = "Bajo" | "Medio" | "Alto" | "Crítico";
 export const nivelMora = (score: number): NivelMora => score >= 75 ? "Crítico" : score >= 50 ? "Alto" : score >= 20 ? "Medio" : "Bajo";
-export interface MorosidadFranq {
-  clave: string; nombre: string; codigo: string; nFacturas: number;
+export type MoraPor = "franquiciado" | "local";
+export interface MorosidadFila {
+  clave: string; nombre: string; codigo: string; empresa: string; nFacturas: number;
   neto: number; vencido: number; saldo: number; incobrable: number;
-  dso: number; maxMora: number; score: number; nivel: NivelMora;
+  comprobMora: number; diasProm: number; diasMax: number;   // sobre facturas ≥30d cobrables
+  capitalMora: number; punitMora: number; totalMora: number; // $ en mora (ranking del Excel)
+  dso: number; score: number; nivel: NivelMora;
 }
-export function morosidad(facturas: FacturaCC[], p: ParamsCC): MorosidadFranq[] {
+export function morosidad(facturas: FacturaCC[], p: ParamsCC, por: MoraPor = "franquiciado"): MorosidadFila[] {
   const cs = facturas.map((f) => costear(f, p));
-  const m = new Map<string, { clave: string; nombres: Map<string, number>; codigo: string; neto: number; vencido: number; saldo: number; incobrable: number; n: number; maxMora: number; wMora: number; wBase: number }>();
+  type Acc = { clave: string; nombres: Map<string, number>; codigo: string; empresa: string; neto: number; vencido: number; saldo: number; incobrable: number; n: number; maxMora: number; wMora: number; wBase: number; comprobMora: number; sumDiasMora: number; capitalMora: number; punitMora: number };
+  const m = new Map<string, Acc>();
   for (const c of cs) {
-    const clave = claveFranq(c.cliente);
+    const clave = por === "local" ? (c.local || "(sin local)") : claveFranq(c.cliente);
     let a = m.get(clave);
-    if (!a) { a = { clave, nombres: new Map(), codigo: c.clienteId || "", neto: 0, vencido: 0, saldo: 0, incobrable: 0, n: 0, maxMora: 0, wMora: 0, wBase: 0 }; m.set(clave, a); }
+    if (!a) { a = { clave, nombres: new Map(), codigo: c.clienteId || "", empresa: c.empresa, neto: 0, vencido: 0, saldo: 0, incobrable: 0, n: 0, maxMora: 0, wMora: 0, wBase: 0, comprobMora: 0, sumDiasMora: 0, capitalMora: 0, punitMora: 0 }; m.set(clave, a); }
     a.n++; a.neto += c.neto; a.saldo += c.saldo;
     if (c.vencida) a.vencido += c.neto;
     if (c.incobrable) a.incobrable += c.neto;
     if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
-    if (c.saldo > 0) { a.wMora += c.diasMora * c.saldo; a.wBase += c.saldo; }
+    if (c.cobrable && c.saldo > 0) { a.wMora += c.diasMora * c.saldo; a.wBase += c.saldo; }
+    // Métricas de mora del Excel: SOLO facturas cobrables con ≥30 días de atraso.
+    if (c.cobrable && c.diasMora >= MORA_MIN) {
+      a.comprobMora++; a.sumDiasMora += c.diasMora;
+      a.capitalMora += c.saldo; a.punitMora += c.punitorios;
+    }
     if (!a.codigo && c.clienteId) a.codigo = c.clienteId;
     a.nombres.set(c.cliente, (a.nombres.get(c.cliente) ?? 0) + 1);
   }
   return Array.from(m.values()).map((a) => {
     const dso = a.wBase > 0 ? a.wMora / a.wBase : 0;
+    const totalMora = a.capitalMora + a.punitMora;
+    const diasProm = a.comprobMora > 0 ? a.sumDiasMora / a.comprobMora : 0;
     const pctVencido = a.neto > 0 ? a.vencido / a.neto : 0;
     const score = Math.min(100, Math.round(40 * pctVencido + 30 * Math.min(1, dso / 90) + 20 * Math.min(1, a.maxMora / 180) + 10 * (a.incobrable > 0 ? 1 : 0)));
     return {
-      clave: a.clave, nombre: nombreRep(a.nombres, a.clave), codigo: a.codigo, nFacturas: a.n,
+      clave: a.clave, nombre: por === "local" ? a.clave : nombreRep(a.nombres, a.clave), codigo: a.codigo, empresa: a.empresa, nFacturas: a.n,
       neto: a.neto, vencido: a.vencido, saldo: a.saldo, incobrable: a.incobrable,
-      dso, maxMora: a.maxMora, score, nivel: nivelMora(score),
+      comprobMora: a.comprobMora, diasProm, diasMax: a.maxMora,
+      capitalMora: a.capitalMora, punitMora: a.punitMora, totalMora,
+      dso, score, nivel: nivelMora(score),
     };
-  }).sort((x, y) => y.score - x.score || y.neto - x.neto);
+  }).sort((x, y) => y.totalMora - x.totalMora || y.neto - x.neto); // ranking del Excel: por $ en mora
+}
+
+// Resumen global de mora (hoja "Días Promedio"): días promedio de mora sobre las
+// facturas cobrables ≥30d, cantidad de comprobantes, locales en mora, y deuda en mora,
+// con el corte por empresa. Es lo que va en el header del panel de Morosidad.
+export interface MoraGlobal {
+  diasProm: number; comprobMora: number; localesEnMora: number; deudaEnMora: number;
+  porEmpresa: { empresa: string; comprob: number; diasProm: number; deuda: number }[];
+}
+export function moraGlobal(facturas: FacturaCC[], p: ParamsCC): MoraGlobal {
+  const cs = facturas.map((f) => costear(f, p)).filter((c) => c.cobrable && c.diasMora >= MORA_MIN);
+  const locales = new Set<string>(), emp = new Map<string, { comprob: number; sumDias: number; deuda: number }>();
+  let sumDias = 0, deuda = 0;
+  for (const c of cs) {
+    sumDias += c.diasMora; deuda += c.neto;
+    if (c.local) locales.add(c.local);
+    const e = emp.get(c.empresa) ?? { comprob: 0, sumDias: 0, deuda: 0 };
+    e.comprob++; e.sumDias += c.diasMora; e.deuda += c.neto; emp.set(c.empresa, e);
+  }
+  return {
+    diasProm: cs.length ? sumDias / cs.length : 0,
+    comprobMora: cs.length, localesEnMora: locales.size, deudaEnMora: deuda,
+    porEmpresa: Array.from(emp.entries()).map(([empresa, e]) => ({ empresa, comprob: e.comprob, diasProm: e.comprob ? e.sumDias / e.comprob : 0, deuda: e.deuda })).sort((a, b) => b.deuda - a.deuda),
+  };
 }
 
 // ── Parsing del CSV/Excel (tolerante a columnas) ──────────────────────────────
