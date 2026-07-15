@@ -87,14 +87,21 @@ export async function POST(req: NextRequest) {
       const f = body.manualNueva as FacturaCC;
       if (!f.cliente || !(f.importe || f.cobrado)) return NextResponse.json({ ok: false, error: "faltan cliente e importe" }, { status: 400 });
       const cur = await leerManuales();
-      cur.push({ ...f, manual: true });
-      await writeStore(MANK, cur);
-      return NextResponse.json({ ok: true, total: cur.length });
+      // Upsert: si ya hay una manual con el mismo comprobante, la reemplaza (no duplica).
+      const k = gestionKey(f);
+      const sinDup = k ? cur.filter((m) => gestionKey(m) !== k) : cur;
+      sinDup.push({ ...f, manual: true });
+      await writeStore(MANK, sinDup);
+      return NextResponse.json({ ok: true, total: sinDup.length });
     }
     if (body.clienteEstado && typeof body.clienteEstado === "object" && typeof body.clienteEstado.clienteId === "string") {
-      const { clienteId, estado, nota } = body.clienteEstado as { clienteId: string; estado?: string; nota?: string };
+      const { clienteId, estado, nota, telefono, email } = body.clienteEstado as { clienteId: string } & ClienteCC;
       const cur = await leerClientes();
-      const next: ClienteCC = { ...(cur[clienteId] ?? {}), ...(estado !== undefined ? { estado } : {}), ...(nota !== undefined ? { nota } : {}) };
+      const next: ClienteCC = {
+        ...(cur[clienteId] ?? {}),
+        ...(estado !== undefined ? { estado } : {}), ...(nota !== undefined ? { nota } : {}),
+        ...(telefono !== undefined ? { telefono } : {}), ...(email !== undefined ? { email } : {}),
+      };
       (Object.keys(next) as (keyof ClienteCC)[]).forEach((k) => { if (!next[k]) delete next[k]; });
       if (Object.keys(next).length) cur[clienteId] = next; else delete cur[clienteId];
       await writeStore(CLIK, cur);

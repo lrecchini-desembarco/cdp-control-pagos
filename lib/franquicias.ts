@@ -34,7 +34,7 @@ export interface FacturaCC {
 export const ESTADOS_CC = ["En gestión", "Prometido", "Cobrada", "Refinanciada", "Incobrable", "En reclamo"];
 // Estado a nivel FRANQUICIADO (etiqueta de situación del cliente, manual).
 export const ESTADOS_FRANQ = ["Al día", "En gestión", "Moroso", "Plan de pago", "En reclamo", "Incobrable"];
-export interface ClienteCC { estado?: string; nota?: string }
+export interface ClienteCC { estado?: string; nota?: string; telefono?: string; email?: string }
 export const esCobradaEstado = (estado: string) => /cobrad/i.test(estado || "");         // marcada cobrada
 export const esIncobrableEstado = (estado: string) => /incobrable/i.test(estado || "");
 
@@ -149,7 +149,7 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
       a.n++; a.saldo += c.saldo; a.punitorios += c.punitorios; a.neto += c.neto;
       if (c.vencida) a.vencido += c.neto;
       if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
-      if (c.vencida && !gestionado(c.contacto)) a.netoSinGestion += c.neto; // vencido a perseguir
+      if (c.vencida && !gestionado(c.contacto) && !c.cobradaManual && !c.incobrable) a.netoSinGestion += c.neto; // vencido REAL a perseguir
       m.set(k, a);
     }
     return Array.from(m.values()).sort((x, y) => y.neto - x.neto);
@@ -166,7 +166,7 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     a.n++; a.saldo += c.saldo; a.punitorios += c.punitorios; a.neto += c.neto;
     if (c.vencida) a.vencido += c.neto;
     if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
-    if (c.vencida && !gestionado(c.contacto)) a.netoSinGestion += c.neto;
+    if (c.vencida && !gestionado(c.contacto) && !c.cobradaManual && !c.incobrable) a.netoSinGestion += c.neto;
     if (!a.clienteId && c.clienteId) a.clienteId = c.clienteId;
     a.nombres.set(c.cliente, (a.nombres.get(c.cliente) ?? 0) + 1);
   }
