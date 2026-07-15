@@ -55,7 +55,7 @@ SELECT
     CAST(c.ID_GVA12 AS varchar(20))                         AS clienteId,
     LTRIM(RTRIM(cli.RAZON_SOCI))                            AS cliente,
     CAST(c.FECHA_VTO AS date)                               AS vencimiento,
-    CAST(c.FECHA_EMIS AS date)                              AS emision,   -- fecha de emisión (ajustar nombre real del campo)
+    CAST(c.FECHA AS date)                                   AS emision,   -- CONFIRMADO: c.FECHA = fecha del comprobante (emisión). Alt: GVA12.FECHA_EMIS por ID_GVA12
     LTRIM(RTRIM(c.T_COMP))                                  AS tipo,
     LTRIM(RTRIM(c.N_COMP))                                  AS nro,
     ISNULL(c.IMPORTE, 0)                                    AS importe,
