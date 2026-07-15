@@ -38,6 +38,12 @@ export interface ClienteCC { estado?: string; nota?: string }
 export const esCobradaEstado = (estado: string) => /cobrad/i.test(estado || "");         // marcada cobrada
 export const esIncobrableEstado = (estado: string) => /incobrable/i.test(estado || "");
 
+const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+// Clave ESTABLE del franquiciado = nombre normalizado (sin acentos/casing/espacios de más).
+// Unifica al mismo franquiciado aunque venga con varios N° de cliente o casing distinto,
+// y no depende del N° (que en el Excel a veces falta o se repite entre clientes distintos).
+export const claveFranq = (nombre: string) => norm(nombre).replace(/\s+/g, " ") || "(sin dato)";
+
 // Capa de GESTIÓN de cobranza — se edita en la app y se guarda APARTE de las facturas
 // (keyed por comprobante), así sobrevive a re-subir el estado de cuenta. Se superpone.
 export interface Gestion { contacto?: string; promesa?: string; nota?: string; estado?: string }
@@ -125,7 +131,7 @@ export interface ResumenCC {
   aging: AgingBucket[];
   porEmpresa: GrupoCC[];
   porDetalle: GrupoCC[];
-  porFranquiciado: (GrupoCC & { clienteId: string })[];
+  porFranquiciado: (GrupoCC & { clienteId: string; clave: string; nombre: string })[];
   porLocal: GrupoCC[];
   porContacto: GrupoCC[];
 }
@@ -149,6 +155,27 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     return Array.from(m.values()).sort((x, y) => y.neto - x.neto);
   };
 
+  // Franquiciado: se agrupa por CLAVE ESTABLE (nombre normalizado) para unificar los
+  // mismos aunque cambie el N° o el casing. Se muestra un nombre representativo (el más
+  // frecuente) y el 1er N° no vacío; el estado se guarda por esta clave.
+  const franqMap = new Map<string, GrupoCC & { clienteId: string; clave: string; nombre: string; nombres: Map<string, number> }>();
+  for (const c of cs) {
+    const clave = claveFranq(c.cliente);
+    let a = franqMap.get(clave);
+    if (!a) { a = { k: clave, clave, nombre: c.cliente, clienteId: c.clienteId || "", n: 0, saldo: 0, punitorios: 0, neto: 0, vencido: 0, maxMora: 0, netoSinGestion: 0, nombres: new Map() }; franqMap.set(clave, a); }
+    a.n++; a.saldo += c.saldo; a.punitorios += c.punitorios; a.neto += c.neto;
+    if (c.vencida) a.vencido += c.neto;
+    if (c.diasMora > a.maxMora) a.maxMora = c.diasMora;
+    if (c.vencida && !gestionado(c.contacto)) a.netoSinGestion += c.neto;
+    if (!a.clienteId && c.clienteId) a.clienteId = c.clienteId;
+    a.nombres.set(c.cliente, (a.nombres.get(c.cliente) ?? 0) + 1);
+  }
+  const porFranquiciado = Array.from(franqMap.values()).map((a) => {
+    const nombre = Array.from(a.nombres.entries()).sort((x, y) => y[1] - x[1] || y[0].length - x[0].length)[0]?.[0] ?? a.nombre;
+    const { nombres, ...rest } = a; void nombres;
+    return { ...rest, nombre };
+  }).sort((x, y) => y.neto - x.neto);
+
   const suma = (pred: (c: FacturaCosteada) => boolean) => cs.filter(pred).reduce((s, c) => s + c.neto, 0);
   const agingMap = new Map<string, AgingBucket>();
   for (const b of AGING_ORDEN) agingMap.set(b, { bucket: b, n: 0, neto: 0 });
@@ -170,14 +197,13 @@ export function resumir(facturas: FacturaCC[], p: ParamsCC): ResumenCC {
     aging: AGING_ORDEN.map((b) => agingMap.get(b)!),
     porEmpresa: agg((c) => c.empresa),
     porDetalle: agg((c) => c.detalle),
-    porFranquiciado: agg((c) => c.cliente).map((g) => ({ ...g, clienteId: cs.find((c) => c.cliente === g.k)?.clienteId ?? "" })),
+    porFranquiciado,
     porLocal: agg((c) => c.local),
     porContacto: agg((c) => c.contacto),
   };
 }
 
 // ── Parsing del CSV/Excel (tolerante a columnas) ──────────────────────────────
-const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 // Empresas: canonicaliza casing/espacios para no fragmentar sumas (Mr Tasty = MR Tasty).
 const EMP_ALIAS: Record<string, string> = { "mr tasty": "Mr Tasty", "desembarco": "Desembarco", "el desembarco": "Desembarco", "mila & go": "Mila & Go", "mila y go": "Mila & Go" };

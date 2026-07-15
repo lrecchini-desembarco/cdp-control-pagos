@@ -3,7 +3,7 @@ import { readStore } from "./store";
 import { getFacturacion } from "./facturacion";
 import { getCruce } from "./cruce";
 import { resumirBancos, canonicalLocal, type MovBanco } from "./bancos";
-import { resumir as resumirCC, aplicarGestion, PARAMS_DEFAULT, type FacturaCC, type Gestion } from "./franquicias";
+import { resumir as resumirCC, aplicarGestion, claveFranq, PARAMS_DEFAULT, type FacturaCC, type Gestion } from "./franquicias";
 
 // Bot de QA diario. Cada check es una "persona" del panel controlando su sección:
 // re-corre las auditorías reales (reconciliación, margen, identidad, mapeo, frescura)
@@ -84,8 +84,10 @@ export async function correrChecks(): Promise<QaCheck[]> {
       return { ok: neg === 0, valor: neg + "", detalle: neg === 0 ? "ningún cobrado mayor al importe" : `${neg} facturas con saldo negativo` };
     }));
     checks.push(safe({ id: "cc-identidad", persona: "Vale", seccion: "Cuentas Corrientes", titulo: "Identidad de franquiciado", severidad: "alta" }, async () => {
-      const sinId = ccFacturas.filter((f) => !f.clienteId).length;
-      return { ok: sinId === 0, valor: sinId + " s/N°", detalle: sinId === 0 ? "todos los franquiciados tienen N° de cliente" : `${sinId} facturas sin N° de cliente → el estado por franquiciado se mezcla` };
+      // La identidad ahora es por NOMBRE normalizado (no por N°). Solo es problema si una
+      // factura no tiene NINGÚN nombre usable -> no se puede agrupar ni gestionar.
+      const sinNombre = ccFacturas.filter((f) => claveFranq(f.cliente) === "(sin dato)").length;
+      return { ok: sinNombre === 0, valor: sinNombre + " s/nombre", detalle: sinNombre === 0 ? "todos los franquiciados se identifican por nombre (unifica N° repetidos/faltantes)" : `${sinNombre} facturas sin nombre de franquiciado usable` };
     }));
     checks.push(safe({ id: "cc-aging", persona: "Marina", seccion: "Cuentas Corrientes", titulo: "El aging cuadra con el neto", severidad: "media" }, async () => {
       const r = resumirCC(ccFacturas, { ...PARAMS_DEFAULT, fechaCorte: hoyISO() });

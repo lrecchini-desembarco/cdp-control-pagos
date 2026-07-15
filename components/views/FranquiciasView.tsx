@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import {
-  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, canonicalEmpresa, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
+  parseFranquiciasCSV, parseFranquiciasMatriz, resumir, costear, gestionado, gestionKey, claveFranq, canonicalEmpresa, ESTADOS_CC, ESTADOS_FRANQ, PARAMS_DEFAULT,
   type FacturaCC, type ParamsCC, type ResumenCC, type ResultadoParse, type Gestion, type ClienteCC,
 } from "@/lib/franquicias";
 
@@ -131,7 +131,7 @@ export default function FranquiciasView() {
     const base = tab === "franquiciado" ? resumenTabla.porFranquiciado : tab === "empresa" ? resumenTabla.porEmpresa
       : tab === "local" ? resumenTabla.porLocal : tab === "detalle" ? resumenTabla.porDetalle : resumenTabla.porContacto;
     const t = normTxt(q.trim());
-    const filt = t ? base.filter((g) => normTxt(g.k + " " + ((g as any).clienteId ?? "")).includes(t)) : base;
+    const filt = t ? base.filter((g) => normTxt(((g as any).nombre ?? g.k) + " " + ((g as any).clienteId ?? "")).includes(t)) : base;
     const key = orden === "vencido" ? (g: any) => g.vencido : orden === "mora" ? (g: any) => g.maxMora : orden === "sinGestion" ? (g: any) => g.netoSinGestion : (g: any) => g.neto;
     return [...filt].sort((a, b) => key(b) - key(a));
   }, [resumenTabla, tab, q, orden]);
@@ -168,7 +168,7 @@ export default function FranquiciasView() {
     try { await fetch("/api/franquicias", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clienteEstado: { clienteId, estado } }) }); } catch { /* */ }
   }
   function filaOnClick(g: any) {
-    if (tab === "franquiciado") abrirDetalle("cliente", g.k, `${g.clienteId} · ${g.k}`);
+    if (tab === "franquiciado") abrirDetalle("cliente", g.clave ?? g.k, `${g.clienteId ? "#" + g.clienteId + " · " : ""}${g.nombre ?? g.k}`);
     else if (tab === "empresa") abrirDetalle("empresa", g.k, `Empresa: ${g.k}`);
     else if (tab === "local") abrirDetalle("local", g.k, `Local: ${g.k}`);
     else if (tab === "detalle") abrirDetalle("detalle", g.k, `Concepto: ${g.k}`);
@@ -346,9 +346,9 @@ export default function FranquiciasView() {
                     const prioridad = g.netoSinGestion > 0; // vencido sin gestionar = perseguir
                     return (
                     <tr key={g.k} onClick={() => filaOnClick(g)} title="Ver las facturas" className={`cursor-pointer border-b border-line/70 last:border-0 hover:bg-action/[0.04] ${prioridad ? "border-l-2 border-l-bad/60" : ""}`}>
-                      <td className="px-4 py-2"><span className="font-medium text-ink">{g.k}</span>{g.clienteId && <span className="ml-2 font-mono text-2xs text-faint">#{g.clienteId}</span>}<span className="ml-1.5 text-2xs text-faint">›</span></td>
+                      <td className="px-4 py-2"><span className="font-medium text-ink">{g.nombre ?? g.k}</span>{g.clienteId && <span className="ml-2 font-mono text-2xs text-faint">#{g.clienteId}</span>}<span className="ml-1.5 text-2xs text-faint">›</span></td>
                       <td className="px-3 py-2 text-right font-mono tnum text-2xs text-muted">{g.maxMora > 0 ? `${g.maxMora}d` : "—"}</td>
-                      {tab === "franquiciado" && <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}><EstadoFranqCell g={g} estado={clientes[g.clienteId]?.estado} onChange={(v) => updateCliente(g.clienteId, v)} /></td>}
+                      {tab === "franquiciado" && <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}><EstadoFranqCell g={g} estado={clientes[g.clave]?.estado} onChange={(v) => updateCliente(g.clave, v)} /></td>}
                       <td className="px-3 py-2 text-right font-mono tnum text-bad monto">{g.vencido ? moneyC(g.vencido) : "—"}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -420,7 +420,7 @@ const CONTACTOS = ["", "Contactado", "Contactado sin respuesta", "Sin contacto"]
 function DetalleModal({ titulo, facturas, dimKey, val, params, onGestion, onBorrarManual, onClose }: { titulo: string; facturas: FacturaCC[]; dimKey: DimKey; val: string; params: ParamsCC; onGestion: (key: string, patch: Gestion) => void; onBorrarManual: (key: string) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null); // key de la fila expandida
-  const propio = (f: FacturaCC) => (dimKey === "cliente" ? f.cliente : dimKey === "empresa" ? f.empresa : dimKey === "local" ? f.local : dimKey === "detalle" ? f.detalle : f.contacto);
+  const propio = (f: FacturaCC) => (dimKey === "cliente" ? claveFranq(f.cliente) : dimKey === "empresa" ? f.empresa : dimKey === "local" ? f.local : dimKey === "detalle" ? f.detalle : f.contacto);
   const cs = useMemo(() => facturas.filter((f) => propio(f) === val).map((f) => costear(f, params)).sort((a, b) => b.neto - a.neto), [facturas, val, params]); // eslint-disable-line react-hooks/exhaustive-deps
   const vis = useMemo(() => { const t = normTxt(q.trim()); return t ? cs.filter((c) => normTxt(c.detalle + " " + c.nro + " " + (c.obs ?? "")).includes(t)) : cs; }, [cs, q]);
   const tot = cs.reduce((s, c) => ({ neto: s.neto + c.neto, saldo: s.saldo + c.saldo, pun: s.pun + c.punitorios }), { neto: 0, saldo: 0, pun: 0 });
