@@ -265,11 +265,14 @@ export default function FranquiciasView() {
         <>
           {/* KPIs */}
           <div data-tour="fr-kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi label="Neto a cobrar" value={moneyC(resumen.totalNeto)} full={money(resumen.totalNeto)} tone="ink" sub={`${int(resumen.nFacturas)} facturas`} big />
-            <Kpi label="Cobrable real" value={moneyC(resumen.cobrable)} full={money(resumen.cobrable)} tone="ok" sub={params.incluirIncobrables ? "incluye incobrables · sin toma local" : "sin incobrables ni toma local"} />
-            <Kpi label="Vencido" value={moneyC(resumen.vencido)} full={money(resumen.vencido)} tone="bad" sub={`${int(resumen.nVencidas)} fc vencidas`} />
-            <Kpi label="Por vencer" value={moneyC(resumen.porVencer)} full={money(resumen.porVencer)} tone="muted" sub="al día" />
+            <Kpi label="Neto a cobrar" value={moneyC(resumen.totalNeto)} full={money(resumen.totalNeto)} tone="ink" sub={`${int(resumen.nFacturas)} facturas`} big hint="TODA la deuda con punitorios, incluidos incobrables y deuda por toma de local. Es el total bruto." />
+            <Kpi label="Cobrable real" value={moneyC(resumen.cobrable)} full={money(resumen.cobrable)} tone="ok" sub={params.incluirIncobrables ? "incluye incobrables · sin toma local" : "sin incobrables ni toma local"} hint="La plata que Cobranzas realmente persigue: saca los INCOBRABLES y la DEUDA TOMA LOCAL (igual que el Excel). Cobrable = Vencido + Por vencer." />
+            <Kpi label="Vencido" value={moneyC(resumen.vencido)} full={money(resumen.vencido)} tone="bad" sub={`${int(resumen.nVencidas)} fc vencidas`} hint="Del cobrable, lo que ya pasó su fecha de vencimiento. Hay que cobrarlo ya." />
+            <Kpi label="Por vencer" value={moneyC(resumen.porVencer)} full={money(resumen.porVencer)} tone="muted" sub="al día" hint="Del cobrable, lo que todavía no venció." />
           </div>
+          <p className="-mt-1 px-1 text-2xs text-faint">
+            <b className="text-muted">Neto a cobrar</b> = toda la deuda. <b className="text-ok">Cobrable real</b> = lo que se persigue de verdad (sin «incobrables» {money(resumen.incobrable)} ni «deuda toma local» {money(resumen.tomaLocal)}). Pasá el mouse por cada número (ⓘ) para ver qué incluye.
+          </p>
 
           {/* Panel de cálculo — compacto: resumen siempre visible, controles al expandir */}
           <Card className="p-3">
@@ -449,16 +452,27 @@ function EstadoFranqCell({ g, estado, onChange }: { g: { netoSinGestion: number;
 function NumIn({ v, step, onChange }: { v: number; step: number; onChange: (n: number) => void }) {
   return <input type="number" step={step} value={v} onChange={(e) => onChange(Number(e.target.value) || 0)} className="w-20 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink" />;
 }
-function Kpi({ label, value, sub, tone, full, big }: { label: string; value: string; sub?: string; tone: "ink" | "ok" | "bad" | "muted"; full?: string; big?: boolean }) {
+function Kpi({ label, value, sub, tone, full, big, hint }: { label: string; value: string; sub?: string; tone: "ink" | "ok" | "bad" | "muted"; full?: string; big?: boolean; hint?: string }) {
   const c = tone === "ok" ? "text-ok" : tone === "bad" ? "text-bad" : tone === "muted" ? "text-muted" : "text-ink";
   return (
     <Card className="group p-3">
-      <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
+      <p className="flex items-center gap-1 text-2xs uppercase tracking-wide text-faint" title={hint}>{label}{hint && <span className="cursor-help text-faint/70">ⓘ</span>}</p>
       <p className={`mt-0.5 font-display font-semibold leading-tight tnum ${big ? "text-xl sm:text-3xl" : "text-base sm:text-2xl"} ${c}`}>
         <span className="monto"><span className="group-hover:hidden">{value}</span>{full && <span className="hidden whitespace-nowrap text-[0.7em] group-hover:inline">{full}</span>}</span>
       </p>
       {sub && <p className="text-2xs text-faint">{sub}</p>}
     </Card>
+  );
+}
+
+// Cartel de ayuda in-situ: explica en criollo lo que puede confundir. tone=info (azul)
+// para aclaraciones, warn (ámbar) para "ojo con esto".
+function InfoNota({ children, tone = "info" }: { children: React.ReactNode; tone?: "info" | "warn" }) {
+  return (
+    <div className={`flex items-start gap-2 border-b border-line px-4 py-2 text-2xs leading-relaxed ${tone === "warn" ? "bg-warn/5" : "bg-action/[0.045]"}`}>
+      <span className="mt-px shrink-0" aria-hidden>{tone === "warn" ? "⚠️" : "ℹ️"}</span>
+      <p className="text-muted">{children}</p>
+    </div>
   );
 }
 
@@ -623,8 +637,11 @@ function MaestroPanel({ facturas, params, clientes, onCliente }: { facturas: Fac
   const inp = "w-full rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink placeholder:text-faint focus:border-action";
   return (
     <>
+      <InfoNota>
+        La ficha de cada franquiciado. <b>CUIT, teléfono y email se editan acá</b> (tocá el campo, escribí y hacé clic afuera — se guarda solo). El código, los locales y las empresas salen de las facturas.
+      </InfoNota>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
-        <span className="text-muted"><b className="text-ink">{filas.length}</b> franquiciados · ficha maestra (CUIT/teléfono/email se editan acá y se guardan)</span>
+        <span className="text-muted"><b className="text-ink">{filas.length}</b> franquiciados · ficha maestra</span>
         <div className="flex items-center gap-2">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar franquiciado, CUIT, local…" className="w-56 rounded-md border border-line bg-surface px-2 py-1 text-2xs text-ink placeholder:text-faint" />
           <button onClick={exportar} className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-muted hover:bg-ink/5">Exportar CSV</button>
@@ -670,8 +687,11 @@ function CobranzaPanel({ facturas, params }: { facturas: FacturaCC[]; params: Pa
   const emps = cal.empresas;
   return (
     <>
+      <InfoNota>
+        Cuánta plata vence por {gran === "semana" ? "semana" : "día"}, abierta por empresa. Estados: <b className="text-faint">Cobrada</b> = ya pasó esa fecha · <b className="text-ok">En curso</b> = es {gran === "semana" ? "la semana" : "el día"} de hoy · <b className="text-action">Próxima</b> = todavía no llegó. Se ordena por fecha de <b>vencimiento</b> (excluye incobrables y deuda toma local).
+      </InfoNota>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
-        <span className="text-muted">Cobranza por <b className="text-ink">{gran === "semana" ? "semana" : "día"}</b> de vencimiento al corte <b className="text-ink">{fechaLabel(cal.corte)}</b> · excluye incobrables y toma local. <span className="text-faint">Cobrada = ya pasó · En curso = esta {gran === "semana" ? "semana" : "fecha"} · Próxima = futura.</span></span>
+        <span className="text-muted">Al corte <b className="text-ink">{fechaLabel(cal.corte)}</b></span>
         <div className="flex overflow-hidden rounded-md border border-line text-[11px]">
           {(["semana", "dia"] as Granularidad[]).map((g) => <button key={g} onClick={() => setGran(g)} className={`px-2 py-0.5 font-medium ${gran === g ? "bg-ink/[0.06] text-ink" : "text-muted hover:bg-ink/[0.03]"}`}>{g === "semana" ? "Semanal" : "Diaria"}</button>)}
         </div>
@@ -719,6 +739,9 @@ function CobroLocalPanel({ facturas, params, cobros }: { facturas: FacturaCC[]; 
   }
   return (
     <>
+      <InfoNota>
+        Una fila por local. <b>Saldo</b> = lo que todavía debe (sin incobrables ni toma local). <b>Total cobrado</b> = todo lo que ese local ya pagó, incluidos los cobros históricos del Excel. <b>Últ. cobro</b> = fecha del último pago.
+      </InfoNota>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
         <span className="text-muted"><b className="text-ink">{filas.length}</b> locales · saldo pendiente <b className="text-ink monto">{money(tot.saldo)}</b> · total cobrado <b className="text-ok monto">{money(tot.cobrado)}</b></span>
         <div className="flex items-center gap-2">
@@ -774,6 +797,9 @@ function MorosidadPanel({ facturas, params, onVer }: { facturas: FacturaCC[]; pa
   }
   return (
     <>
+      <InfoNota>
+        Ranking de los más atrasados, ordenado por <b>Total en mora</b> (la plata con ≥30 días de atraso — capital + punitorios). <b>Días prom.</b> = cuántos días de atraso promedian · <b>Peor</b> = la factura más atrasada · <b>Score</b> = riesgo de 0 a 100 (más alto, peor). Cambiá entre <b>Por local</b> y <b>Por franquiciado</b> arriba a la derecha. Tocá una fila para ver sus facturas.
+      </InfoNota>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
         <span className="text-muted">Mora ≥30 días · promedio <b className="text-ink">{Math.round(glob.diasProm)} días</b> · <b className="text-ink">{glob.comprobMora}</b> comprobantes · <b className="text-ink">{glob.localesEnMora}</b> locales en mora · deuda en mora <b className="text-bad monto">{money(glob.deudaEnMora)}</b></span>
         <div className="flex items-center gap-2">
@@ -843,6 +869,9 @@ function CobrosPanel({ cobros, cobrosHist, onBorrar }: { cobros: CobroCC[]; cobr
   );
   return (
     <>
+      <InfoNota>
+        Los cobros con la etiqueta <span className="rounded bg-ink/[0.06] px-1 py-px text-[10px] font-medium text-faint">Excel</span> <b>ya están descontados del saldo</b> (venían aplicados en el estado de cuenta). <b>No los cargues de nuevo.</b> Para un pago nuevo que entre de ahora en más, entrá al detalle de un franquiciado, abrí la factura y usá <b className="text-ok">＋ Registrar cobro</b> — ese sí baja el saldo y aparece acá.
+      </InfoNota>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-ink/[0.015] px-4 py-2 text-2xs">
         <span className="text-muted"><b className="text-ink">{orden.length}</b> cobros · total <b className="text-ok monto">{money(totalHist + totalNuevos)}</b>
           <span className="text-faint"> ({cobrosHist.length} del Excel {money(totalHist)}{cobros.length ? ` + ${cobros.length} nuevos ${money(totalNuevos)}` : ""})</span>
