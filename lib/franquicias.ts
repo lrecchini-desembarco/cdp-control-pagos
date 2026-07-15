@@ -459,13 +459,17 @@ export function canonicalEmpresa(s: string): string {
 // que aparezcan pares Tango/Raven que no matcheen solos, se agregan acá (clave = nombre
 // ya normalizado con canonicalLocalRaw, valor = nombre canónico final).
 const LOCAL_ALIAS: Record<string, string> = {
-  // ej: "MR TASTY VILLA REAL": "MR TASTY VILLA DEL PARQUE",   // ← cargar pares reales
+  // Pares Tango/Raven que NO se resuelven con la normalización de marca (nombres
+  // realmente distintos del mismo local). Cargar acá tras confirmar que son el MISMO
+  // local (ojo: un franquiciado puede tener varios locales — no mezclar).
+  // Pendientes de confirmar (NO cargados aún): SAN TELMO<->MICROCENTRO, COLEGIALES<->COLEGIALES 2.
 };
 function canonicalLocalRaw(s: string): string {
   let t = String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/\s+/g, " ").replace(/[.\s-]+$/, "").trim();
   if (!t) return "";
-  // Abreviaturas de marca al inicio (confiables): MRT / M.R.T. -> MR TASTY · DDR -> DESEMBARCO.
-  t = t.replace(/^M\.?\s?R\.?\s?T\.?(\s|$)/, "MR TASTY$1").replace(/^DDR(\s|$)/, "DESEMBARCO$1");
+  // Marca al inicio -> un solo nombre. Tango mezcla "MR TASTY X" y "TASTY X"; Raven usa
+  // "MRT X". Todo se normaliza a "TASTY X". DDR -> DESEMBARCO.
+  t = t.replace(/^(M\.?\s?R\.?\s?T\.?|MR\s+TASTY)(\s|$)/, "TASTY$2").replace(/^DDR(\s|$)/, "DESEMBARCO$1");
   return t.replace(/\s+/g, " ").trim();
 }
 /** Nombre canónico de un local (unifica Tango/Raven/Excel). Aplicar SIEMPRE al agrupar
