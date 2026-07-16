@@ -231,8 +231,8 @@ export default function FranquiciasView() {
     if (!resumen) return;
     const cs = facturas.map((f) => costear(f, params)).sort((a, b) => b.neto - a.neto);
     descargarCSV("franquicias-cuenta-corriente.csv",
-      ["cliente_id", "franquiciado", "empresa", "local", "concepto", "comprobante", "vencimiento", "dias_mora", "importe", "cobrado", "saldo", "tasa_%", "punitorios", "neto", "estado", "gestion"],
-      cs.map((c) => [c.clienteId, c.cliente, c.empresa, c.local, c.detalle, c.nro, fechaLabel(c.vencimiento), c.diasMora, Math.round(c.importe), Math.round(c.cobrado), Math.round(c.saldo), c.tasa.toFixed(2), Math.round(c.punitorios), Math.round(c.neto), c.vencida ? "Vencida" : "Por vencer", c.contacto]));
+      ["cliente_id", "franquiciado", "empresa", "local", "concepto", "tipo", "comprobante", "emision", "vencimiento", "dias_mora", "importe", "cobrado", "saldo", "tasa_%", "punitorios", "neto", "estado", "contacto", "bloqueo", "promesa", "nota"],
+      cs.map((c) => [c.clienteId, c.cliente, c.empresa, c.local, c.detalle, c.tipo, c.nro, c.emision ? fechaLabel(c.emision) : "", fechaLabel(c.vencimiento), c.diasMora, Math.round(c.importe), Math.round(c.cobrado), Math.round(c.saldo), c.tasa.toFixed(2), Math.round(c.punitorios), Math.round(c.neto), c.estado || (c.vencida ? "Vencida" : "Por vencer"), c.contacto, c.bloqueo || "", c.promesa ? fechaLabel(c.promesa) : "", c.obs ?? ""]));
   }
 
   const cargando = estado === "saving";
