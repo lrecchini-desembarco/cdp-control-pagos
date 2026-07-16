@@ -3,7 +3,7 @@ import { gzipSync, gunzipSync } from "zlib";
 import { guard } from "@/lib/api-guard";
 import { readStore, writeStore } from "@/lib/store";
 import { franquiciasTangoDesdeCache } from "@/lib/tango-cache";
-import { PARAMS_DEFAULT, aplicarGestion, aplicarCobros, facturasDesdeTango, gestionKey, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC, type CobroCC, type RavenFranq } from "@/lib/franquicias";
+import { PARAMS_DEFAULT, aplicarGestion, aplicarCobros, facturasDesdeTango, gestionKey, claveFranq, type FacturaCC, type ParamsCC, type Gestion, type ClienteCC, type CobroCC, type RavenFranq } from "@/lib/franquicias";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -72,6 +72,21 @@ export async function GET() {
   const [base, manuales, gestion, clientes, cobros, cobrosHist, raven, params, meta] = await Promise.all([
     leerBase(), leerManuales(), leerGestion(), leerClientes(), leerCobros(), leerCobrosHist(), leerRaven(), leerParams(), readStore<{ actualizado?: string; corte?: string } | null>(META, null),
   ]);
+  // Enriquecer el LOCAL del dato vivo de Tango: Tango manda "Casa central" (la sucursal
+  // del emisor, no la del franquiciado). Se reemplaza por el nombre de local de RAVEN
+  // (cruzado por CUIT del maestro); si Raven no lo tiene, por el nombre del franquiciado.
+  if (base.fuente === "live" && base.facturas.length) {
+    const soloDig = (s?: string) => String(s ?? "").replace(/\D/g, "");
+    const localRaven = new Map<string, string>();
+    for (const rf of raven.franqs) if (rf.cuit && rf.localRaven) localRaven.set(soloDig(rf.cuit), rf.localRaven);
+    base.facturas = base.facturas.map((f) => {
+      const cuit = soloDig(clientes[claveFranq(f.cliente)]?.cuit);
+      const lr = cuit ? localRaven.get(cuit) : "";
+      if (lr) return { ...f, local: lr };
+      if (!f.local || /casa central/i.test(f.local)) return { ...f, local: f.cliente };
+      return f;
+    });
+  }
   // Base (vivo de Tango o Excel subido) + facturas manuales; se aplican los cobros
   // NUEVOS (bajan el saldo) y se superpone la gestión. Los cobros históricos van aparte
   // (ya están aplicados en el snapshot) y sirven para Total cobrado / Último cobro.
