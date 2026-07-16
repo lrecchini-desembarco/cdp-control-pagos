@@ -206,18 +206,94 @@ function fechaPdf(s: string): string {
 }
 function detectarBancoPdf(texto: string, ruta: string): string {
   const tr = norm(texto) + " " + norm(ruta); // texto del PDF + ruta (respaldo cuando el texto no nombra al banco)
-  if (/mercado ?pago|release_date/.test(tr)) return "Mercado Pago";
-  if (/banco galicia|resumen de cuenta corriente|galicia/.test(tr)) return "Galicia";
-  if (/banco macro|macro/.test(tr)) return "Macro";
-  if (/banco ciudad|ciudad|cid campeador/.test(tr)) return "Ciudad";
-  if (/santander/.test(tr)) return "Santander";
-  if (/provincia/.test(tr)) return "Provincia";
-  if (/icbc|industrial and commercial/.test(tr)) return "ICBC";
+  // 1) Firmas ESPECÍFICAS (evitar palabras sueltas: "ciudad" matchea domicilios
+  //    "Ciudad Autónoma"; "mercado pago" matchea transferencias a MP en OTROS bancos).
+  // Nombres explícitos de banco PRIMERO (inequívocos); recién después la firma
+  // estructural de MP (un "cvu"/"id de operación" puede aparecer en otros extractos).
+  if (/industrial and commercial bank of china|\bicbc\b/.test(tr)) return "ICBC";
+  if (/banco santander|santander argentina|santander r[ií]o/.test(tr)) return "Santander";
+  if (/banco macro|\bmacro\b/.test(tr)) return "Macro";
+  if (/banco de la naci|banco naci[oó]n|\bajbxp/.test(tr)) return "Nación"; // AJBXP = form de resumen Nación
+  if (/banco ciudad|cid campeador/.test(tr)) return "Ciudad";
+  if (/banco galicia|\bgalicia\b/.test(tr)) return "Galicia";
+  if (/banco (de la )?provincia|provincia de buenos aires/.test(tr)) return "Provincia";
   if (/supervielle/.test(tr)) return "Supervielle";
+  if (/\bcvu\b|id de la operaci|release_date/.test(tr)) return "Mercado Pago"; // MP: cuenta virtual (CVU), no CBU
+  // 2) Fallback por CBU: los 3 primeros dígitos son el código de entidad (estándar BCRA).
+  const cbu = (tr.match(/\b(\d{3})\d{19}\b/) || tr.match(/cbu[:\s]*(\d{3})/) || [])[1];
+  const porCbu: Record<string, string> = { "011": "Nación", "007": "Galicia", "014": "Provincia", "072": "Santander", "285": "Macro", "029": "Ciudad", "015": "ICBC" };
+  if (cbu && porCbu[cbu]) return porCbu[cbu];
   return "Otro";
 }
 
 interface FilaPdf { ancla?: number; fecha?: string; concepto?: string; mov?: number | null; saldo?: number; cuit?: string }
+
+// Importe de ICBC: puede traer el menos AL FINAL ("50.000.000,00-"). Devuelve magnitud
+// con signo (negativo = débito). El genérico no maneja el menos final a propósito
+// (rompía otros bancos); acá es local a ICBC.
+function parseNumIcbc(s: string): number {
+  const t = String(s || "").trim();
+  const neg = /-\s*$/.test(t) || t.startsWith("-");
+  const n = parseNumBanco(t.replace(/-/g, ""));
+  return neg ? -n : n;
+}
+
+/** Parser DEDICADO de ICBC. Su layout no entra en el genérico por 3 cosas a la vez:
+ *  (a) fecha "dd-mm" SIN año -> se toma el año del PERIODO ("01-06-2026 AL ...");
+ *  (b) importes con el MENOS AL FINAL en la columna de débitos;
+ *  (c) saldo corrido INTERMITENTE (sólo en algunas filas).
+ *  Columnas por posición x: DÉBITOS ~360-420 (con "-"), CRÉDITOS ~430-489 (sin signo),
+ *  SALDOS x>=490. El signo del importe sale de la columna, no del delta de saldo. */
+function parseIcbcPdf(pags: PdfItem[][], ruta: string, nombre: string): { movs: MovBanco[]; descartados: number; error?: string } {
+  const texto = pags.flat().map((i) => i.s).join(" ");
+  const my = texto.match(/PERIODO[^0-9]*\d{2}[-/]\d{2}[-/](20\d{2})/i) || texto.match(/\b\d{2}[-/]\d{2}[-/](20\d{2})\b/);
+  const anio = my ? my[1] : "";
+  if (!anio) return { movs: [], descartados: 0, error: "ICBC: no pude leer el año del período" };
+  const lineasTxt: string[] = [];
+  const movs: MovBanco[] = [];
+  let saldoPrev: number | null = null;
+  let evaluadas = 0, desconf = 0;
+  for (const items of pags) {
+    const byY = new Map<number, PdfItem[]>();
+    for (const i of items) { if (!i.s.trim()) continue; const k = Math.round(i.y); const a = byY.get(k) ?? []; a.push(i); byY.set(k, a); }
+    for (const y of Array.from(byY.keys()).sort((a, b) => b - a)) {
+      const ln = (byY.get(y) as PdfItem[]).sort((a, b) => a.x - b.x);
+      const txt = ln.map((i) => i.s).join(" ");
+      lineasTxt.push(txt);
+      const ant = txt.match(/SALDO\s+ULTIMO[^0-9-]*(-?[\d.]+,\d{2}-?)/i);
+      if (ant && saldoPrev == null) { saldoPrev = parseNumIcbc(ant[1]); continue; }
+      const fm = (ln[0]?.s || "").match(/^(\d{2})-(\d{2})$/); // dd-mm
+      if (!fm) continue;
+      const fecha = `${anio}-${fm[2]}-${fm[1]}`;
+      if (!ymdValido(anio, fm[2], fm[1])) continue;
+      let debito = 0, credito = 0, saldo: number | null = null;
+      for (const it of ln.slice(1)) {
+        if (!esNum(it.s)) continue;
+        const val = parseNumIcbc(it.s);
+        if (/-\s*$/.test(it.s.trim()) || val < 0) debito += Math.abs(val);   // menos al final = débito
+        else if (it.x >= 490) saldo = val;                                    // columna de saldos
+        else credito += Math.abs(val);                                        // columna de créditos
+      }
+      const concepto = ln.slice(1).filter((i) => !esNum(i.s) && !/^\d{2}-\d{2}$/.test(i.s)).map((i) => i.s).join(" ").trim().slice(0, 80);
+      const ingreso = credito, egreso = debito;
+      // Validación: si la fila trae saldo, el saldo previo + neto debe cuadrar.
+      if (saldo != null && saldoPrev != null) {
+        evaluadas++;
+        if (Math.abs(saldoPrev + ingreso - egreso - saldo) > 2) desconf++;
+        saldoPrev = saldo;
+      } else if (saldoPrev != null) {
+        saldoPrev = saldoPrev + ingreso - egreso;
+      }
+      if (ingreso === 0 && egreso === 0) continue;
+      movs.push({ fecha, mes: fecha.slice(0, 7), banco: "", local: "", concepto, ingreso, egreso, categoria: categoriaDe(concepto), cuit: extraerCuit(concepto) });
+    }
+  }
+  if (!movs.length) return { movs: [], descartados: 0, error: "ICBC: no reconocí movimientos" };
+  if (evaluadas && desconf / evaluadas > 0.3) return { movs: [], descartados: desconf, error: "ICBC: los importes no cuadran con el saldo (¿layout nuevo?)" };
+  const local = canonicalLocal(entidadDeRuta(ruta || nombre));
+  for (const m of movs) { m.banco = "ICBC"; m.local = local; }
+  return { movs, descartados: desconf };
+}
 
 /** Parsea los items de texto de un PDF (por página) a movimientos.
  * Cada fila trae un IMPORTE (columna) y un SALDO corrido. Dos casos:
@@ -227,6 +303,11 @@ interface FilaPdf { ancla?: number; fecha?: string; concepto?: string; mov?: num
  * La validación es order-agnostic: |importe| debe coincidir con |saldo − vecino|
  * (arriba o abajo). Si no cuadra en >30% de las filas, se rechaza (tarjeta/escaneado). */
 export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): { movs: MovBanco[]; descartados: number; error?: string } {
+  // ICBC tiene un layout propio (fecha sin año, menos al final, saldo intermitente)
+  // que no entra en la lógica genérica -> parser dedicado (no afecta a los demás bancos).
+  if (/industrial and commercial bank of china|\bicbc\b/i.test(pags.flat().map((i) => i.s).join(" "))) {
+    return parseIcbcPdf(pags, ruta, nombre);
+  }
   const lineasTxt: string[] = [];
   const filas: FilaPdf[] = [];
   for (const items of pags) {
