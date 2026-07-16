@@ -354,7 +354,7 @@ export function cobroPorLocal(facturas: FacturaCC[], p: ParamsCC, cobros: { loca
     let a = m.get(k);
     if (!a) { a = { local: k, empresa: c.empresa, vencida: 0, noVencida: 0, saldo: 0, totalCobrado: 0, ultimoCobro: "", nFacturas: 0 }; m.set(k, a); }
     if (c.vencida) a.vencida += c.neto; else a.noVencida += c.neto;
-    a.saldo += c.saldo; a.nFacturas++;
+    a.saldo += c.saldo; a.totalCobrado += c.cobrado; a.nFacturas++; // cobrado ya aplicado (Tango) + registro abajo
   }
   for (const co of cobros) {
     const k = key(co.local);
