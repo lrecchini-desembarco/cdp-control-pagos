@@ -543,14 +543,19 @@ export interface ResultadoParse {
 // ya vienen aliasadas por la vista; acá solo normalizamos tipos, empresa y el mes.
 // Tolerante a que falten local/detalle (son enriquecimiento, la app funciona sin ellos).
 export function tangoRowAFactura(row: Record<string, unknown>): FacturaCC {
-  const venc = isoFecha(row.vencimiento);
+  const emis = isoFecha(row.emision);
+  const vencRaw = isoFecha(row.vencimiento);
+  // Tango marca "sin vencimiento" con la fecha 1899-12-31 (o vacío). Si el vencimiento
+  // no es válido (anterior a 2015, ej. regalías/notas de débito), se usa la EMISIÓN
+  // como vencimiento — si no, la mora daría ~46.000 días y los punitorios explotan.
+  const venc = (!vencRaw || vencRaw < "2015-01-01") ? (emis || vencRaw) : vencRaw;
   const clienteRaw = String(row.cliente ?? "").trim();
   const mCli = clienteRaw.match(/^(\d+)\s*[-–]\s*(.+)$/); // por si el nombre viene "2003 - NOMBRE"
   return {
     clienteId: String(row.clienteId ?? (mCli ? mCli[1] : "")).trim(),
     cliente: mCli ? mCli[2].trim() : clienteRaw,
     vencimiento: venc,
-    emision: isoFecha(row.emision),
+    emision: emis,
     tipo: String(row.tipo ?? "").trim() || "FAC",
     nro: String(row.nro ?? "").trim(),
     importe: parseNum(row.importe),
