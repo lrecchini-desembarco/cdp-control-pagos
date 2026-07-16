@@ -317,7 +317,10 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
       const ln = (byY.get(y) as PdfItem[]).sort((a, b) => a.x - b.x);
       const txt = ln.map((i) => i.s).join(" ");
       lineasTxt.push(txt);
-      const ant = txt.match(/SALDO\s+(?:ANTERIOR|ULTIMO EXTRACTO)[^0-9-]*(-?[\d.]+,\d{2}-?)/i);
+      // Ancla del saldo inicial. El "(?:AL <fecha>)?" opcional deja pasar bancos que
+      // meten la fecha entre la etiqueta y el monto (ej. Macro: "SALDO ULTIMO EXTRACTO
+      // AL 29/05/2026  100.000,00"), sin cambiar los que no la tienen.
+      const ant = txt.match(/SALDO\s+(?:ANTERIOR|ULTIMO\s+EXTRACTO)(?:\s+AL\s+[\d/.-]+)?[^0-9-]*(-?[\d.]+,\d{2}-?)/i);
       if (ant) { filas.push({ ancla: parseNumBanco(ant[1]) }); continue; }
       const fecha = fechaPdf(ln[0]?.s || "");
       if (!fecha) continue;
@@ -330,16 +333,37 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
     }
   }
   const datos = filas.filter((f) => f.fecha);
-  if (!datos.length) return { movs: [], descartados: 0, error: "sin movimientos con fecha (cuenta sin actividad en el período, PDF escaneado, o formato aún no soportado)" };
+  // Detección con cabecera (primeras 40 líneas) + PIE (últimas 8): varios bancos
+  // (Macro, ICBC) ponen la razón social legal recién en el pie del extracto.
+  const bancoDet = detectarBancoPdf([...lineasTxt.slice(0, 40), ...lineasTxt.slice(-8)].join(" "), ruta);
+  if (!datos.length) {
+    // ¿Cuenta DORMIDA? Trae ancla ("SALDO ULTIMO/ANTERIOR") y/o "SALDO FINAL" pero
+    // ningún movimiento con fecha -> no es un error, la cuenta no tuvo actividad.
+    const tieneCierres = filas.some((f) => f.ancla != null) || lineasTxt.some((l) => /SALDO\s+FINAL/i.test(l));
+    if (tieneCierres) {
+      const sc = lineasTxt.join(" ").match(/Saldo\s+Cuentas\s+en\s+PESOS[^0-9-]*(-?[\d.]+,\d{2})/i);
+      const pref = bancoDet !== "Otro" ? bancoDet + ": " : "";
+      return { movs: [], descartados: 0, error: `${pref}cuenta sin movimientos en el período (no es un error)${sc ? ` · saldo $${sc[1]}` : ""}` };
+    }
+    return { movs: [], descartados: 0, error: "sin movimientos con fecha (¿PDF escaneado o formato aún no soportado?)" };
+  }
   // ¿el banco firma los importes? (algún importe negativo en la columna de movimiento)
   const firmado = datos.some((f) => f.mov != null && f.mov < 0);
   // Validación order-agnostic: |importe| cuadra con el salto de saldo contra un vecino.
+  // La secuencia incluye las ANCLAS (saldo inicial de cada cuenta) como checkpoints:
+  // sin esto el primer movimiento de cada cuenta (su vecino es el ancla, sin fecha)
+  // siempre "no cuadraba" y tumbaba extractos cortos (ej. Macro con pocos movimientos).
+  const seq: { saldo: number; mov?: number | null }[] = [];
+  for (const f of filas) {
+    if (f.ancla != null) seq.push({ saldo: f.ancla });
+    else if (f.fecha && f.saldo != null) seq.push({ saldo: f.saldo as number, mov: f.mov });
+  }
   let desconf = 0, evaluadas = 0;
-  for (let i = 0; i < datos.length; i++) {
-    const f = datos[i]; if (f.mov == null) continue; evaluadas++;
-    const m = Math.abs(f.mov);
-    const okPrev = datos[i - 1]?.saldo != null && Math.abs(Math.abs((f.saldo as number) - (datos[i - 1].saldo as number)) - m) < 2;
-    const okNext = datos[i + 1]?.saldo != null && Math.abs(Math.abs((f.saldo as number) - (datos[i + 1].saldo as number)) - m) < 2;
+  for (let i = 0; i < seq.length; i++) {
+    const s = seq[i]; if (s.mov == null) continue; evaluadas++;
+    const m = Math.abs(s.mov);
+    const okPrev = i > 0 && Math.abs(Math.abs(s.saldo - seq[i - 1].saldo) - m) < 2;
+    const okNext = i < seq.length - 1 && Math.abs(Math.abs(seq[i + 1].saldo - s.saldo) - m) < 2;
     if (!okPrev && !okNext) desconf++;
   }
   if (evaluadas && desconf / evaluadas > 0.3) return { movs: [], descartados: desconf, error: "formato no reconocido (los importes no cuadran con el saldo — ¿resumen de tarjeta o escaneado?)" };
@@ -371,9 +395,8 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
     movs.push({ fecha: f.fecha, mes: f.fecha.slice(0, 7), banco: "", local: "", concepto, ingreso, egreso, categoria: categoriaDe(concepto), cuit: f.cuit });
   }
   if (!movs.length) return { movs: [], descartados: desconf, error: "no reconocí movimientos (¿PDF escaneado o formato nuevo?)" };
-  const banco = detectarBancoPdf(lineasTxt.slice(0, 40).join(" "), ruta);
   const local = canonicalLocal(entidadDeRuta(ruta || nombre));
-  for (const m of movs) { m.banco = banco; m.local = local; }
+  for (const m of movs) { m.banco = bancoDet; m.local = local; }
   return { movs, descartados: desconf };
 }
 
