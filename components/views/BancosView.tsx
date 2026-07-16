@@ -298,7 +298,16 @@ export default function BancosView() {
               <button onClick={guardar} className="rounded-md bg-ok px-3 py-1 text-xs font-semibold text-white hover:opacity-90">Guardar {int(preview.movs.length)} movimientos</button>
             </div>
           </div>
-          {preview.errores.length > 0 && <p className="mt-1.5 text-2xs text-faint">No leídos: {preview.errores.slice(0, 4).join(" · ")}{preview.errores.length > 4 ? "…" : ""}</p>}
+          {preview.errores.length > 0 && (
+            <div className="mt-2 rounded-md border border-warn/30 bg-warn/[0.06] p-2">
+              <p className="text-xs font-semibold text-warn">{preview.errores.length} archivo{preview.errores.length > 1 ? "s" : ""} no {preview.errores.length > 1 ? "entraron" : "entró"} — revisá antes de guardar:</p>
+              <ul className="mt-1 space-y-0.5">
+                {preview.errores.map((e, i) => (
+                  <li key={i} className="text-2xs text-ink/70">• {e}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Card>
       )}
 

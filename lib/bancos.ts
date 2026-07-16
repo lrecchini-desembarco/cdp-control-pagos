@@ -197,10 +197,11 @@ export interface PdfItem { s: string; x: number; y: number }
 const esNum = (s: string) => /^\$?\s*-?\d[\d.,]*[.,]\d{2}-?\s*$/.test(s.trim());
 const MES3: Record<string, string> = { ene: "01", feb: "02", mar: "03", abr: "04", may: "05", jun: "06", jul: "07", ago: "08", sep: "09", oct: "10", nov: "11", dic: "12" };
 function fechaPdf(s: string): string {
-  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
-  if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2]}-${m[1]}`; }
-  m = s.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
-  if (m) { const mo = MES3[m[2].toLowerCase()]; return mo ? `${m[3]}-${mo}-${m[1]}` : ""; }
+  // dd/mm/yyyy o dd-mm-yyyy (Mercado Pago usa guiones y mes numérico). Tolera 1-2 dígitos.
+  let m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
+  m = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/); // dd-MMM-yyyy (Ciudad)
+  if (m) { const mo = MES3[m[2].toLowerCase()]; return mo ? `${m[3]}-${mo}-${m[1].padStart(2, "0")}` : ""; }
   return "";
 }
 function detectarBancoPdf(texto: string, ruta: string): string {
@@ -248,7 +249,7 @@ export function parsePdfItems(pags: PdfItem[][], nombre: string, ruta: string): 
     }
   }
   const datos = filas.filter((f) => f.fecha);
-  if (!datos.length) return { movs: [], descartados: 0, error: "no reconocí movimientos (¿PDF escaneado o formato nuevo?)" };
+  if (!datos.length) return { movs: [], descartados: 0, error: "sin movimientos con fecha (cuenta sin actividad en el período, PDF escaneado, o formato aún no soportado)" };
   // ¿el banco firma los importes? (algún importe negativo en la columna de movimiento)
   const firmado = datos.some((f) => f.mov != null && f.mov < 0);
   // Validación order-agnostic: |importe| cuadra con el salto de saldo contra un vecino.
