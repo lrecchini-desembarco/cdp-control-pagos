@@ -567,11 +567,18 @@ export function tangoRowAFactura(row: Record<string, unknown>): FacturaCC {
     mes: venc ? venc.slice(0, 7) : "",
   };
 }
-/** Mapea el snapshot vivo de Tango (varias filas) a FacturaCC, descartando basura. */
+// Clientes de Tango que NO son franquiciados (socios comerciales / apps / proveedores
+// que tienen cta cte por acuerdos de publicidad/comercial). Se excluyen de la pantalla
+// de franquicias. Lista extensible — agregar si aparecen otros.
+const NO_FRANQUICIADOS = /coca\s*cola|femsa|delivery\s*hero|\brappi\b|pedidos\s*ya|pedidosya|mercado\s*(libre|pago)/i;
+export const esFranquiciado = (cliente: string) => !NO_FRANQUICIADOS.test(cliente || "");
+
+/** Mapea el snapshot vivo de Tango (varias filas) a FacturaCC, descartando basura y
+ *  los clientes que no son franquiciados (socios comerciales / apps / proveedores). */
 export function facturasDesdeTango(rows: unknown[]): FacturaCC[] {
   if (!Array.isArray(rows)) return [];
   return rows.map((r) => tangoRowAFactura(r as Record<string, unknown>))
-    .filter((f) => f.cliente && (f.importe || f.cobrado));
+    .filter((f) => f.cliente && (f.importe || f.cobrado) && esFranquiciado(f.cliente));
 }
 
 // ── Datos de RAVEN (export fiscal "mis-comprobantes") ─────────────────────────
