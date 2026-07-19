@@ -28,6 +28,22 @@ export async function updateLista(id: string, patch: Partial<Lista>): Promise<Li
   return persistir(listas);
 }
 
+/** Importa/actualiza listas completas (ej. las de El Desembarco desde el Excel).
+ *  Upsert por id: si existe, actualiza params y precios; si no, la agrega. */
+export async function importarListas(nuevas: Lista[]): Promise<{ agregadas: number; actualizadas: number }> {
+  const listas = (await readStore<Lista[] | null>(KEY, null)) ?? SEED.map((l) => ({ ...l }));
+  const idx = new Map(listas.map((l, i) => [l.id, i]));
+  let agregadas = 0, actualizadas = 0;
+  for (const n of nuevas) {
+    if (!n?.id) continue;
+    const i = idx.get(n.id);
+    if (i === undefined) { listas.push(n); idx.set(n.id, listas.length - 1); agregadas++; }
+    else { listas[i] = { ...listas[i], ...n }; actualizadas++; }
+  }
+  await persistir(listas);
+  return { agregadas, actualizadas };
+}
+
 /** Setea el precio de venta de un producto en una lista. */
 export async function setPrecio(id: string, skuTango: string, precio: number): Promise<Lista[]> {
   const listas = (await readStore<Lista[] | null>(KEY, null)) ?? SEED.map((l) => ({ ...l }));

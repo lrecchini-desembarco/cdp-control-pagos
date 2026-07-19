@@ -1,6 +1,7 @@
 import type { CanalVenta, Componente } from "./recetas";
 import type { Insumo } from "./insumos";
 import { precioUnidadDe } from "./insumos";
+import type { Lista } from "./listas";
 
 // Importador de recetas/insumos desde el Excel de costos (hoja R_DS de "DS BA Costos
 // y Precios" y su maestro de insumos C_INS_BA). Formato LARGO: una fila por componente.
@@ -85,6 +86,33 @@ export function parseCInsBA(filas: unknown[][]): Insumo[] {
       estado: norm(r[12]),
       obs: norm(r[13]),
     });
+  }
+  return out;
+}
+
+// SKU -> precio desde una hoja de lista (col SKU y col precio, filas con SKU numérico).
+function preciosDeHoja(filas: unknown[][], colSku: number, colPrecio: number): Record<string, number> {
+  const p: Record<string, number> = {};
+  for (const r of filas) {
+    const sku = norm(r[colSku]);
+    if (!sku || !/^\d/.test(sku)) continue; // saltea encabezados (SKU es numérico)
+    const precio = Math.round(Number(r[colPrecio]) || 0);
+    if (precio > 0) p[sku] = precio;
+  }
+  return p;
+}
+
+/** Parsea las listas de precios DS del Excel: LP_DS_BA_S (salón, precio col 7) y
+ *  LP_DSBA_A (apps, precio col 5). SKU en col 2. DS usa regalías 4% (no 6%). */
+export function parseListasDS(rowsSalon: unknown[][] | null, rowsApps: unknown[][] | null): Lista[] {
+  const out: Lista[] = [];
+  if (rowsSalon) {
+    const precios = preciosDeHoja(rowsSalon, 2, 7);
+    if (Object.keys(precios).length) out.push({ id: "DS-S", nombre: "El Desembarco · Salón", marca: "El Desembarco", tipo: "salon", regaliasPct: 4, iibbPct: 3, publicidadPct: 0, locales: [], precios });
+  }
+  if (rowsApps) {
+    const precios = preciosDeHoja(rowsApps, 2, 5);
+    if (Object.keys(precios).length) out.push({ id: "DS-A", nombre: "El Desembarco · Apps", marca: "El Desembarco", tipo: "apps", regaliasPct: 4, iibbPct: 3, publicidadPct: 0, locales: [], precios });
   }
   return out;
 }

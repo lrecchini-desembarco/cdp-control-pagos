@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Field, inputClass, Button, Badge, Skeleton, EmptyState, ErrorState } from "@/components/ui/primitives";
 import { CANALES_VENTA, type CanalVenta, type RecetaCosteada, type VersionReceta, type Componente } from "@/lib/recetas";
 import type { Insumo } from "@/lib/insumos";
-import { parseRDS, parseCInsBA, previaImportacion, type PreviaImport } from "@/lib/importar-recetas";
+import { parseRDS, parseCInsBA, parseListasDS, previaImportacion, type PreviaImport } from "@/lib/importar-recetas";
+import type { Lista } from "@/lib/listas";
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -200,6 +201,7 @@ export default function RecetasView() {
 
 function ImportModal({ recetas, onClose, onImportado }: { recetas: RecetaCosteada[]; onClose: () => void; onImportado: (rs: RecetaCosteada[], gs?: string[]) => void }) {
   const [previa, setPrevia] = useState<PreviaImport | null>(null);
+  const [listasDS, setListasDS] = useState<Lista[]>([]);
   const [nombreArch, setNombreArch] = useState("");
   const [sobrescribir, setSobrescribir] = useState(false);
   const [leyendo, setLeyendo] = useState(false);
@@ -209,7 +211,7 @@ function ImportModal({ recetas, onClose, onImportado }: { recetas: RecetaCostead
 
   async function onArchivo(file: File | undefined) {
     if (!file) return;
-    setError(""); setResultado(""); setPrevia(null); setLeyendo(true); setNombreArch(file.name);
+    setError(""); setResultado(""); setPrevia(null); setListasDS([]); setLeyendo(true); setNombreArch(file.name);
     try {
       const XLSX = await import("xlsx");
       const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
@@ -220,6 +222,10 @@ function ImportModal({ recetas, onClose, onImportado }: { recetas: RecetaCostead
       const recetasImp = parseRDS(rows(nRds));
       const nCins = hoja(/c_?ins/i);
       const insumosDS = nCins ? parseCInsBA(rows(nCins)) : [];
+      // Listas de precios DS (salón / apps), si están en el Excel.
+      const nSalon = hoja(/lp_?ds_?ba_?s$/i) || hoja(/lp_?ds.*_s$/i);
+      const nApps = hoja(/lp_?dsba_?a$/i) || hoja(/lp_?ds.*_a$/i);
+      setListasDS(parseListasDS(nSalon ? rows(nSalon) : null, nApps ? rows(nApps) : null));
       // Maestro actual (para saber qué insumos faltan).
       const ji = await (await fetch("/api/insumos")).json();
       const maestro = new Set<string>((ji.insumos as Insumo[] | undefined ?? []).map((i) => i.cod.toLowerCase()));
@@ -240,7 +246,13 @@ function ImportModal({ recetas, onClose, onImportado }: { recetas: RecetaCostead
       if (!j.ok) throw new Error(j.error || "No se pudo importar.");
       onImportado(j.recetas, j.grupos);
       const r = j.resumen || {};
-      setResultado(`Importadas ${aImportar.length} recetas: ${r.creados ?? 0} nuevas, ${r.actualizados ?? 0} actualizadas${r.insumosAgregados ? ` · ${r.insumosAgregados} insumos nuevos` : ""}${skip.size ? ` · ${skip.size} salteadas (otra marca)` : ""}.`);
+      // Listas de precios DS (van al módulo Listas).
+      let msgListas = "";
+      if (listasDS.length) {
+        const jl = await (await fetch("/api/listas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion: "importar", listas: listasDS }) })).json();
+        if (jl.ok) msgListas = ` · ${listasDS.length} listas de precios (${listasDS.map((l) => l.nombre.replace("El Desembarco · ", "")).join(", ")})`;
+      }
+      setResultado(`Importadas ${aImportar.length} recetas: ${r.creados ?? 0} nuevas, ${r.actualizados ?? 0} actualizadas${r.insumosAgregados ? ` · ${r.insumosAgregados} insumos nuevos` : ""}${skip.size ? ` · ${skip.size} salteadas (otra marca)` : ""}${msgListas}.`);
     } catch (e) { setError(e instanceof Error ? e.message : "Error."); }
     finally { setGuardando(false); }
   }
@@ -274,6 +286,9 @@ function ImportModal({ recetas, onClose, onImportado }: { recetas: RecetaCostead
             </div>
             {previa.insumosFaltantes.length > 0 && (
               <p className="rounded-lg bg-action/10 px-3 py-2 text-2xs text-action">Se cargarán <b>{previa.insumosFaltantes.length}</b> insumos nuevos al maestro (los usan estas recetas): {previa.insumosFaltantes.map((i) => i.cod).join(", ")}.</p>
+            )}
+            {listasDS.length > 0 && (
+              <p className="rounded-lg bg-action/10 px-3 py-2 text-2xs text-action">También se importan <b>{listasDS.length}</b> listas de precios al módulo Listas: {listasDS.map((l) => `${l.nombre.replace("El Desembarco · ", "")} (${Object.keys(l.precios).length})`).join(", ")}.</p>
             )}
             {previa.codigosSinInsumo.length > 0 && (
               <p className="rounded-lg bg-warn/10 px-3 py-2 text-2xs text-warn">{previa.codigosSinInsumo.length} insumos no tienen dato en el Excel y quedarán como faltantes: {previa.codigosSinInsumo.join(", ")}.</p>
@@ -593,13 +608,13 @@ function Editor({ receta, grupos, onClose, onGuardado }: { receta: RecetaCostead
               const ins = idx.get(c.insumoCod.toLowerCase());
               const sub = (ins?.precioUnidad ?? 0) * (Number(c.cant) || 0);
               return (
-                <div key={i} className="flex items-center gap-2">
-                  <select className={`${inputClass} flex-1`} value={ins?.cod ?? c.insumoCod} onChange={(e) => setComp(i, { insumoCod: e.target.value })}>
+                <div key={i} className="flex flex-wrap items-center gap-2">
+                  <select className={`${inputClass} min-w-0 flex-1 basis-full sm:basis-0`} value={ins?.cod ?? c.insumoCod} onChange={(e) => setComp(i, { insumoCod: e.target.value })}>
                     <option value="">— elegí insumo —</option>
                     {c.insumoCod && !ins && <option value={c.insumoCod}>{c.insumoCod} (falta en maestro)</option>}
                     {insumos.map((x) => <option key={x.cod} value={x.cod}>{x.descripcion} ({x.cod})</option>)}
                   </select>
-                  <input type="number" className={`${inputClass} w-24`} value={c.cant} onChange={(e) => setComp(i, { cant: Number(e.target.value) })} title="cantidad (unidades o gramos)" />
+                  <input type="number" className={`${inputClass} w-16`} value={c.cant} onChange={(e) => setComp(i, { cant: Number(e.target.value) })} title="cantidad (unidades o gramos)" />
                   <span className="w-20 shrink-0 text-right font-mono tnum text-2xs text-muted monto">{money(sub)}</span>
                   <button onClick={() => delComp(i)} className="px-1 text-muted hover:text-bad" title="Quitar">✕</button>
                 </div>

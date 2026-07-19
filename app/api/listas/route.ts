@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
-import { getListas, setPrecio, updateLista } from "@/lib/listas-store";
+import { getListas, setPrecio, updateLista, importarListas } from "@/lib/listas-store";
 import { margenDe, type MargenProducto } from "@/lib/listas";
 import { getRecetas } from "@/lib/recetas-store";
 import { getInsumos } from "@/lib/insumos-store";
@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
   if (!(await autorizado())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
   try {
     const body = await req.json();
+    if (body?.accion === "importar") {
+      const res = await importarListas(Array.isArray(body.listas) ? body.listas : []);
+      return NextResponse.json({ ok: true, listas: await getListas(), resumen: res });
+    }
     if (!body?.id) throw new Error("Falta el id de lista.");
     if (body.sku !== undefined) {
       return NextResponse.json({ ok: true, listas: await setPrecio(body.id, body.sku, body.precio) });
