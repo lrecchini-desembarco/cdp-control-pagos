@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
-import { getRecetas, saveReceta, getReceta, getGrupos, setGrupos, guardarProducto, reordenarProductos, renombrarGrupo, eliminarGrupo, importarRecetas } from "@/lib/recetas-store";
+import { getRecetas, saveReceta, getReceta, getGrupos, setGrupos, guardarProducto, reordenarProductos, renombrarGrupo, eliminarGrupo, importarRecetas, aplicarMetaProductos, mergeGrupos } from "@/lib/recetas-store";
 import { getInsumos, importarInsumos } from "@/lib/insumos-store";
 import { costearReceta, indiceInsumos } from "@/lib/recetas";
 import { getRecetasTango } from "@/lib/sources/tango";
@@ -61,12 +61,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, recetas: recetas.map((r) => costearReceta(r, idx)), grupos });
     }
     if (accion === "importar") {
-      // Carga los insumos faltantes primero (para que las recetas costeen), luego las recetas.
+      // 1) insumos faltantes (para que costeen), 2) recetas, 3) grupos (por Sección) +
+      // metadata de productos (nombre/grupo/orden; crea los que faltan sin receta).
       const ins = Array.isArray(body.insumos) ? body.insumos : [];
       const insRes = ins.length ? await importarInsumos(ins) : { agregados: 0 };
       const rimp = await importarRecetas(Array.isArray(body.recetas) ? body.recetas : [], s.email);
-      const [idx, grupos] = await Promise.all([indiceInsumos(await getInsumos()), getGrupos()]);
-      return NextResponse.json({ ok: true, recetas: rimp.recetas.map((r) => costearReceta(r, idx)), grupos, resumen: { ...rimp, recetas: undefined, insumosAgregados: insRes.agregados } });
+      let metaRes = { creados: 0, actualizados: 0 };
+      if (Array.isArray(body.gruposOrden) && body.gruposOrden.length) await mergeGrupos(body.gruposOrden);
+      if (Array.isArray(body.productos) && body.productos.length) metaRes = await aplicarMetaProductos(body.productos);
+      const [idx, grupos, recetas] = await Promise.all([indiceInsumos(await getInsumos()), getGrupos(), getRecetas()]);
+      return NextResponse.json({ ok: true, recetas: recetas.map((r) => costearReceta(r, idx)), grupos, resumen: { ...rimp, recetas: undefined, insumosAgregados: insRes.agregados, productosCreados: metaRes.creados } });
     }
     if (accion === "producto") recetas = await guardarProducto(body);
     else if (accion === "reordenar") recetas = await reordenarProductos(Array.isArray(body.items) ? body.items : []);

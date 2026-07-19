@@ -117,6 +117,31 @@ export function parseListasDS(rowsSalon: unknown[][] | null, rowsApps: unknown[]
   return out;
 }
 
+export interface ProductoMetaImport { skuTango: string; descripcion: string; grupo: string; orden: number; }
+
+/** Extrae de las hojas de precios DS el maestro de productos con su Sección (=grupo)
+ *  y orden de aparición. Sirve para: nombrar los productos sin receta y AGRUPAR/ORDENAR
+ *  todos los productos DS por su sección del Excel (Burger, Milanesas, Combos, etc.). */
+export function parseProductosDS(rowsSalon: unknown[][] | null, rowsApps: unknown[][] | null): { productos: ProductoMetaImport[]; grupos: string[] } {
+  const map = new Map<string, ProductoMetaImport>();
+  const grupos: string[] = [];
+  let orden = 0;
+  const comer = (filas: unknown[][] | null) => {
+    if (!filas) return;
+    for (const r of filas) {
+      const sku = norm(r[2]);
+      if (!sku || !/^\d/.test(sku)) continue; // SKU numérico (saltea encabezados)
+      const grupo = norm(r[1]), desc = norm(r[3]);
+      if (grupo && !grupos.includes(grupo)) grupos.push(grupo);
+      const p = map.get(sku);
+      if (!p) map.set(sku, { skuTango: sku, descripcion: desc, grupo, orden: ++orden });
+      else { if (!p.grupo && grupo) p.grupo = grupo; if (!p.descripcion && desc) p.descripcion = desc; }
+    }
+  };
+  comer(rowsSalon); comer(rowsApps);
+  return { productos: Array.from(map.values()), grupos };
+}
+
 export interface PreviaImport {
   recetas: RecetaImport[];
   insumosFaltantes: Insumo[];   // insumos que usan las recetas y NO están en el maestro actual

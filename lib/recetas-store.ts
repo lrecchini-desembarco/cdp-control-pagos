@@ -192,6 +192,43 @@ export async function importarRecetas(
   return { recetas: await getRecetas(), creados, actualizados, versionados };
 }
 
+/** Aplica metadata masiva a productos (grupo/orden/descripción, ej. desde las hojas
+ *  de precios DS por Sección). Agrupa y ordena los que existen; crea con nombre los que
+ *  faltan (sin receta). Un solo read+write. No toca recetas ni versiones. */
+export async function aplicarMetaProductos(
+  items: { skuTango: string; descripcion?: string; grupo?: string; orden?: number }[]
+): Promise<{ creados: number; actualizados: number }> {
+  const lista = await leerLista();
+  const byId = new Map(lista.map((r) => [r.skuTango, r]));
+  let creados = 0, actualizados = 0;
+  for (const it of items) {
+    const sku = String(it.skuTango ?? "").trim();
+    if (!sku) continue;
+    const prev = byId.get(sku);
+    if (prev) {
+      if (it.grupo !== undefined) prev.grupo = it.grupo ? String(it.grupo).trim() : undefined;
+      if (it.orden !== undefined && Number.isFinite(it.orden)) prev.orden = it.orden;
+      // La descripción solo se completa si el producto NO tiene receta (para no pisar el nombre real de la receta).
+      if (it.descripcion && (!prev.versiones.length || !prev.descripcion || prev.descripcion === sku)) prev.descripcion = it.descripcion;
+      actualizados++;
+    } else {
+      const r: Receta = { skuTango: sku, descripcion: it.descripcion || sku, marca: "El Desembarco", grupo: it.grupo ? String(it.grupo).trim() : undefined, orden: it.orden, canales: [], versiones: [] };
+      lista.push(r); byId.set(sku, r); creados++;
+    }
+  }
+  await writeStore(KEY, lista);
+  return { creados, actualizados };
+}
+
+/** Agrega grupos nuevos al final, preservando el orden de los ya existentes (merge). */
+export async function mergeGrupos(nuevos: string[]): Promise<string[]> {
+  const actuales = await getGrupos();
+  const set = new Set(actuales);
+  const merged = [...actuales];
+  for (const g of nuevos) { const n = String(g).trim(); if (n && !set.has(n)) { merged.push(n); set.add(n); } }
+  return setGrupos(merged);
+}
+
 /** Renombra un grupo: en la lista de grupos y en todos los productos que lo usan. */
 export async function renombrarGrupo(de: string, a: string): Promise<Receta[]> {
   const nombre = String(a ?? "").trim();
