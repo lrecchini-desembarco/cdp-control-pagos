@@ -16,11 +16,23 @@ export interface VersionReceta {
   autor?: string;
   componentes: Componente[];
 }
+// Canal de venta a nivel producto (dónde se vende, no confundir con lib/canales.ts
+// que son las apps de delivery con sus comisiones).
+export type CanalVenta = "salon" | "mostrador" | "delivery";
+export const CANALES_VENTA: { id: CanalVenta; label: string }[] = [
+  { id: "salon", label: "Salón" },
+  { id: "mostrador", label: "Mostrador" },
+  { id: "delivery", label: "Delivery" },
+];
+
 export interface Receta {
   skuTango: string;  // clave — Cód. Art. Tango (= SKU de venta)
   descripcion: string;
   marca: string;     // "Mr. Tasty" | "Mila & Go" | "El Desembarco"
-  versiones: VersionReceta[]; // la última es la vigente
+  grupo?: string;    // grupo de productos (maestro) — para agrupar y ordenar
+  orden?: number;    // orden manual dentro del grupo (el que pide Diego)
+  canales?: CanalVenta[]; // dónde se vende: salón / mostrador / delivery
+  versiones: VersionReceta[]; // la última es la vigente (puede estar vacía: producto sin receta aún)
 }
 
 export interface ComponenteCosteado extends Componente {
@@ -34,6 +46,9 @@ export interface RecetaCosteada {
   skuTango: string;
   descripcion: string;
   marca: string;
+  grupo?: string;
+  orden?: number;
+  canales?: CanalVenta[];
   version: number;
   fecha: string;
   nVersiones: number;
@@ -41,6 +56,7 @@ export interface RecetaCosteada {
   costoNeto: number;
   costoConImp: number;
   nFaltantes: number;
+  sinReceta?: boolean; // producto del maestro que todavía no tiene receta cargada
   fuente?: "tango"; // la receta vino del recetario de Tango (cocina), no del maestro editable
 }
 
@@ -105,12 +121,16 @@ export function costearReceta(r: Receta, idx: Map<string, Insumo>): RecetaCostea
     skuTango: r.skuTango,
     descripcion: r.descripcion,
     marca: r.marca,
-    version: v?.version ?? 1,
+    grupo: r.grupo,
+    orden: r.orden,
+    canales: r.canales,
+    version: v?.version ?? 0,
     fecha: v?.fecha ?? "",
     nVersiones: r.versiones.length,
     componentes: comps,
     costoNeto,
     costoConImp,
     nFaltantes: comps.filter((c) => c.falta).length,
+    sinReceta: !v || v.componentes.length === 0,
   };
 }

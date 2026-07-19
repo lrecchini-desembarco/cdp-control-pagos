@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
-import { getRecetas, saveReceta, getReceta } from "@/lib/recetas-store";
+import { getRecetas, saveReceta, getReceta, getGrupos, setGrupos, guardarProducto, reordenarProductos, renombrarGrupo, eliminarGrupo } from "@/lib/recetas-store";
 import { getInsumos } from "@/lib/insumos-store";
 import { costearReceta, indiceInsumos } from "@/lib/recetas";
 import { getRecetasTango } from "@/lib/sources/tango";
@@ -18,7 +18,7 @@ async function autorizado() {
 // ?sku=... -> devuelve además el historial de versiones de esa receta.
 export async function GET(req: NextRequest) {
   if (!(await autorizado())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
-  const [recetas, insumos] = await Promise.all([getRecetas(), getInsumos()]);
+  const [recetas, insumos, grupos] = await Promise.all([getRecetas(), getInsumos(), getGrupos()]);
   const idx = indiceInsumos(insumos);
   const costeadas = recetas.map((r) => costearReceta(r, idx));
 
@@ -37,20 +37,36 @@ export async function GET(req: NextRequest) {
         }
       } catch { /* si Tango no está disponible, el modal muestra "sin receta" */ }
     }
-    return NextResponse.json({ ok: true, recetas: costeadas, historial: r?.versiones ?? [] });
+    return NextResponse.json({ ok: true, recetas: costeadas, grupos, historial: r?.versiones ?? [] });
   }
-  return NextResponse.json({ ok: true, recetas: costeadas });
+  return NextResponse.json({ ok: true, recetas: costeadas, grupos });
 }
 
-// POST (admin/operaciones): guarda una receta (crea versión nueva).
+// POST (admin/operaciones): despacha por `accion`.
+//  - "receta" (default): guarda una receta -> crea versión nueva.
+//  - "producto": crea/edita un producto del maestro (grupo/orden/canales, sin versión).
+//  - "reordenar": fija el orden de varios productos.
+//  - "grupos": reemplaza la lista/orden de grupos (crear/renombrar/reordenar).
 export async function POST(req: NextRequest) {
   const s = await autorizado();
   if (!s) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 403 });
   try {
     const body = await req.json();
-    const recetas = await saveReceta({ ...body, autor: s.email });
-    const idx = indiceInsumos(await getInsumos());
-    return NextResponse.json({ ok: true, recetas: recetas.map((r) => costearReceta(r, idx)) });
+    const accion = body?.accion ?? "receta";
+    let recetas;
+    if (accion === "grupos") {
+      const grupos = await setGrupos(Array.isArray(body.grupos) ? body.grupos : []);
+      recetas = await getRecetas();
+      const idx = indiceInsumos(await getInsumos());
+      return NextResponse.json({ ok: true, recetas: recetas.map((r) => costearReceta(r, idx)), grupos });
+    }
+    if (accion === "producto") recetas = await guardarProducto(body);
+    else if (accion === "reordenar") recetas = await reordenarProductos(Array.isArray(body.items) ? body.items : []);
+    else if (accion === "renombrar-grupo") recetas = await renombrarGrupo(body.de, body.a);
+    else if (accion === "eliminar-grupo") recetas = await eliminarGrupo(body.nombre);
+    else recetas = await saveReceta({ ...body, autor: s.email });
+    const [idx, grupos] = await Promise.all([indiceInsumos(await getInsumos()), getGrupos()]);
+    return NextResponse.json({ ok: true, recetas: recetas.map((r) => costearReceta(r, idx)), grupos });
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "No se pudo guardar." }, { status: 400 });
   }
