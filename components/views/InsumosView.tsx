@@ -7,7 +7,9 @@ import {
   IVA_OPCIONES, DONDE_OPCIONES, type Insumo,
 } from "@/lib/insumos";
 
-const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
+// Precios de insumos con DOS DECIMALES (el costo por unidad suele ser < $10 y
+// redondeado se perdía, ej. $6,44 -> "$6"). Se muestra la precisión real.
+const money = (n: number) => "$" + (Number(n) || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const VIEJO_DIAS = 45; // umbral para marcar un costo desactualizado
 
 export default function InsumosView() {

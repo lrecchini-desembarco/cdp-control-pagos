@@ -47,8 +47,10 @@ export async function upsertInsumo(input: Partial<Insumo>): Promise<Insumo[]> {
   const i = lista.findIndex((x) => x.cod === cod);
   const prev = i >= 0 ? lista[i] : undefined;
   const next = saneo({ ...input, cod }, prev);
-  // Si cambió el costo, refrescamos la fecha de actualización.
-  if (prev && (prev.precioBulto !== next.precioBulto || prev.factor !== next.factor) && !input.actualizado) {
+  // Si cambió el costo (precio de bulto o factor), sellamos la fecha de HOY. Antes esto
+  // se condicionaba a `!input.actualizado`, pero el form reenvía el `actualizado` viejo
+  // del insumo -> nunca se refrescaba. Ahora el cambio de costo manda siempre.
+  if (prev && (prev.precioBulto !== next.precioBulto || prev.factor !== next.factor)) {
     next.actualizado = new Date().toISOString().slice(0, 10);
   }
   if (i >= 0) lista[i] = next;
