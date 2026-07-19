@@ -153,6 +153,45 @@ export async function guardarProducto(
   return getRecetas();
 }
 
+/** Importación masiva de recetas (ej. hoja R_DS). Un solo read+write. Para cada SKU:
+ *  nuevo -> crea v1; existente -> actualiza desc/marca/canales y agrega versión SOLO si
+ *  los componentes cambiaron (no versiona al pedo al re-importar). Conserva grupo/orden. */
+export async function importarRecetas(
+  items: { skuTango: string; descripcion?: string; marca?: string; canales?: CanalVenta[]; componentes: Componente[] }[],
+  autor?: string
+): Promise<{ recetas: Receta[]; creados: number; actualizados: number; versionados: number }> {
+  const lista = await leerLista();
+  const byId = new Map(lista.map((r) => [r.skuTango, r]));
+  const fecha = new Date().toISOString().slice(0, 10);
+  let creados = 0, actualizados = 0, versionados = 0;
+  for (const it of items) {
+    const sku = String(it.skuTango ?? "").trim();
+    if (!sku) continue;
+    const comps = (it.componentes ?? [])
+      .map((c) => ({ insumoCod: String(c.insumoCod ?? "").trim(), cant: Number(c.cant) || 0 }))
+      .filter((c) => c.insumoCod && c.cant > 0);
+    const canales = saneaCanales(it.canales);
+    const prev = byId.get(sku);
+    if (!prev) {
+      const r: Receta = {
+        skuTango: sku, descripcion: it.descripcion ?? sku, marca: it.marca ?? "El Desembarco",
+        canales, versiones: comps.length ? [{ version: 1, fecha, autor, componentes: comps }] : [],
+      };
+      lista.push(r); byId.set(sku, r); creados++;
+    } else {
+      if (it.descripcion) prev.descripcion = it.descripcion;
+      if (it.marca) prev.marca = it.marca;
+      if (canales !== undefined) prev.canales = canales;
+      const ultima = prev.versiones.at(-1);
+      const cambio = comps.length && JSON.stringify(ultima?.componentes ?? []) !== JSON.stringify(comps);
+      if (cambio) { prev.versiones.push({ version: (ultima?.version ?? 0) + 1, fecha, autor, componentes: comps }); versionados++; }
+      actualizados++;
+    }
+  }
+  await writeStore(KEY, lista);
+  return { recetas: await getRecetas(), creados, actualizados, versionados };
+}
+
 /** Renombra un grupo: en la lista de grupos y en todos los productos que lo usan. */
 export async function renombrarGrupo(de: string, a: string): Promise<Receta[]> {
   const nombre = String(a ?? "").trim();

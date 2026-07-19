@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
-import { getRecetas, saveReceta, getReceta, getGrupos, setGrupos, guardarProducto, reordenarProductos, renombrarGrupo, eliminarGrupo } from "@/lib/recetas-store";
-import { getInsumos } from "@/lib/insumos-store";
+import { getRecetas, saveReceta, getReceta, getGrupos, setGrupos, guardarProducto, reordenarProductos, renombrarGrupo, eliminarGrupo, importarRecetas } from "@/lib/recetas-store";
+import { getInsumos, importarInsumos } from "@/lib/insumos-store";
 import { costearReceta, indiceInsumos } from "@/lib/recetas";
 import { getRecetasTango } from "@/lib/sources/tango";
 import { agruparRecetasTango, costearRecetaTango, indiceInsumosPorDesc } from "@/lib/recetas-tango";
@@ -59,6 +59,14 @@ export async function POST(req: NextRequest) {
       recetas = await getRecetas();
       const idx = indiceInsumos(await getInsumos());
       return NextResponse.json({ ok: true, recetas: recetas.map((r) => costearReceta(r, idx)), grupos });
+    }
+    if (accion === "importar") {
+      // Carga los insumos faltantes primero (para que las recetas costeen), luego las recetas.
+      const ins = Array.isArray(body.insumos) ? body.insumos : [];
+      const insRes = ins.length ? await importarInsumos(ins) : { agregados: 0 };
+      const rimp = await importarRecetas(Array.isArray(body.recetas) ? body.recetas : [], s.email);
+      const [idx, grupos] = await Promise.all([indiceInsumos(await getInsumos()), getGrupos()]);
+      return NextResponse.json({ ok: true, recetas: rimp.recetas.map((r) => costearReceta(r, idx)), grupos, resumen: { ...rimp, recetas: undefined, insumosAgregados: insRes.agregados } });
     }
     if (accion === "producto") recetas = await guardarProducto(body);
     else if (accion === "reordenar") recetas = await reordenarProductos(Array.isArray(body.items) ? body.items : []);

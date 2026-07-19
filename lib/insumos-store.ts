@@ -59,6 +59,23 @@ export async function upsertInsumo(input: Partial<Insumo>): Promise<Insumo[]> {
   return getInsumos();
 }
 
+/** Alta masiva de insumos (ej. los que faltan al importar recetas de DS). Un read+write.
+ *  Upsert por código; respeta los ya cargados salvo que se pida sobrescribir. */
+export async function importarInsumos(entradas: Partial<Insumo>[], sobrescribir = false): Promise<{ agregados: number; total: number }> {
+  const lista = (await readStore<Insumo[] | null>(KEY, null)) ?? [...SEED];
+  const idx = new Map(lista.map((x, i) => [x.cod.toLowerCase(), i]));
+  let agregados = 0;
+  for (const e of entradas) {
+    const cod = String(e.cod ?? "").trim();
+    if (!cod) continue;
+    const i = idx.get(cod.toLowerCase());
+    if (i === undefined) { lista.push(saneo({ ...e, cod })); idx.set(cod.toLowerCase(), lista.length - 1); agregados++; }
+    else if (sobrescribir) lista[i] = saneo({ ...e, cod }, lista[i]);
+  }
+  await writeStore(KEY, lista);
+  return { agregados, total: lista.length };
+}
+
 export async function removeInsumo(cod: string): Promise<Insumo[]> {
   const lista = (await readStore<Insumo[] | null>(KEY, null)) ?? [...SEED];
   await writeStore(KEY, lista.filter((x) => x.cod !== cod));

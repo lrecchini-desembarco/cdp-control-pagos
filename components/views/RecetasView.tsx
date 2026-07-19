@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Field, inputClass, Button, Badge, Skeleton, EmptyState, ErrorState } from "@/components/ui/primitives";
 import { CANALES_VENTA, type CanalVenta, type RecetaCosteada, type VersionReceta, type Componente } from "@/lib/recetas";
 import type { Insumo } from "@/lib/insumos";
+import { parseRDS, parseCInsBA, previaImportacion, type PreviaImport } from "@/lib/importar-recetas";
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -27,6 +28,7 @@ export default function RecetasView() {
   const [editar, setEditar] = useState<RecetaCosteada | null>(null);
   const [ordenando, setOrdenando] = useState(false);
   const [gestionGrupos, setGestionGrupos] = useState(false);
+  const [importar, setImportar] = useState(false);
   const [guardandoOrden, setGuardandoOrden] = useState(false);
 
   async function cargar() {
@@ -112,6 +114,7 @@ export default function RecetasView() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setImportar(true)}>Importar Excel</Button>
           <Button variant="outline" onClick={() => setGestionGrupos(true)}>Grupos</Button>
           <Button variant="outline" onClick={() => setOrdenando((v) => !v)}>{ordenando ? "Listo" : "Ordenar"}</Button>
           <Button onClick={() => setEditar({ skuTango: "", descripcion: "", marca: "Mr. Tasty", version: 0, fecha: "", nVersiones: 0, componentes: [], costoNeto: 0, costoConImp: 0, nFaltantes: 0, canales: [] })}>+ Nuevo producto</Button>
@@ -190,8 +193,116 @@ export default function RecetasView() {
       {detalle && <Detalle receta={detalle} onClose={() => setDetalle(null)} onEditar={() => setEditar(detalle)} />}
       {editar && <Editor receta={editar} grupos={grupos} onClose={() => setEditar(null)} onGuardado={onGuardado} />}
       {gestionGrupos && <GruposManager grupos={grupos} accion={accion} onClose={() => setGestionGrupos(false)} />}
+      {importar && <ImportModal recetas={recetas} onClose={() => setImportar(false)} onImportado={(rs, gs) => { setRecetas(rs); if (gs) setGrupos(gs); }} />}
     </div>
   );
+}
+
+function ImportModal({ recetas, onClose, onImportado }: { recetas: RecetaCosteada[]; onClose: () => void; onImportado: (rs: RecetaCosteada[], gs?: string[]) => void }) {
+  const [previa, setPrevia] = useState<PreviaImport | null>(null);
+  const [nombreArch, setNombreArch] = useState("");
+  const [sobrescribir, setSobrescribir] = useState(false);
+  const [leyendo, setLeyendo] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+  const [resultado, setResultado] = useState<string>("");
+
+  async function onArchivo(file: File | undefined) {
+    if (!file) return;
+    setError(""); setResultado(""); setPrevia(null); setLeyendo(true); setNombreArch(file.name);
+    try {
+      const XLSX = await import("xlsx");
+      const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
+      const hoja = (re: RegExp) => wb.SheetNames.find((n) => re.test(n));
+      const nRds = hoja(/^r_?ds$/i) || hoja(/r_?ds/i);
+      if (!nRds) throw new Error("No encontré la hoja de recetas 'R_DS' en el Excel.");
+      const rows = (n: string) => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, blankrows: false, defval: "" }) as unknown[][];
+      const recetasImp = parseRDS(rows(nRds));
+      const nCins = hoja(/c_?ins/i);
+      const insumosDS = nCins ? parseCInsBA(rows(nCins)) : [];
+      // Maestro actual (para saber qué insumos faltan).
+      const ji = await (await fetch("/api/insumos")).json();
+      const maestro = new Set<string>((ji.insumos as Insumo[] | undefined ?? []).map((i) => i.cod.toLowerCase()));
+      const prev = previaImportacion(recetasImp, insumosDS, maestro, recetas.map((r) => ({ skuTango: r.skuTango, marca: r.marca })));
+      setPrevia(prev);
+    } catch (e) { setError(e instanceof Error ? e.message : "No pude leer el Excel."); }
+    finally { setLeyendo(false); }
+  }
+
+  async function confirmar() {
+    if (!previa) return;
+    setGuardando(true); setError("");
+    // Por defecto NO pisa recetas que ya existen con otra marca (ej. bebidas Mila).
+    const skip = new Set(sobrescribir ? [] : previa.skusOtraMarca);
+    const aImportar = previa.recetas.filter((r) => !skip.has(r.skuTango));
+    try {
+      const j = await (await fetch("/api/recetas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion: "importar", recetas: aImportar, insumos: previa.insumosFaltantes }) })).json();
+      if (!j.ok) throw new Error(j.error || "No se pudo importar.");
+      onImportado(j.recetas, j.grupos);
+      const r = j.resumen || {};
+      setResultado(`Importadas ${aImportar.length} recetas: ${r.creados ?? 0} nuevas, ${r.actualizados ?? 0} actualizadas${r.insumosAgregados ? ` · ${r.insumosAgregados} insumos nuevos` : ""}${skip.size ? ` · ${skip.size} salteadas (otra marca)` : ""}.`);
+    } catch (e) { setError(e instanceof Error ? e.message : "Error."); }
+    finally { setGuardando(false); }
+  }
+
+  const aGuardar = previa ? previa.recetas.length - (sobrescribir ? 0 : previa.skusOtraMarca.length) : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4" onClick={onClose}>
+      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-card border border-line bg-surface p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between">
+          <h2 className="font-display text-lg font-semibold text-ink">Importar recetas de Excel</h2>
+          <button onClick={onClose} className="rounded-lg px-2 text-lg text-muted hover:text-ink">✕</button>
+        </div>
+        <p className="mt-1 text-2xs text-faint">Subí el Excel de costos (ej. "DS BA Costos y Precios"). Lee la hoja <b>R_DS</b> (recetas) y <b>C_INS_BA</b> (insumos que falten). Nada se guarda hasta que confirmes.</p>
+
+        <div className="mt-4">
+          <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-line px-4 py-6 text-sm text-muted hover:border-action hover:text-action">
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => onArchivo(e.target.files?.[0])} />
+            {leyendo ? "Leyendo…" : nombreArch || "Elegí el archivo .xlsx"}
+          </label>
+        </div>
+
+        {error && <p className="mt-3 rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+
+        {previa && !resultado && (
+          <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <Mini label="Productos" value={previa.recetas.length} />
+              <Mini label="Nuevos" value={previa.skusNuevos} />
+              <Mini label="Ya existen" value={previa.skusExistentes} />
+            </div>
+            {previa.insumosFaltantes.length > 0 && (
+              <p className="rounded-lg bg-action/10 px-3 py-2 text-2xs text-action">Se cargarán <b>{previa.insumosFaltantes.length}</b> insumos nuevos al maestro (los usan estas recetas): {previa.insumosFaltantes.map((i) => i.cod).join(", ")}.</p>
+            )}
+            {previa.codigosSinInsumo.length > 0 && (
+              <p className="rounded-lg bg-warn/10 px-3 py-2 text-2xs text-warn">{previa.codigosSinInsumo.length} insumos no tienen dato en el Excel y quedarán como faltantes: {previa.codigosSinInsumo.join(", ")}.</p>
+            )}
+            {previa.skusOtraMarca.length > 0 && (
+              <div className="rounded-lg bg-warn/10 px-3 py-2 text-2xs text-warn">
+                <b>{previa.skusOtraMarca.length}</b> productos ya existen con otra marca (ej. bebidas compartidas). Por defecto <b>no se tocan</b>.
+                <label className="mt-1 flex items-center gap-1.5 text-ink">
+                  <input type="checkbox" checked={sobrescribir} onChange={(e) => setSobrescribir(e.target.checked)} />
+                  Sobrescribirlos igual (marcarlos como El Desembarco)
+                </label>
+              </div>
+            )}
+          </div>
+        )}
+
+        {resultado && <p className="mt-4 rounded-lg bg-ok/10 px-3 py-2 text-sm text-ok">✅ {resultado}</p>}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>{resultado ? "Cerrar" : "Cancelar"}</Button>
+          {previa && !resultado && <Button onClick={confirmar} disabled={guardando || aGuardar === 0}>{guardando ? "Importando…" : `Importar ${aGuardar} recetas`}</Button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-lg border border-line px-3 py-2 text-center"><p className="text-2xs uppercase tracking-wide text-faint">{label}</p><p className="font-display text-lg font-semibold text-ink">{value}</p></div>;
 }
 
 function GrupoSeccion({ grupo, items, ordenando, esPrimerGrupo, esUltimoGrupo, puedeMoverGrupo, onMoverGrupo, onMoverProducto, onVer }: {
