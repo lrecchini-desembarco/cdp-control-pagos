@@ -44,6 +44,7 @@ export default function BancosView() {
   const [estado, setEstado] = useState<"loading" | "idle" | "parsing" | "saving">("loading");
   const [progreso, setProgreso] = useState("");
   const [error, setError] = useState("");
+  const [guardado, setGuardado] = useState<{ movs: number; bancos: string[]; fallidos: string[] } | null>(null);
   const [tab, setTab] = useState<"banco" | "local" | "mes" | "categoria" | "cuit-ing" | "cuit-egr" | "intercompany">("banco");
   const [verCobertura, setVerCobertura] = useState(false);
   const [ayuda, setAyuda] = useState(false);
@@ -156,25 +157,40 @@ export default function BancosView() {
 
   async function guardar() {
     if (!preview) return;
-    setEstado("saving"); setError("");
+    setEstado("saving"); setError(""); setGuardado(null);
     // Agrupar por banco+local+mes y mandar en tandas (cada tanda reemplaza sus grupos).
     const grupos = new Map<string, MovBanco[]>();
     for (const m of preview.movs) { const k = claveOrigen(m); const a = grupos.get(k) ?? []; a.push(m); grupos.set(k, a); }
     const tandas: MovBanco[][] = []; let cur: MovBanco[] = [];
     for (const g of Array.from(grupos.values())) { if (cur.length + g.length > 2500 && cur.length) { tandas.push(cur); cur = []; } cur.push(...g); }
     if (cur.length) tandas.push(cur);
-    try {
-      let ultima: any = null;
-      for (let i = 0; i < tandas.length; i++) {
-        setProgreso(`Guardando ${i + 1}/${tandas.length}…`);
-        const r = await (await fetch("/api/bancos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ movs: tandas[i] }) })).json();
-        if (!r.ok) throw new Error(r.error || "falló al guardar");
-        ultima = r;
+    // Bancos que trae cada tanda -> para reportar por banco qué entró y qué no.
+    const bancosDe = (t: MovBanco[]) => Array.from(new Set(t.map((m) => m.banco || "Otro")));
+    let okMovs = 0; const okBancos = new Set<string>(); const fallidos = new Set<string>();
+    // Cada tanda se guarda de forma independiente y con 1 reintento: si una falla,
+    // NO cortamos el resto (los otros bancos igual entran) y avisamos cuáles quedaron afuera.
+    for (let i = 0; i < tandas.length; i++) {
+      let ok = false;
+      for (let intento = 1; intento <= 2 && !ok; intento++) {
+        setProgreso(`Guardando ${i + 1}/${tandas.length}${intento > 1 ? " (reintento)" : ""}…`);
+        try {
+          const r = await (await fetch("/api/bancos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ movs: tandas[i] }) })).json();
+          if (!r.ok) throw new Error(r.error || "falló al guardar");
+          ok = true;
+        } catch { if (intento === 2) break; await new Promise((res) => setTimeout(res, 600)); }
       }
-      void ultima;
+      if (ok) { okMovs += tandas[i].length; bancosDe(tandas[i]).forEach((b) => okBancos.add(b)); }
+      else bancosDe(tandas[i]).forEach((b) => fallidos.add(b));
+    }
+    // Un banco que entró en una tanda y falló en otra: cuenta como fallido (aviso honesto).
+    const bancosOk = Array.from(okBancos).filter((b) => !fallidos.has(b)).sort();
+    const bancosFail = Array.from(fallidos).sort();
+    if (okMovs > 0) {
       setPreview(null); setMesSel(""); setBancoSel(""); setCuitSel(""); await cargar("", "", "");
-    } catch (e) { setError(e instanceof Error ? e.message : "no se pudo guardar"); }
-    finally { setEstado("idle"); setProgreso(""); }
+      setGuardado({ movs: okMovs, bancos: bancosOk, fallidos: bancosFail });
+    }
+    if (bancosFail.length && okMovs === 0) setError(`No se pudo guardar: ${bancosFail.join(", ")}. Probá de nuevo.`);
+    setEstado("idle"); setProgreso("");
   }
 
   const r = resumen;
@@ -282,6 +298,22 @@ export default function BancosView() {
 
       {cargando && <Card className="p-3 text-sm text-muted">{progreso || "Procesando…"}</Card>}
       {error && <Card className="border-bad/40 bg-bad/[0.04] p-3 text-sm text-bad">{error}</Card>}
+      {guardado && !cargando && (
+        <Card className={`p-3 text-sm ${guardado.fallidos.length ? "border-warn/40 bg-warn/[0.05]" : "border-ok/40 bg-ok/[0.05]"}`}>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className={guardado.fallidos.length ? "text-warn" : "text-ok"}>
+                {guardado.fallidos.length ? "⚠️" : "✅"} Guardé <b>{int(guardado.movs)}</b> movimientos
+                {guardado.bancos.length > 0 && <> en <b>{guardado.bancos.length}</b> banco{guardado.bancos.length > 1 ? "s" : ""}: <span className="text-ink">{guardado.bancos.join(", ")}</span></>}.
+              </p>
+              {guardado.fallidos.length > 0 && (
+                <p className="mt-1 text-2xs text-warn">No entraron (probá subirlos de nuevo): <b>{guardado.fallidos.join(", ")}</b>.</p>
+              )}
+            </div>
+            <button onClick={() => setGuardado(null)} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-ink/5">Cerrar</button>
+          </div>
+        </Card>
+      )}
 
       {/* Preview tras parsear: qué detecté, antes de guardar */}
       {preview && !cargando && (
