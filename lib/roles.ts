@@ -129,6 +129,7 @@ export const NAV_CATALOG: NavItem[] = [
   // Empresa — estructura y personas
   { href: "/organigrama", label: "Organigrama", icon: "⧉", section: "Empresa", fresh: "carga", desc: "Quién reporta a quién; ubicás tu casillero." },
   { href: "/contactos", label: "Contactos", icon: "☏", section: "Empresa", fresh: "carga", desc: "Contactos clave para resolver temas urgentes (Tango, sistemas, proveedores, bancos): teléfono, mail y con qué verlo, con botón directo de WhatsApp y email." },
+  { href: "/bienvenida", label: "Bienvenida · Nuevo ingreso", icon: "✋", section: "Empresa", fresh: "carga", desc: "Alta de nuevos ingresos y su tarjeta de bienvenida imprimible con los datos de acceso (email y clave)." },
   // Sistema — configuración y salud
   { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema", fresh: "carga", desc: "Enseñale al sistema las recetas y los códigos de sucursal." },
   { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga", desc: "Alta de usuarios y qué puede ver cada uno." },
