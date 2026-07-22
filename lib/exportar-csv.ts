@@ -44,5 +44,14 @@ export async function descargarExcel(
   }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, hoja.slice(0, 31));
-  XLSX.writeFile(wb, nombreArchivo.endsWith(".xlsx") ? nombreArchivo : `${nombreArchivo}.xlsx`);
+  // Escribimos a bytes y descargamos con Blob. NO usamos XLSX.writeFile: en el bundle
+  // del navegador toma el path de Node (fs) y baja un archivo corrupto ("Excel encontró
+  // un problema"). Con XLSX.write(type:"array") + Blob el .xlsx queda válido.
+  const bytes = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombreArchivo.endsWith(".xlsx") ? nombreArchivo : `${nombreArchivo}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
