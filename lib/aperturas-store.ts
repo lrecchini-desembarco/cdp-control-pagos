@@ -14,9 +14,14 @@ export interface LocalApertura {
   firma: EstadoLF;    // F: ¿contrato firmado?
   orden: number;      // para mantener el orden del cuadro
   actualizado: string;
+  campos?: Record<string, string>; // valores de las columnas custom (por id de columna)
 }
 
+// Columna agregada por el usuario (más allá de Sucursal/Marca/L/F).
+export interface ColumnaAp { id: string; label: string; }
+
 const KEY = "aperturas";
+const KEY_COLS = "aperturas-columnas";
 const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 // Semilla: los 46 del JPG "Locales Actualizados 10-06". L=si/no/reservado, F=si (todos firmados).
@@ -65,6 +70,8 @@ export async function upsertApertura(input: Partial<LocalApertura> & { nombre?: 
         ...(input.marca !== undefined ? { marca: input.marca } : {}),
         ...(input.local !== undefined ? { local: input.local } : {}),
         ...(input.firma !== undefined ? { firma: input.firma } : {}),
+        // Columnas custom: merge parcial (solo las que vienen en el patch).
+        ...(input.campos !== undefined ? { campos: { ...(items[i].campos ?? {}), ...input.campos } } : {}),
         actualizado: ahora,
       };
     }
@@ -85,4 +92,26 @@ export async function removeApertura(id: string): Promise<LocalApertura[]> {
   const items = (await getAperturas()).filter((x) => x.id !== id);
   await writeStore(KEY, items);
   return getAperturas();
+}
+
+// ---- Columnas custom ----
+const nuevoColId = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+export async function getColumnas(): Promise<ColumnaAp[]> {
+  return (await readStore<ColumnaAp[] | null>(KEY_COLS, null)) ?? [];
+}
+
+/** Reemplaza la lista de columnas custom (crear/renombrar/reordenar/eliminar). */
+export async function setColumnas(cols: ColumnaAp[]): Promise<ColumnaAp[]> {
+  const seen = new Set<string>();
+  const out: ColumnaAp[] = [];
+  for (const c of Array.isArray(cols) ? cols : []) {
+    const id = String(c?.id || "").trim() || nuevoColId();
+    const label = String(c?.label || "").trim();
+    if (!label || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, label });
+  }
+  await writeStore(KEY_COLS, out);
+  return out;
 }

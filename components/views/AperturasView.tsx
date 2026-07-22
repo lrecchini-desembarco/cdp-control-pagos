@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, Field, inputClass, Button, Skeleton, EmptyState } from "@/components/ui/primitives";
 import { MARCAS_AP, ESTADOS_LF, marcaAp, lf } from "@/lib/aperturas";
+import { descargarCSV, descargarExcel } from "@/lib/exportar-csv";
 
 interface Item {
   id: string;
@@ -11,10 +12,14 @@ interface Item {
   local: string;
   firma: string;
   actualizado: string;
+  campos?: Record<string, string>;
 }
+
+interface Columna { id: string; label: string; }
 
 export default function AperturasView() {
   const [items, setItems] = useState<Item[]>([]);
+  const [columnas, setColumnas] = useState<Columna[]>([]);
   const [estado, setEstado] = useState<"loading" | "ok" | "error">("loading");
   const [nuevo, setNuevo] = useState({ nombre: "", marca: "tasty", local: "no", firma: "si" });
   const [q, setQ] = useState("");
@@ -27,6 +32,7 @@ export default function AperturasView() {
       const j = await (await fetch("/api/aperturas")).json();
       if (!j.ok) throw new Error();
       setItems(j.items);
+      setColumnas(j.columnas ?? []);
       setEstado("ok");
     } catch {
       setEstado("error");
@@ -42,9 +48,36 @@ export default function AperturasView() {
   async function guardar(patch: Record<string, unknown>) {
     try {
       const j = await (await fetch("/api/aperturas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })).json();
-      if (j.ok) setItems(j.items);
+      if (j.ok) { setItems(j.items); if (j.columnas) setColumnas(j.columnas); }
       else setMsg(j.error || "No se pudo guardar.");
     } catch { setMsg("Error de red."); }
+  }
+
+  // ---- Columnas custom ----
+  const guardarColumnas = (cols: Columna[]) => guardar({ accion: "columnas", columnas: cols });
+  const agregarColumna = () => { guardarColumnas([...columnas, { id: "", label: `Columna ${columnas.length + 1}` }]); setMsg("Columna agregada ✓"); };
+  const renombrarColumna = (id: string, label: string) => { const l = label.trim(); if (!l) return; guardarColumnas(columnas.map((c) => (c.id === id ? { ...c, label: l } : c))); };
+  const borrarColumna = (id: string, label: string) => { if (!confirm(`¿Eliminar la columna "${label}"? Se pierden sus valores.`)) return; guardarColumnas(columnas.filter((c) => c.id !== id)); };
+  const editarCampo = (id: string, colId: string, valor: string) => guardar({ id, campos: { [colId]: valor } });
+
+  // ---- Exportar ----
+  const COL_BASE = ["Sucursal", "Marca", "L · Local", "F · Firmado"];
+  function datosExport(): { cols: string[]; filas: (string | number | null)[][] } {
+    const cols = [...COL_BASE, ...columnas.map((c) => c.label)];
+    const filas = items.map((it) => [
+      it.nombre,
+      marcaAp(it.marca).label,
+      lf(it.local).label,
+      lf(it.firma).label,
+      ...columnas.map((c) => it.campos?.[c.id] ?? ""),
+    ]);
+    return { cols, filas };
+  }
+  const nombreArchivo = () => `apertura-locales-${new Date().toISOString().slice(0, 10)}`;
+  function exportarCSV() { const { cols, filas } = datosExport(); descargarCSV(nombreArchivo(), cols, filas); }
+  async function exportarExcel() {
+    try { const { cols, filas } = datosExport(); await descargarExcel(nombreArchivo(), cols, filas, "Aperturas"); }
+    catch { setMsg("No se pudo generar el Excel."); }
   }
   function editar(id: string, patch: Partial<Item>, persistir = true) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -118,10 +151,15 @@ export default function AperturasView() {
         {msg && <p className="mt-2 text-2xs text-muted">{msg}</p>}
       </Card>
 
-      {/* Buscar */}
-      <div className="flex items-center gap-2">
+      {/* Buscar + acciones del cuadro */}
+      <div className="flex flex-wrap items-center gap-2">
         <input className={`${inputClass} max-w-xs`} placeholder="Buscar local…" value={q} onChange={(e) => setQ(e.target.value)} />
         <span className="text-2xs text-faint">{filtrados.length} de {items.length}</span>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={agregarColumna}>+ Agregar columna</Button>
+          <Button variant="outline" onClick={exportarCSV} disabled={!items.length}>Exportar CSV</Button>
+          <Button variant="outline" onClick={exportarExcel} disabled={!items.length}>Exportar Excel</Button>
+        </div>
       </div>
 
       {/* Tabla */}
@@ -141,6 +179,15 @@ export default function AperturasView() {
                   <th className="px-3 py-2 font-medium">Marca</th>
                   <th className="px-3 py-2 font-medium">L · Local</th>
                   <th className="px-3 py-2 font-medium">F · Firmado</th>
+                  {columnas.map((c) => (
+                    <th key={c.id} className="px-3 py-2 font-medium">
+                      <div className="flex items-center gap-1">
+                        <input defaultValue={c.label} onBlur={(e) => renombrarColumna(c.id, e.target.value)}
+                          className="w-28 min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-2xs font-medium uppercase tracking-wide text-faint hover:border-line focus:border-action focus:bg-surface focus:text-ink" title="Renombrar columna" />
+                        <button onClick={() => borrarColumna(c.id, c.label)} title="Eliminar columna" className="shrink-0 text-faint hover:text-bad">✕</button>
+                      </div>
+                    </th>
+                  ))}
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -161,6 +208,12 @@ export default function AperturasView() {
                       </td>
                       <td className="px-3 py-2"><SelLF value={it.local} onChange={(v) => editar(it.id, { local: v })} /></td>
                       <td className="px-3 py-2"><SelLF value={it.firma} onChange={(v) => editar(it.id, { firma: v })} /></td>
+                      {columnas.map((c) => (
+                        <td key={c.id} className="px-3 py-2">
+                          <input defaultValue={it.campos?.[c.id] ?? ""} onBlur={(e) => { const v = e.target.value; if (v !== (it.campos?.[c.id] ?? "")) editarCampo(it.id, c.id, v); }}
+                            placeholder="—" className="w-28 min-w-0 rounded-md border border-transparent bg-transparent px-1 py-1 text-ink placeholder:text-faint hover:border-line focus:border-action focus:bg-surface" />
+                        </td>
+                      ))}
                       <td className="px-3 py-2 text-right">
                         <button onClick={() => quitar(it.id, it.nombre)} className="text-2xs font-medium text-bad hover:underline">Quitar</button>
                       </td>

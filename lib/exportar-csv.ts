@@ -26,3 +26,23 @@ export function descargarCSV(nombreArchivo: string, columnas: string[], filas: (
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// Genera y descarga un .xlsx real (Excel) con SheetJS. Se carga on-demand para no
+// pesar el bundle. Mismo formato de entrada que descargarCSV (columnas + filas).
+export async function descargarExcel(
+  nombreArchivo: string,
+  columnas: string[],
+  filas: (string | number | null)[][],
+  hoja = "Datos",
+): Promise<void> {
+  const XLSX = await import("xlsx");
+  const aoa: (string | number)[][] = [columnas, ...filas.map((r) => r.map((c) => (c == null ? "" : c)))];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Ancho de columnas según el contenido más largo (tope 40).
+  ws["!cols"] = columnas.map((_, i) => ({
+    wch: Math.min(40, Math.max(10, ...aoa.map((r) => String(r[i] ?? "").length + 2))),
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, hoja.slice(0, 31));
+  XLSX.writeFile(wb, nombreArchivo.endsWith(".xlsx") ? nombreArchivo : `${nombreArchivo}.xlsx`);
+}
