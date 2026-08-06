@@ -119,6 +119,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/apps", label: "Margen apps", icon: "◧", section: "Costos", fresh: "carga", desc: "Margen por app de delivery, según sus comisiones." },
   { href: "/promos", label: "Promociones", icon: "◎", section: "Costos", fresh: "carga", desc: "Armá promociones y mirá su impacto." },
   { href: "/rentabilidad", label: "Rentabilidad", icon: "◉", section: "Costos", fresh: "carga", desc: "Margen por producto y simulación de promos." },
+  { href: "/tango", label: "Carga artículos Tango", icon: "↥", section: "Costos", fresh: "carga", desc: "Generá la planilla de importación de artículos promo y precios para Tango (Desembarco o Tasty), lista para subir." },
   // Clientes — reseñas, CRM y cupones
   { href: "/resenas", label: "Reseñas", icon: "★", section: "Clientes", fresh: "revisar", desc: "Reputación de Google y el sistema de cupones por reseña." }, // reputación Google = snapshot (foto)
   { href: "/clientes", label: "Clientes", icon: "☺", section: "Clientes", fresh: "carga", desc: "El CRM que se arma solo con reseñas y cupones." },
