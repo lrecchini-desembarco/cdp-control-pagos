@@ -5,8 +5,7 @@ import { Card, inputClass } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { parseNumero } from "@/lib/num";
 import { armarClaveSuc } from "@/lib/sucursal-key";
-import { parseRemitosPdf, mergeRemitos, type Remito } from "@/lib/remitos";
-import type { PdfItem } from "@/lib/bancos";
+import { parseRemitosPdf, mergeRemitos, type Remito, type PdfItem } from "@/lib/remitos";
 
 // Acepta PDFs de remitos del CDP directo (parseados client-side con pdfjs) y el
 // CSV consolidado de scripts/parsear-remitos.py (fecha,marca,sucursal,codigo,...).
@@ -28,7 +27,7 @@ async function extraerItemsPdf(buf: ArrayBuffer): Promise<PdfItem[][]> {
   return pags;
 }
 
-interface Carga { nombre: string; agregadas: number; duplicadas: number }
+interface Carga { nombre: string; agregadas: number; duplicadas: number; copias: number }
 
 // Parser CSV mínimo que respeta comillas (descripciones con comas).
 function parseCSV(text: string): string[][] {
@@ -73,10 +72,10 @@ export default function RemitosView() {
   const [leyendo, setLeyendo] = useState(false);
 
   // Un archivo (PDF o CSV) → líneas de remito. Tira Error con mensaje para el usuario.
-  async function parsearArchivo(file: File): Promise<Remito[]> {
+  async function parsearArchivo(file: File): Promise<{ remitos: Remito[]; copias: number }> {
     if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
       const parsed = parseRemitosPdf(await extraerItemsPdf(await file.arrayBuffer()));
-      if (!parsed.length) throw new Error(`${file.name}: no encontré remitos en el PDF. ¿Es el PDF de remitos de entrega del CDP?`);
+      if (!parsed.remitos.length) throw new Error(`${file.name}: no encontré remitos en el PDF. ¿Es el PDF de remitos de entrega del CDP?`);
       return parsed;
     }
     const rows = parseCSV(await file.text());
@@ -92,7 +91,7 @@ export default function RemitosView() {
           : `${file.name}: faltan columnas (sucursal, codigo, cantidad). Subí los PDF de remitos del CDP o el DETALLE consolidado (remitos_consolidado.csv).`
       );
     }
-    return rows.slice(1).filter((r) => r.length > iQ).map((r) => ({
+    const remitos = rows.slice(1).filter((r) => r.length > iQ).map((r) => ({
       fecha: r[iF] ?? "",
       marca: r[iM] ?? "",
       sucursal: r[iS] ?? "",
@@ -101,6 +100,7 @@ export default function RemitosView() {
       cantidad: parseNumero(r[iQ]),
       remito: r[iR] ?? "",
     }));
+    return { remitos, copias: 0 };
   }
 
   async function subir(files: FileList | null) {
@@ -113,9 +113,9 @@ export default function RemitosView() {
     for (const file of Array.from(files)) {
       try {
         const parsed = await parsearArchivo(file);
-        const { total, agregadas, duplicadas } = mergeRemitos(acc, parsed);
+        const { total, agregadas, duplicadas } = mergeRemitos(acc, parsed.remitos);
         acc = total;
-        nuevasCargas.push({ nombre: file.name, agregadas, duplicadas });
+        nuevasCargas.push({ nombre: file.name, agregadas, duplicadas, copias: parsed.copias });
       } catch (e) {
         errores.push(e instanceof Error ? e.message : String(e));
       }
@@ -249,9 +249,16 @@ export default function RemitosView() {
               <li key={i} className="rounded-full bg-paper px-2 py-0.5 text-2xs text-faint">
                 {c.nombre} · +{c.agregadas}
                 {c.duplicadas > 0 && <span className="text-warn"> ({c.duplicadas} repetidas)</span>}
+                {c.copias > 0 && <span className="text-warn"> ({c.copias} {c.copias === 1 ? "copia orig/dup ignorada" : "copias orig/dup ignoradas"})</span>}
               </li>
             ))}
           </ul>
+        )}
+        {remitos.some((r) => !r.remito) && (
+          <p className="mt-2 text-2xs text-warn">
+            ⚠ Hay líneas sin nº de remito legible: para esas el control de duplicados compara el contenido completo
+            (fecha + sucursal + código + descripción + cantidad). Revisá que el total cierre.
+          </p>
         )}
       </Card>
 
@@ -260,7 +267,7 @@ export default function RemitosView() {
       {remitos.length > 0 && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <Kpi label="Remitos" value={String(new Set(remitos.map((r) => r.remito).filter(Boolean)).size || cargas.length)} />
+            <Kpi label="Remitos" value={String(new Set(remitos.map((r) => r.remito).filter(Boolean)).size) + (remitos.some((r) => !r.remito) ? " +?" : "")} />
             <Kpi label="Líneas de remito" value={String(remitos.length)} />
             <Kpi label="Sucursales con remito" value={String(porSucursal.length)} />
             <Kpi label="Insumos" value={String(porInsumo.length)} />

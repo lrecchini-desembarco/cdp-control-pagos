@@ -1,8 +1,14 @@
-// Parser de PDFs de remitos del CDP + fusión de cargas múltiples.
-// Es el mismo formato que scripts/parsear-remitos.py (portado a TS para que
-// /remitos acepte los PDF directo, sin pasar por Python). El texto del PDF lo
-// extrae el cliente con pdfjs (ver RemitosView) y acá se reconstruyen las líneas.
-import type { PdfItem } from "@/lib/bancos";
+// Parser de PDFs de remitos del CDP + fusión de cargas múltiples SIN duplicar.
+// Mismo formato que scripts/parsear-remitos.py (portado a TS para que /remitos
+// acepte los PDF directo). El texto del PDF lo extrae el cliente con pdfjs
+// (ver RemitosView) y acá se reconstruyen las líneas y se deduplica:
+//  - DENTRO de un archivo: las copias ORIGINAL/DUPLICADO/TRIPLICADO del mismo
+//    remito (mismo nº + mismos items) se cuentan UNA vez. Una continuación
+//    multipágina (mismo nº, items distintos) NO se descarta.
+//  - ENTRE cargas (mergeRemitos): un remito ya cargado (mismo nº) se saltea
+//    entero; líneas sin nº deduplican por contenido completo.
+
+export interface PdfItem { s: string; x: number; y: number }
 
 export interface Remito {
   fecha: string;       // dd/mm/aaaa (como viene en el PDF/CSV)
@@ -12,6 +18,12 @@ export interface Remito {
   descripcion: string;
   cantidad: number;
   remito: string;      // número de remito (p.ej. 0001-00012345)
+}
+
+export interface ParseoPdf {
+  remitos: Remito[];
+  copias: number;      // bloques ignorados por ser copia exacta (orig/dup/trip)
+  sinNro: number;      // líneas cuyo bloque no tenía nº de remito legible
 }
 
 // Línea de detalle: código de 6 dígitos + descripción + cantidad al final.
@@ -43,9 +55,12 @@ const cantidadDe = (s: string) => {
 };
 
 /** Parsea el texto de un PDF de remitos (una o varias entregas por archivo). */
-export function parseRemitosPdf(pags: PdfItem[][]): Remito[] {
+export function parseRemitosPdf(pags: PdfItem[][]): ParseoPdf {
   const texto = lineasDePdf(pags).join("\n");
   const out: Remito[] = [];
+  let copias = 0, sinNro = 0;
+  // nº ya visto -> firmas de items de sus bloques (para detectar copias exactas)
+  const firmasPorNro = new Map<string, Set<string>>();
   for (const b of texto.split(/REMITO\s+R/).slice(1)) {
     const nro = b.match(/N[°º\W]\s*([\d-]{8,})/)?.[1] ?? "";
     const fecha = b.match(/FECHA:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1] ?? "";
@@ -55,24 +70,42 @@ export function parseRemitosPdf(pags: PdfItem[][]): Remito[] {
     const sep = dest.match(/^(.*?)\s[–—‒\-�]\s(.*)$/);
     const marca = (sep ? sep[1] : dest).trim();
     const sucursal = (sep ? sep[2] : "").trim();
+
+    const items: Remito[] = [];
     for (const linea of b.split("\n")) {
       const m = linea.trim().match(CODELINE);
       if (!m) continue;
       const cantidad = cantidadDe(m[3]);
       if (!Number.isFinite(cantidad)) continue;
-      out.push({ fecha, marca, sucursal, codigo: m[1], descripcion: m[2].trim(), cantidad, remito: nro });
+      items.push({ fecha, marca, sucursal, codigo: m[1], descripcion: m[2].trim(), cantidad, remito: nro });
     }
+    if (!items.length) continue;
+
+    if (nro) {
+      // Copia exacta del mismo remito (ORIGINAL/DUPLICADO/TRIPLICADO en el
+      // mismo PDF): mismos items -> se ignora. Items distintos = continuación.
+      const firma = items.map((i) => `${i.codigo}|${i.cantidad}`).join(";");
+      const previas = firmasPorNro.get(nro);
+      if (previas?.has(firma)) { copias++; continue; }
+      (previas ?? firmasPorNro.set(nro, new Set()).get(nro)!).add(firma);
+    } else {
+      sinNro += items.length;
+    }
+    out.push(...items);
   }
-  return out;
+  return { remitos: out, copias, sinNro };
 }
 
-const claveLinea = (r: Remito) => [r.remito, r.fecha, r.sucursal, r.codigo, r.cantidad].join("|");
+// Clave de línea para dedupe sin nº: contenido completo (evita fusionar por error
+// líneas de remitos distintos que solo coinciden en código y cantidad).
+const claveLinea = (r: Remito) =>
+  [r.remito, r.fecha, r.marca, r.sucursal, r.codigo, r.descripcion, r.cantidad].join("|");
 
 /**
  * Suma una carga nueva a lo ya acumulado SIN duplicar: un remito ya cargado
  * (mismo número) se saltea entero, así subir dos veces el mismo PDF/CSV — o un
  * consolidado que pisa remitos ya subidos — no infla las cantidades. Las líneas
- * sin número de remito deduplican por contenido (fecha+sucursal+código+cantidad).
+ * sin número de remito deduplican por contenido completo.
  */
 export function mergeRemitos(prev: Remito[], nuevos: Remito[]): { total: Remito[]; agregadas: number; duplicadas: number } {
   const nrosPrevios = new Set(prev.map((r) => r.remito).filter(Boolean));
