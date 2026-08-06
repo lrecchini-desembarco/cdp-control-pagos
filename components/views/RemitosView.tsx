@@ -5,18 +5,30 @@ import { Card, inputClass } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { parseNumero } from "@/lib/num";
 import { armarClaveSuc } from "@/lib/sucursal-key";
+import { parseRemitosPdf, mergeRemitos, type Remito } from "@/lib/remitos";
+import type { PdfItem } from "@/lib/bancos";
 
-// Formato esperado del CSV (lo genera scripts/parsear-remitos.py):
-// fecha,marca,sucursal,codigo,descripcion,cantidad,remito
-interface Remito {
-  fecha: string;
-  marca: string;
-  sucursal: string;
-  codigo: string;
-  descripcion: string;
-  cantidad: number;
-  remito: string;
+// Acepta PDFs de remitos del CDP directo (parseados client-side con pdfjs) y el
+// CSV consolidado de scripts/parsear-remitos.py (fecha,marca,sucursal,codigo,...).
+// Las cargas se ACUMULAN: se pueden subir varios archivos, incluso repetidos —
+// un remito ya cargado (mismo número) no se duplica.
+
+// pdfjs se carga on-demand (recién al procesar un PDF) para no pesar el bundle.
+// Import NATIVO desde /public (no webpack): el .mjs de pdfjs-dist v5 rompe el
+// require de webpack en `next dev` ("Object.defineProperty called on non-object").
+let pdfjsMod: any = null;
+async function extraerItemsPdf(buf: ArrayBuffer): Promise<PdfItem[][]> {
+  if (!pdfjsMod) { pdfjsMod = await (Function("u", "return import(u)")("/pdf.min.mjs")); pdfjsMod.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"; }
+  const doc = await pdfjsMod.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise;
+  const pags: PdfItem[][] = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const tc = await (await doc.getPage(p)).getTextContent();
+    pags.push(tc.items.map((i: any) => ({ s: String(i.str || "").trim(), x: i.transform?.[4] ?? 0, y: Math.round(i.transform?.[5] ?? 0) })).filter((i: PdfItem) => i.s));
+  }
+  return pags;
 }
+
+interface Carga { nombre: string; agregadas: number; duplicadas: number }
 
 // Parser CSV mínimo que respeta comillas (descripciones con comas).
 function parseCSV(text: string): string[][] {
@@ -52,31 +64,35 @@ const isoDe = (ddmmaa: string) => {
 
 export default function RemitosView() {
   const [remitos, setRemitos] = useState<Remito[]>([]);
-  const [archivo, setArchivo] = useState("");
+  const [cargas, setCargas] = useState<Carga[]>([]);
   const [ventasSuc, setVentasSuc] = useState<{ sucursal: string; unidades: number }[]>([]);
   const [rango, setRango] = useState<{ desde: string; hasta: string } | null>(null);
   const [tab, setTab] = useState<"cobertura" | "sucursal" | "insumo">("cobertura");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [leyendo, setLeyendo] = useState(false);
 
-  async function subir(file?: File) {
-    if (!file) return;
-    setError("");
-    setArchivo(file.name);
+  // Un archivo (PDF o CSV) → líneas de remito. Tira Error con mensaje para el usuario.
+  async function parsearArchivo(file: File): Promise<Remito[]> {
+    if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
+      const parsed = parseRemitosPdf(await extraerItemsPdf(await file.arrayBuffer()));
+      if (!parsed.length) throw new Error(`${file.name}: no encontré remitos en el PDF. ¿Es el PDF de remitos de entrega del CDP?`);
+      return parsed;
+    }
     const rows = parseCSV(await file.text());
-    if (rows.length < 2) return setError("El CSV está vacío o no se pudo leer.");
+    if (rows.length < 2) throw new Error(`${file.name}: el CSV está vacío o no se pudo leer.`);
     const head = rows[0].map((h) => norm(h));
     const idx = (name: string) => head.findIndex((h) => h.includes(name));
     const iF = idx("fecha"), iM = idx("marca"), iS = idx("sucursal"), iC = idx("codigo"), iD = idx("descripcion"), iQ = idx("cantidad"), iR = idx("remito");
     if (iS < 0 || iC < 0 || iQ < 0) {
       const esAuditoria = head.some((h) => h.includes("tiene remito") || h.includes("tiene ventas") || h === "estado");
-      return setError(
+      throw new Error(
         esAuditoria
-          ? "Ese es el CSV de AUDITORÍA (la salida de esta pantalla), no el de entrada. Subí el DETALLE de remitos: remitos_consolidado.csv (o remitos_16-30-06_detalle.csv), que tiene columnas 'codigo' y 'cantidad' por fila."
-          : "Faltan columnas (sucursal, codigo, cantidad). Subí el DETALLE de remitos (remitos_consolidado.csv), el que genera scripts/parsear-remitos.py."
+          ? `${file.name}: ese es el CSV de AUDITORÍA (la salida de esta pantalla), no el de entrada. Subí los PDF de remitos o el DETALLE (remitos_consolidado.csv), que tiene columnas 'codigo' y 'cantidad' por fila.`
+          : `${file.name}: faltan columnas (sucursal, codigo, cantidad). Subí los PDF de remitos del CDP o el DETALLE consolidado (remitos_consolidado.csv).`
       );
     }
-    const parsed: Remito[] = rows.slice(1).filter((r) => r.length > iQ).map((r) => ({
+    return rows.slice(1).filter((r) => r.length > iQ).map((r) => ({
       fecha: r[iF] ?? "",
       marca: r[iM] ?? "",
       sucursal: r[iS] ?? "",
@@ -85,9 +101,32 @@ export default function RemitosView() {
       cantidad: parseNumero(r[iQ]),
       remito: r[iR] ?? "",
     }));
-    setRemitos(parsed);
-    // rango de fechas del CSV → traer ventas de Tango para auditar cobertura
-    const isos = parsed.map((p) => isoDe(p.fecha)).filter(Boolean).sort();
+  }
+
+  async function subir(files: FileList | null) {
+    if (!files?.length) return;
+    setError("");
+    setLeyendo(true);
+    let acc = remitos;
+    const nuevasCargas: Carga[] = [];
+    const errores: string[] = [];
+    for (const file of Array.from(files)) {
+      try {
+        const parsed = await parsearArchivo(file);
+        const { total, agregadas, duplicadas } = mergeRemitos(acc, parsed);
+        acc = total;
+        nuevasCargas.push({ nombre: file.name, agregadas, duplicadas });
+      } catch (e) {
+        errores.push(e instanceof Error ? e.message : String(e));
+      }
+    }
+    setLeyendo(false);
+    setRemitos(acc);
+    setCargas((prev) => [...prev, ...nuevasCargas]);
+    if (errores.length) setError(errores.join(" · "));
+
+    // rango de fechas de TODO lo acumulado → ventas de Tango para auditar cobertura
+    const isos = acc.map((p) => isoDe(p.fecha)).filter(Boolean).sort();
     if (isos.length) {
       const desde = isos[0], hasta = isos[isos.length - 1];
       setRango({ desde, hasta });
@@ -95,13 +134,17 @@ export default function RemitosView() {
       try {
         const j = await (await fetch(`/api/ventas/sucursales?desde=${desde}&hasta=${hasta}`)).json();
         setVentasSuc(j.ok ? j.sucursales : []);
-        if (!j.ok) setError("Remitos cargados, pero no pude traer ventas de Tango: " + (j.error || ""));
+        if (!j.ok) setError((e) => [e, "Remitos cargados, pero no pude traer ventas de Tango: " + (j.error || "")].filter(Boolean).join(" · "));
       } catch (e) {
-        setError("Remitos cargados, pero falló Tango: " + String(e));
+        setError((prev) => [prev, "Remitos cargados, pero falló Tango: " + String(e)].filter(Boolean).join(" · "));
       } finally {
         setCargando(false);
       }
     }
+  }
+
+  function limpiar() {
+    setRemitos([]); setCargas([]); setVentasSuc([]); setRango(null); setError("");
   }
 
   const porSucursal = useMemo(() => {
@@ -172,34 +215,52 @@ export default function RemitosView() {
       <div>
         <h1 className="font-display text-xl font-semibold text-ink">Remitos vs Ventas</h1>
         <p className="mt-0.5 max-w-2xl text-sm text-muted">
-          Subí el CSV de remitos y auditá la cobertura contra las ventas de Tango: qué sucursales recibieron
-          del CDP y no registran ventas (y viceversa). Exportable a Google Sheets/Excel.
+          Subí los PDF de remitos del CDP (o el CSV consolidado) y auditá la cobertura contra las ventas de
+          Tango: qué sucursales recibieron del CDP y no registran ventas (y viceversa). Exportable a Sheets/Excel.
         </p>
       </div>
 
       {/* Carga */}
       <Card className="p-4">
         <label className="mb-1 block text-2xs font-medium uppercase tracking-wide text-faint">
-          CSV de remitos — <b>remitos_consolidado.csv</b> (columnas: fecha, marca, sucursal, codigo, descripcion, cantidad, remito). No es el de auditoría.
+          PDFs de remitos de entrega (podés elegir varios) o el CSV consolidado del script. Las cargas se suman; un remito repetido no se duplica.
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <label className="cursor-pointer rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">
-            Elegir CSV…
-            <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => subir(e.target.files?.[0])} />
+            {leyendo ? "Leyendo…" : "Elegir PDFs o CSV…"}
+            <input
+              type="file"
+              accept=".pdf,.csv,application/pdf,text/csv"
+              multiple
+              className="hidden"
+              onChange={(e) => { subir(e.target.files); e.target.value = ""; }}
+            />
           </label>
-          {archivo && <span className="text-2xs text-faint">{archivo}</span>}
-          {rango && <span className="text-2xs text-faint">· período {rango.desde} → {rango.hasta}</span>}
+          {rango && <span className="text-2xs text-faint">período {rango.desde} → {rango.hasta}</span>}
+          {remitos.length > 0 && (
+            <button onClick={limpiar} className="rounded-lg border border-line px-2.5 py-1 text-2xs text-muted hover:border-bad/40 hover:text-bad">
+              ✕ Limpiar todo
+            </button>
+          )}
         </div>
-        <p className="mt-2 text-2xs text-faint">
-          ¿No tenés el CSV? Generalo desde los PDFs con <code className="rounded bg-paper px-1">python scripts/parsear-remitos.py</code> (deja el CSV en Downloads).
-        </p>
+        {cargas.length > 0 && (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {cargas.map((c, i) => (
+              <li key={i} className="rounded-full bg-paper px-2 py-0.5 text-2xs text-faint">
+                {c.nombre} · +{c.agregadas}
+                {c.duplicadas > 0 && <span className="text-warn"> ({c.duplicadas} repetidas)</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       {error && <Card className="p-3 text-sm text-bad">{error}</Card>}
 
       {remitos.length > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            <Kpi label="Remitos" value={String(new Set(remitos.map((r) => r.remito).filter(Boolean)).size || cargas.length)} />
             <Kpi label="Líneas de remito" value={String(remitos.length)} />
             <Kpi label="Sucursales con remito" value={String(porSucursal.length)} />
             <Kpi label="Insumos" value={String(porInsumo.length)} />
