@@ -143,10 +143,13 @@ export default function ComprasView() {
       generado: new Date().toLocaleString("es-AR"),
       resumen,
       topInsumos: porInsumo,
-      variaciones: comparativo
-        .filter((v) => v.costoA >= 500_000 || v.costoB >= 500_000)
-        .slice()
-        .sort((a, b) => (b.varCosto ?? -1e9) - (a.varCosto ?? -1e9)),
+      // Mismo umbral relativo que la pestaña Movimientos (para que PDF y pantalla coincidan).
+      variaciones: (() => {
+        const totalB = comparativo.reduce((s, x) => s + x.costoB, 0);
+        const min = Math.max(50_000, totalB * 0.001);
+        return comparativo.filter((v) => v.costoA >= min || v.costoB >= min).slice()
+          .sort((a, b) => (b.varCosto ?? -1e9) - (a.varCosto ?? -1e9));
+      })(),
       mesLabel,
     });
   }
@@ -411,16 +414,27 @@ function LocalTab({ locales, mesA, mesB }: { locales: LocalRentab[]; mesA: strin
   const [orden, setOrden] = useState<"peor" | "mejor" | "ventas">("peor");
   const rango = mesA === mesB ? mesLabel(mesA) : `${mesLabel(mesA < mesB ? mesA : mesB)} → ${mesLabel(mesA < mesB ? mesB : mesA)}`;
 
+  // Piso de foodcost plausible: por debajo de esto, el consumo está cargado a medias
+  // (no es eficiencia real). Un foodcost < ~15% es físicamente imposible en gastronomía.
+  // Se toma el mayor entre 15% y la mitad de la mediana del grupo filtrado (QA #2).
+  const piso = useMemo(() => {
+    const vals = locales.filter((l) => !l.sinConsumo && !l.sinVentas && l.cmvPct != null).map((l) => l.cmvPct!).sort((a, b) => a - b);
+    const med = vals.length ? vals[Math.floor(vals.length / 2)] : 0;
+    return Math.max(15, med * 0.5);
+  }, [locales]);
+  const dudoso = (l: LocalRentab) => !l.sinConsumo && !l.sinVentas && l.cmvPct != null && l.cmvPct < piso;
+
   // Cobertura: locales con ambas fuentes vs con datos incompletos (QA de negocio #2).
   const conVentas = locales.filter((l) => l.ventas > 0).length;
   const conConsumo = locales.filter((l) => l.cmv > 0).length;
-  const incompletos = locales.filter((l) => l.sinConsumo || l.sinVentas).length;
+  const incompletos = locales.filter((l) => l.sinConsumo || l.sinVentas || dudoso(l)).length;
 
   const filas = useMemo(() => {
     const l = locales.slice();
     if (orden === "ventas") return l.sort((a, b) => b.ventas - a.ventas);
-    // Ranking por foodcost: peor = mayor CMV%. Los sin cobertura completa van al fondo.
-    const val = (x: LocalRentab) => (x.sinConsumo || x.sinVentas || x.cmvPct == null ? null : x.cmvPct);
+    // Ranking por foodcost: peor = mayor CMV%. Los de cobertura dudosa/incompleta van al fondo
+    // (si no, un local cargado a medias con foodcost irreal aparecería como el "mejor").
+    const val = (x: LocalRentab) => (x.sinConsumo || x.sinVentas || dudoso(x) || x.cmvPct == null ? null : x.cmvPct);
     return l.sort((a, b) => {
       const va = val(a), vb = val(b);
       if (va == null && vb == null) return b.ventas - a.ventas;
@@ -428,7 +442,7 @@ function LocalTab({ locales, mesA, mesB }: { locales: LocalRentab[]; mesA: strin
       if (vb == null) return -1;
       return orden === "peor" ? vb - va : va - vb;
     });
-  }, [locales, orden]);
+  }, [locales, orden, piso]);
 
   const exportar = () => descargarCSV(`foodcost_por_local_${mesA}_${mesB}`,
     ["Local", "Marca", "Tipo", "Ventas", "CMV", "Foodcost %", "Margen %", "Cobertura"],
@@ -455,25 +469,29 @@ function LocalTab({ locales, mesA, mesB }: { locales: LocalRentab[]; mesA: strin
         <TablaSimple
           cols={["Local", "Ventas", "CMV", "Foodcost", "Margen"]}
           alinearDesde={1}
-          filas={filas.slice(0, 250).map((l) => [
+          filas={filas.slice(0, 250).map((l) => {
+            const incompleto = l.sinConsumo || l.sinVentas || dudoso(l);
+            return [
             <span key="n">
               <span className="text-sm text-ink">{l.nombre}</span>
               {l.marca === "T" && <span className="ml-1 text-2xs text-faint">MrT</span>}
               {l.sinConsumo && <span className="ml-1 rounded bg-warn/10 px-1 text-2xs text-warn">sin consumo</span>}
               {l.sinVentas && <span className="ml-1 rounded bg-warn/10 px-1 text-2xs text-warn">sin ventas</span>}
+              {dudoso(l) && <span className="ml-1 rounded bg-warn/10 px-1 text-2xs text-warn">revisar carga</span>}
             </span>,
             <span key="v" className="font-mono tnum text-muted">{moneyC(l.ventas)}</span>,
             <span key="c" className="font-mono tnum text-muted">{moneyC(l.cmv)}</span>,
-            <b key="f" className={`font-mono tnum ${l.cmvPct == null || l.sinConsumo ? "text-faint" : l.cmvPct > 40 ? "text-bad" : l.cmvPct > 35 ? "text-warn" : "text-ok"}`}>
-              {l.sinConsumo || l.cmvPct == null ? "—" : pct(l.cmvPct)}
+            <b key="f" className={`font-mono tnum ${incompleto || l.cmvPct == null ? "text-faint" : l.cmvPct > 40 ? "text-bad" : l.cmvPct > 35 ? "text-warn" : "text-ok"}`}>
+              {incompleto || l.cmvPct == null ? "—" : pct(l.cmvPct)}
             </b>,
-            <span key="m" className="font-mono tnum text-muted">{l.sinConsumo || l.margenPct == null ? "—" : pct(l.margenPct)}</span>,
-          ])}
+            <span key="m" className="font-mono tnum text-muted">{incompleto || l.margenPct == null ? "—" : pct(l.margenPct)}</span>,
+          ]; })}
         />
       </Card>
       <p className="text-2xs text-faint">
         <b>Foodcost</b> = CMV / Ventas (cuánto de cada venta se va en insumos). Rojo &gt; 40 %, ámbar 35–40 %, verde &lt; 35 %.
-        Los locales "sin consumo" venden pero no cargaron insumos en el período: revisá la carga en Tango antes de sacar conclusiones.
+        Los marcados <b>"revisar carga"</b> tienen consumo cargado a medias (foodcost irreal) y quedan fuera del ranking.
+        Nota: si las ventas de Tango incluyen IVA, el foodcost real es ~8 pts más alto que el mostrado (a confirmar).
       </p>
     </div>
   );
