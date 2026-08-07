@@ -250,7 +250,8 @@ function RentabilidadTab({ resumen, rowA, rowB, mesA, mesB }: {
       </div>
       <p className="-mt-1 text-2xs text-faint">
         <b>Margen bruto</b> = (Ventas − CMV) / Ventas. Es margen sobre insumos: <b>no</b> descuenta regalías, alquiler,
-        sueldos ni impuestos (no es rentabilidad neta). Ventas tomadas como las registra Tango.
+        sueldos ni impuestos (no es rentabilidad neta). Ventas <b>netas de IVA</b> (÷1,21, mismo criterio que Tango), para
+        que sean comparables con el costo.
       </p>
 
       <Card className="p-4">
@@ -491,7 +492,7 @@ function LocalTab({ locales, mesA, mesB }: { locales: LocalRentab[]; mesA: strin
       <p className="text-2xs text-faint">
         <b>Foodcost</b> = CMV / Ventas (cuánto de cada venta se va en insumos). Rojo &gt; 40 %, ámbar 35–40 %, verde &lt; 35 %.
         Los marcados <b>"revisar carga"</b> tienen consumo cargado a medias (foodcost irreal) y quedan fuera del ranking.
-        Nota: si las ventas de Tango incluyen IVA, el foodcost real es ~8 pts más alto que el mostrado (a confirmar).
+        Ventas netas de IVA, así el foodcost es comparable al estándar de la industria.
       </p>
     </div>
   );

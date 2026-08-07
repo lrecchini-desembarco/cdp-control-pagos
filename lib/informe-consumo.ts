@@ -110,7 +110,7 @@ export function abrirInformePDF(d: DatosInforme): void {
     </div>
   </div>
 
-  <div class="foot">Generado ${esc(d.generado)} · CDP · Control — DS Group · Fuente: consumo de insumos valorizado y ventas de Tango. Margen bruto = (Ventas − CMV) / Ventas: <b>no</b> descuenta regalías, alquileres ni mano de obra, y las ventas se toman como las registra Tango (a confirmar si incluyen IVA — de ser así el margen quedaría sobreestimado ~8 pts respecto del food cost neto).</div>
+  <div class="foot">Generado ${esc(d.generado)} · CDP · Control — DS Group · Fuente: consumo de insumos valorizado y ventas de Tango. Ventas <b>netas de IVA</b> (÷1,21). Margen bruto = (Ventas − CMV) / Ventas: <b>no</b> descuenta regalías, alquileres, sueldos ni impuestos (no es rentabilidad neta).</div>
   <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); };</script>
 </body></html>`;
 

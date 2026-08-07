@@ -1,5 +1,13 @@
 import { q } from "./consumo-db";
 
+// Las ventas de Tango (venta_tango_articulo.monto) vienen CON IVA (21%), mientras que
+// el costo del consumo (CMV) es NETO. Para que margen y foodcost sean comparables se
+// netean las ventas ÷1,21 — es exactamente lo que hace Tango: en vw_PreciosProducto,
+// precio_neto = precio / 1,21 (verificado 2026-08-07). Casi todo lo que venden estas
+// marcas es comida preparada al 21%, así que la tasa uniforme es correcta.
+const IVA = 1.21;
+const neto = (montoConIva: number) => montoConIva / IVA;
+
 // Capa de datos "Consumo (CMV) vs Ventas". Todo se agrega en SQL (rápido) sobre
 // las tablas reales del grupo (esquema cierres):
 //   - consumo_insumo_tango: insumo × local × día, con costo_total  -> CMV real
@@ -76,7 +84,7 @@ export async function getResumenMensual(f: FiltrosConsumo = {}): Promise<Resumen
     [...wv.params, ...wc.params]
   );
   return rows.map((r) => {
-    const ventas = Number(r.ventas ?? 0);
+    const ventas = neto(Number(r.ventas ?? 0)); // neto de IVA, comparable al CMV
     const cmv = Number(r.cmv ?? 0);
     return {
       mes: r.mes,
@@ -201,7 +209,7 @@ export async function getPorLocal(mesDesde: string, mesHasta: string, f: Filtros
     [mesDesde, mesHasta, ...wf.params]
   );
   return rows.map((r) => {
-    const ventas = Number(r.ventas), cmv = Number(r.cmv);
+    const ventas = neto(Number(r.ventas)), cmv = Number(r.cmv); // ventas netas de IVA
     return {
       id: r.id, nombre: r.nombre, marca: r.marca, esPropia: r.es_propia,
       ventas, unidades: Number(r.unidades), cmv,

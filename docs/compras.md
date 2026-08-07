@@ -31,9 +31,15 @@ con filtros `marca` / `propias` / `sucursal`. Guardada con `guard('/compras')`.
 Cada pestaña exporta CSV. Botón **⬇ Informe PDF** arma un informe imprimible del período y
 filtros actuales (`lib/informe-consumo.ts`, se guarda como PDF desde el navegador).
 
+## IVA (resuelto 2026-08-07)
+`venta_tango_articulo.monto` viene **con IVA (21%)**; el CMV es neto. Verificado contra
+`vw_PreciosProducto` de Tango (donde `precio_neto = precio / 1,21`) y contra el precio de venta
+implícito (que supera al precio neto → sólo posible si monto es bruto). Se netean las ventas ÷1,21
+en `lib/consumo.ts` (constante `IVA`), así margen y foodcost son comparables al estándar. Los
+umbrales de color (foodcost verde &lt;35 % / rojo &gt;40 %) ya operan sobre valores netos.
+
 ## Pendientes / próximos (del QA con experto en ventas)
-- Confirmar si `venta_tango_articulo.monto` incluye IVA: si sí, netear para que el margen sea
-  comparable a foodcost estándar (hoy el % puede estar ~8 pts sobreestimado). Decisión de negocio.
 - Consumo por **unidad vendida** (normalizado) para separar crecimiento de ventas de merma/precio.
+- Umbral de foodcost **por marca** (Mr Tasty corre estructuralmente más alto que Desembarco).
 - Foodcost **teórico vs real** usando recetas (BOM) → desvío = merma/robo. Requiere match receta→insumo.
 - Alertas automáticas de desvío de margen/consumo por local.
