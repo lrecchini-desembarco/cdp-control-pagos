@@ -101,7 +101,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/ventas", label: "Ventas por turno", icon: "▦", section: "Ventas y compras", fresh: "vivo", desc: "Qué se vendió por artículo y turno (unidades reales de Tango)." },
   { href: "/precios", label: "Precios", icon: "$", section: "Ventas y compras", fresh: "vivo", desc: "Precio vigente por producto y sucursal (Tango)." },
   { href: "/remitos", label: "Remitos vs Ventas", icon: "⇉", section: "Ventas y compras", fresh: "carga", desc: "Subís el CSV de remitos y lo cruzás contra las ventas." },
-  { href: "/compras", label: "Compras vs Ventas", icon: "⇲", section: "Ventas y compras", fresh: "carga", desc: "Subís el CSV de compras y lo cruzás contra las ventas." },
+  { href: "/compras", label: "Consumo vs Ventas", icon: "⇲", section: "Ventas y compras", fresh: "vivo", desc: "Consumo de insumos (CMV) vs ventas, mes a mes: rentabilidad, más/menos consumido, drill por insumo. Datos reales." },
   { href: "/actividad", label: "Actividad de ventas", icon: "◔", section: "Ventas y compras", fresh: "vivo", desc: "Ranking de locales por actividad y productos que se durmieron." },
   { href: "/facturacion", label: "Facturación", icon: "≣", section: "Ventas y compras", fresh: "vivo", desc: "Cuánta plata mueve cada producto, local y marca (estimada, Tango)." },
   { href: "/mercadopago", label: "Cobros · Mercado Pago", icon: "◐", section: "Ventas y compras", fresh: "vivo", desc: "Lo que cobró Mercado Pago, por medio de pago y día; para conciliar." },

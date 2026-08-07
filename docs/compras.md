@@ -1,51 +1,39 @@
-# Compras vs Ventas
+# Consumo (CMV) vs Ventas  ·  `/compras`
 
-Pantalla `/compras`: subís el **CSV de compras** (lo que cada local compró/recibió) y audita la
-**cobertura contra las ventas de Tango** del mismo período — qué locales compraron mercadería pero
-**no registran ventas** (y viceversa). Es el análogo de **Remitos vs Ventas** para el lado de compras.
-Todo exportable a Sheets/Excel.
+Tablero de **rentabilidad real** del grupo: cruza el **consumo de insumos valorizado (CMV)**
+contra las **ventas**, mes a mes. Datos reales de Tango (no se carga nada a mano). Item del
+panel: **"Consumo vs Ventas"** (sección *Ventas y compras*).
 
-## Ingesta flexible (auto-detecta columnas)
-No hay un formato fijo: la pantalla **detecta las columnas solas** por el encabezado y te muestra
-cuáles reconoció (chips verdes). Reconoce (con sinónimos):
+## Fuente de datos
+Base Postgres del grupo (Neon, la misma de Cierres/bi-ventas), esquema `cierres`, vía
+`DATABASE_URL`. Lee (agregado en SQL, ver `lib/consumo.ts` + `lib/consumo-db.ts`):
+- `consumo_insumo_tango` — consumo por insumo×local×día con `costo_total` → **CMV real**.
+- `venta_tango_articulo` — ventas por artículo×local×día (`monto` = $).
+- `sucursal_tango` — catálogo id→nombre, marca (D/T), es_propia.
 
-| Campo | Encabezados aceptados (ejemplos) |
-|---|---|
-| fecha | fecha, emision, dia |
-| proveedor | proveedor, razon social, vendedor |
-| local/sucursal | sucursal, local, boca, deposito, destino |
-| código | codigo, cod, sku, ean |
-| descripción | descripcion, detalle, articulo, producto, insumo |
-| cantidad | cantidad, cant, unidades, bultos |
-| importe $ | importe, total, monto, subtotal, neto |
-| comprobante | comprobante, factura, remito, orden, oc, nro |
+Disponible desde **jun-2026** (por eso el año-contra-año 2026 vs 2025 queda para cuando haya
+histórico). El mes en curso es parcial: por defecto se comparan los dos últimos meses completos.
 
-- Acepta separador **`;`** o **`,`** y números en formato **argentino** (`1.234,56`) o inglés (`1,234.56`).
-- **Mínimo**: una columna de **código o descripción** + una de **cantidad o importe**.
-- El **cruce contra ventas** (pestaña Cobertura) necesita la columna **local/sucursal**. Si el CSV no
-  trae fecha, la pantalla pide el período a mano para traer las ventas de Tango.
-- ¿Tenés Excel? Guardalo como **CSV** (Archivo → Guardar como → CSV) y subilo.
+API: `app/api/consumo/route.ts` (`?q=resumen|comparativo|insumo|local|sucursales|meses`),
+con filtros `marca` / `propias` / `sucursal`. Guardada con `guard('/compras')`.
 
-## Vistas (pestañas)
-- **Cobertura (audit)** — local con compra ↔ con ventas (solo si hay columna local).
-- **Por proveedor** — proveedor · líneas · insumos · cantidad · importe (solo si hay columna proveedor).
-- **Por insumo** — código · insumo · cantidad · importe · # proveedores/locales.
-- **Por local** — local · líneas · cantidad · importe (solo si hay columna local).
+## Pestañas
+- **Rentabilidad** — KPIs del mes B (Ventas, CMV, Margen bruto, Unidades) con delta vs mes A,
+  gráfico Ventas vs CMV por mes (SVG propio) y tabla mensual. Margen bruto = (Ventas − CMV)/Ventas.
+- **Más / menos consumido** — comparativo por insumo entre mes A y B: más consumido, mayores
+  subas y bajas (umbral relativo al período/filtro, no fijo).
+- **Por insumo** — consumo del período por insumo, con % del CMV y buscador.
+- **Por local (foodcost)** — ranking de locales por CMV/Ventas; detecta cobertura despareja
+  (locales con ventas pero sin consumo cargado → margen no confiable).
+- **Compras (CSV)** — carga manual de facturas/OC reales (la vieja pantalla, `ComprasCsvView`),
+  cruce por local contra ventas. Complementa el consumo automático.
 
-Cada pestaña tiene su botón **⬇ Exportar** (CSV `;` + coma decimal → abre en columnas en Excel/Sheets es-AR).
+Cada pestaña exporta CSV. Botón **⬇ Informe PDF** arma un informe imprimible del período y
+filtros actuales (`lib/informe-consumo.ts`, se guarda como PDF desde el navegador).
 
-## Qué audita (Cobertura)
-- **COMPRA SIN VENTAS** 🔴 — compró/recibió pero no registra ventas en Tango (revisar: merma, robo, o falta de carga).
-- **VENTAS SIN COMPRA** 🟠 — vende pero no figura compra en el período (se abastece por otra vía).
-- **OK** — tiene ambas.
-
-El cruce es a nivel **local**. La reconciliación unidad-a-unidad **insumo↔producto** necesita la receta
-(BOM) producto→insumo (no disponible como dato real).
-
-## Estructura
-- `components/views/ComprasView.tsx` + `app/compras/page.tsx` — pantalla (parsea el CSV client-side, ingesta flexible).
-- `app/api/ventas/sucursales` (`lib/ventas.ts` → `getVentasPorSucursal`) — ventas por local (Tango), reusado del cruce de remitos.
-- Nav: `lib/roles.ts` (`NAV_CATALOG` + defaults de admin y operaciones).
-
-> Nota: si los roles ya tienen su nav **guardado en el store** (KV), `/compras` no aparece hasta
-> habilitarlo en **/usuarios** (editor de permisos por rol). En instalaciones nuevas aparece solo.
+## Pendientes / próximos (del QA con experto en ventas)
+- Confirmar si `venta_tango_articulo.monto` incluye IVA: si sí, netear para que el margen sea
+  comparable a foodcost estándar (hoy el % puede estar ~8 pts sobreestimado). Decisión de negocio.
+- Consumo por **unidad vendida** (normalizado) para separar crecimiento de ventas de merma/precio.
+- Foodcost **teórico vs real** usando recetas (BOM) → desvío = merma/robo. Requiere match receta→insumo.
+- Alertas automáticas de desvío de margen/consumo por local.

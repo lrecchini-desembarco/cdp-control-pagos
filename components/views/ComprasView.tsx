@@ -1,428 +1,525 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import { parseNumero } from "@/lib/num";
-import { armarClaveSuc } from "@/lib/sucursal-key";
+import { abrirInformePDF } from "@/lib/informe-consumo";
+import ComprasCsvView from "./ComprasCsvView";
 
-// Cruce de COMPRAS (lo que cada local compró/recibió) contra las VENTAS de Tango del
-// mismo período. Ingesta flexible: auto-detecta las columnas del CSV que subas, así
-// funciona con el formato que tengas (export de Tango, del ERP, o armado a mano).
+// Tablero "Consumo (CMV) vs Ventas" — datos REALES de la base del grupo (Neon),
+// vía /api/consumo. Cruza el consumo de insumos valorizado (CMV) contra las
+// ventas de Tango, mes a mes, con rentabilidad, más/menos consumido y drill por
+// insumo. Filtros por marca (Desembarco/Mr Tasty), propios/franquicias y local.
+// La carga manual de compras por CSV queda como pestaña secundaria (ComprasCsvView).
 
-interface Compra {
-  fecha: string;        // ISO yyyy-mm-dd (normalizada)
-  proveedor: string;
-  sucursal: string;
-  codigo: string;
-  descripcion: string;
-  cantidad: number;
-  importe: number;      // $ de la línea (0 si el CSV no lo trae)
-  comprobante: string;
-}
+interface ResumenMes { mes: string; ventas: number; unidades: number; cmv: number; margen: number; margenPct: number | null }
+interface InsumoComp { codigo: string; descripcion: string; unidad: string; cantA: number; costoA: number; cantB: number; costoB: number; varCosto: number | null }
+interface InsumoPer { codigo: string; descripcion: string; unidad: string; cantidad: number; costo: number; locales: number }
+interface LocalRentab { id: number; nombre: string; marca: string; esPropia: boolean; ventas: number; unidades: number; cmv: number; margenPct: number | null; cmvPct: number | null; sinConsumo: boolean; sinVentas: boolean }
+interface Sucursal { id: number; nombre: string; marca: string; esPropia: boolean }
 
-// Sinónimos aceptados por columna (encabezado normalizado -> campo).
-const SINONIMOS: Record<keyof Omit<Compra, never>, string[]> = {
-  fecha: ["fecha", "emision", "dia"],
-  proveedor: ["proveedor", "razon social", "vendedor", "fabricante"],
-  sucursal: ["sucursal", "local", "boca", "deposito", "destino", "punto de venta"],
-  codigo: ["codigo", "cod", "sku", "articulo id", "id articulo", "ean"],
-  descripcion: ["descripcion", "detalle", "articulo", "producto", "insumo", "nombre", "concepto"],
-  cantidad: ["cantidad", "cant", "unidades", "qty", "bultos"],
-  importe: ["importe", "total", "monto", "subtotal", "neto", "precio total", "valor"],
-  comprobante: ["comprobante", "factura", "remito", "orden", "oc", "numero", "nro", "documento", "comp"],
+type Tab = "rentabilidad" | "movimientos" | "insumo" | "local" | "csv";
+
+// $ compacto para plata grande (miles de millones): "$5,5 mil M", "$2,0 M".
+const moneyC = (n: number) => {
+  const a = Math.abs(n);
+  const s = a >= 1e9 ? (n / 1e9).toFixed(1).replace(".", ",") + " mil M"
+    : a >= 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " M"
+    : a >= 1e3 ? Math.round(n / 1e3) + " k" : String(Math.round(n));
+  return "$" + s;
 };
-
-const normH = (s: string) =>
-  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-
-const money = (n: number) => Math.round(n).toLocaleString("es-AR");
-
-const num = parseNumero;
-
-// dd/mm/aaaa · dd-mm-aa · aaaa-mm-dd -> ISO. "" si no matchea.
-function isoDe(s: string): string {
-  s = (s || "").trim();
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/);
-  if (m) {
-    let [, d, mo, y] = m;
-    if (y.length === 2) y = "20" + y;
-    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  }
-  return "";
-}
-
-// Parser CSV con delimitador dado, respeta comillas.
-function parseCSV(text: string, delim: string): string[][] {
-  const rows: string[][] = [];
-  let field = "", row: string[] = [], inQ = false;
-  text = text.replace(/^﻿/, "");
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQ) {
-      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
-      else field += c;
-    } else if (c === '"') inQ = true;
-    else if (c === delim) { row.push(field); field = ""; }
-    else if (c === "\n" || c === "\r") {
-      if (field !== "" || row.length) { row.push(field); rows.push(row); row = []; field = ""; }
-      if (c === "\r" && text[i + 1] === "\n") i++;
-    } else field += c;
-  }
-  if (field !== "" || row.length) { row.push(field); rows.push(row); }
-  return rows;
-}
-
-type Campo = keyof typeof SINONIMOS;
-const CAMPOS: Campo[] = ["fecha", "proveedor", "sucursal", "codigo", "descripcion", "cantidad", "importe", "comprobante"];
-const ETIQUETA: Record<Campo, string> = {
-  fecha: "fecha", proveedor: "proveedor", sucursal: "local/sucursal", codigo: "código",
-  descripcion: "descripción", cantidad: "cantidad", importe: "importe $", comprobante: "comprobante",
+const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
+const int = (n: number) => Math.round(n).toLocaleString("es-AR");
+const pct = (n: number | null) => (n == null ? "—" : n.toFixed(1).replace(".", ",") + " %");
+const mesLabel = (m: string) => {
+  const [y, mo] = m.split("-");
+  return `${["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][+mo] || mo} ${y.slice(2)}`;
 };
 
 export default function ComprasView() {
-  const [compras, setCompras] = useState<Compra[]>([]);
-  const [detectadas, setDetectadas] = useState<Partial<Record<Campo, boolean>>>({});
-  const [archivo, setArchivo] = useState("");
-  const [ventasSuc, setVentasSuc] = useState<{ sucursal: string; unidades: number }[]>([]);
-  const [rango, setRango] = useState<{ desde: string; hasta: string } | null>(null);
-  const [manual, setManual] = useState<{ desde: string; hasta: string }>({ desde: "", hasta: "" });
-  const [tab, setTab] = useState<"cobertura" | "proveedor" | "insumo" | "sucursal">("insumo");
-  const [error, setError] = useState("");
+  const [tab, setTab] = useState<Tab>("rentabilidad");
+
+  // Filtros globales
+  const [marca, setMarca] = useState<"" | "D" | "T">("");
+  const [propias, setPropias] = useState<"" | "1" | "0">("");
+  const [sucursal, setSucursal] = useState<string>("");
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [meses, setMeses] = useState<string[]>([]);
+
+  // Selección de período
+  const [mesA, setMesA] = useState<string>("");
+  const [mesB, setMesB] = useState<string>("");
+
+  // Datos
+  const [resumen, setResumen] = useState<ResumenMes[]>([]);
+  const [comparativo, setComparativo] = useState<InsumoComp[]>([]);
+  const [porInsumo, setPorInsumo] = useState<InsumoPer[]>([]);
+  const [porLocal, setPorLocal] = useState<LocalRentab[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
 
-  const tieneSuc = !!detectadas.sucursal;
-  const tieneProv = !!detectadas.proveedor;
-  const tieneImporte = !!detectadas.importe;
+  const qs = useCallback(() => {
+    const p = new URLSearchParams();
+    if (marca) p.set("marca", marca);
+    if (propias) p.set("propias", propias);
+    if (sucursal) p.set("sucursal", sucursal);
+    return p;
+  }, [marca, propias, sucursal]);
 
-  async function fetchVentas(desde: string, hasta: string) {
-    if (!desde || !hasta) return;
-    setCargando(true);
-    try {
-      const j = await (await fetch(`/api/ventas/sucursales?desde=${desde}&hasta=${hasta}`)).json();
-      setVentasSuc(j.ok ? j.sucursales : []);
-      if (!j.ok) setError("Compras cargadas, pero no pude traer ventas de Tango: " + (j.error || ""));
-    } catch (e) {
-      setError("Compras cargadas, pero falló Tango: " + String(e));
-    } finally {
-      setCargando(false);
-    }
-  }
-
-  async function subir(file?: File) {
-    if (!file) return;
-    setError(""); setVentasSuc([]); setRango(null);
-    setArchivo(file.name);
-    const text = await file.text();
-    const firstLine = text.replace(/^﻿/, "").split(/\r?\n/)[0] || "";
-    const delim = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
-    const rows = parseCSV(text, delim);
-    if (rows.length < 2) return setError("El CSV está vacío o no se pudo leer.");
-
-    const head = rows[0].map(normH);
-    const idxDe = (campo: Campo): number => {
-      for (const syn of SINONIMOS[campo]) {
-        const i = head.findIndex((h) => h === syn || h.includes(syn));
-        if (i >= 0) return i;
+  // Carga inicial: meses + sucursales (una vez)
+  useEffect(() => {
+    (async () => {
+      try {
+        const [jm, js] = await Promise.all([
+          fetch("/api/consumo?q=meses").then((r) => r.json()),
+          fetch("/api/consumo?q=sucursales").then((r) => r.json()),
+        ]);
+        if (js.ok) setSucursales(js.sucursales);
+        if (jm.ok && jm.meses.length) {
+          const ms: string[] = jm.meses; // más nuevo primero; el [0] suele ser el mes en curso (parcial)
+          setMeses(ms);
+          // Default: los dos últimos meses COMPLETOS (evita comparar el parcial en curso).
+          if (ms.length >= 3) { setMesB(ms[1]); setMesA(ms[2]); }
+          else if (ms.length === 2) { setMesB(ms[0]); setMesA(ms[1]); }
+          else { setMesB(ms[0]); setMesA(ms[0]); }
+        } else {
+          setError("No hay meses en la base de consumo todavía.");
+        }
+      } catch (e) {
+        setError("No pude conectar con la base de consumo: " + String(e));
       }
-      return -1;
-    };
-    const idx = Object.fromEntries(CAMPOS.map((c) => [c, idxDe(c)])) as Record<Campo, number>;
-    const det = Object.fromEntries(CAMPOS.map((c) => [c, idx[c] >= 0])) as Record<Campo, boolean>;
-    setDetectadas(det);
+    })();
+  }, []);
 
-    // Mínimo indispensable: algo que identifique el insumo + una cantidad.
-    if (idx.codigo < 0 && idx.descripcion < 0) {
-      return setError("No encontré una columna de código ni de descripción del insumo. Revisá los encabezados del CSV (podés renombrarlos: 'codigo', 'descripcion', 'cantidad', 'local', 'proveedor', 'importe').");
-    }
-    if (idx.cantidad < 0 && idx.importe < 0) {
-      return setError("No encontré 'cantidad' ni 'importe'. El CSV necesita al menos una de las dos para poder sumar.");
-    }
+  // Resumen mensual (depende de filtros)
+  useEffect(() => {
+    if (!meses.length) return;
+    setCargando(true); setError("");
+    fetch("/api/consumo?q=resumen&" + qs().toString())
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setResumen(j.meses); else setError(j.error || "Error trayendo el resumen."); })
+      .catch((e) => setError(String(e)))
+      .finally(() => setCargando(false));
+  }, [meses, qs]);
 
-    const g = (r: string[], i: number) => (i >= 0 ? (r[i] ?? "") : "");
-    const parsed: Compra[] = rows.slice(1)
-      .filter((r) => r.some((c) => c && c.trim() !== ""))
-      .map((r) => ({
-        fecha: isoDe(g(r, idx.fecha)),
-        proveedor: g(r, idx.proveedor).trim(),
-        sucursal: g(r, idx.sucursal).trim(),
-        codigo: g(r, idx.codigo).trim(),
-        descripcion: g(r, idx.descripcion).trim(),
-        cantidad: num(g(r, idx.cantidad)),
-        importe: num(g(r, idx.importe)),
-        comprobante: g(r, idx.comprobante).trim(),
-      }));
-    setCompras(parsed);
-    setTab(det.sucursal ? "cobertura" : det.proveedor ? "proveedor" : "insumo");
+  // Comparativo A vs B (para movimientos) — depende de período + filtros
+  useEffect(() => {
+    if (!mesA || !mesB) return;
+    const p = qs(); p.set("q", "comparativo"); p.set("mesA", mesA); p.set("mesB", mesB);
+    fetch("/api/consumo?" + p.toString())
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setComparativo(j.insumos); })
+      .catch(() => {});
+  }, [mesA, mesB, qs]);
 
-    // Cruce vs ventas: solo tiene sentido si hay local. Período: de la fecha, o manual.
-    if (det.sucursal) {
-      const isos = parsed.map((p) => p.fecha).filter(Boolean).sort();
-      if (isos.length) {
-        const desde = isos[0], hasta = isos[isos.length - 1];
-        setRango({ desde, hasta });
-        setManual({ desde, hasta });
-        fetchVentas(desde, hasta);
-      }
-    }
-  }
+  // Consumo por insumo + rentabilidad por local del período (mesA..mesB)
+  useEffect(() => {
+    if (!mesA || !mesB) return;
+    const desde = mesA <= mesB ? mesA : mesB, hasta = mesA <= mesB ? mesB : mesA;
+    const pi = qs(); pi.set("q", "insumo"); pi.set("desde", desde); pi.set("hasta", hasta);
+    fetch("/api/consumo?" + pi.toString()).then((r) => r.json()).then((j) => { if (j.ok) setPorInsumo(j.insumos); }).catch(() => {});
+    const pl = qs(); pl.set("q", "local"); pl.set("desde", desde); pl.set("hasta", hasta);
+    fetch("/api/consumo?" + pl.toString()).then((r) => r.json()).then((j) => { if (j.ok) setPorLocal(j.locales); }).catch(() => {});
+  }, [mesA, mesB, qs]);
 
-  const porInsumo = useMemo(() => {
-    const m = new Map<string, { codigo: string; descripcion: string; cantidad: number; importe: number; refs: Set<string> }>();
-    for (const c of compras) {
-      const key = c.codigo || c.descripcion;
-      const a = m.get(key) ?? { codigo: c.codigo, descripcion: c.descripcion || c.codigo, cantidad: 0, importe: 0, refs: new Set() };
-      a.cantidad += c.cantidad; a.importe += c.importe;
-      a.refs.add(tieneProv ? c.proveedor : c.sucursal);
-      if (!a.descripcion && c.descripcion) a.descripcion = c.descripcion;
-      m.set(key, a);
-    }
-    return Array.from(m.values()).sort((a, b) => b.importe - a.importe || b.cantidad - a.cantidad);
-  }, [compras, tieneProv]);
+  const rowA = resumen.find((r) => r.mes === mesA);
+  const rowB = resumen.find((r) => r.mes === mesB);
+  // El mes más nuevo es el que está corriendo → marcarlo "parcial" en los selectores.
+  const mesesOpc = useMemo<[string, string][]>(
+    () => meses.map((m, i) => [m, i === 0 ? `${mesLabel(m)} · parcial` : mesLabel(m)]),
+    [meses]
+  );
+  const mesBParcial = mesB && mesB === meses[0];
 
-  const porProveedor = useMemo(() => {
-    const m = new Map<string, { proveedor: string; lineas: number; cantidad: number; importe: number; insumos: Set<string> }>();
-    for (const c of compras) {
-      const k = c.proveedor || "(sin proveedor)";
-      const a = m.get(k) ?? { proveedor: k, lineas: 0, cantidad: 0, importe: 0, insumos: new Set() };
-      a.lineas++; a.cantidad += c.cantidad; a.importe += c.importe; a.insumos.add(c.codigo || c.descripcion);
-      m.set(k, a);
-    }
-    return Array.from(m.values()).sort((a, b) => b.importe - a.importe);
-  }, [compras]);
-
-  const porSucursal = useMemo(() => {
-    const m = new Map<string, { sucursal: string; lineas: number; cantidad: number; importe: number }>();
-    for (const c of compras) {
-      const k = c.sucursal || "(sin local)";
-      const a = m.get(k) ?? { sucursal: k, lineas: 0, cantidad: 0, importe: 0 };
-      a.lineas++; a.cantidad += c.cantidad; a.importe += c.importe;
-      m.set(k, a);
-    }
-    return Array.from(m.values()).sort((a, b) => b.importe - a.importe || b.cantidad - a.cantidad);
-  }, [compras]);
-
-  // Auditoría de cobertura: local con compra ↔ con ventas (Tango).
-  const cobertura = useMemo(() => {
-    // Misma reconciliación que el Cruce: no fusiona "Mrt X" con el "X" de El Desembarco.
-    const clave = armarClaveSuc([...compras.map((c) => c.sucursal).filter(Boolean), ...ventasSuc.map((v) => v.sucursal)]);
-    const compBy = new Map<string, { disp: string; cant: number; imp: number }>();
-    for (const c of compras) {
-      if (!c.sucursal) continue;
-      const n = clave(c.sucursal);
-      const a = compBy.get(n) ?? { disp: c.sucursal, cant: 0, imp: 0 };
-      a.cant += c.cantidad; a.imp += c.importe; compBy.set(n, a);
-    }
-    const venBy = new Map<string, { disp: string; u: number }>();
-    for (const v of ventasSuc) {
-      const n = clave(v.sucursal);
-      const a = venBy.get(n) ?? { disp: v.sucursal, u: 0 };
-      a.u += v.unidades; venBy.set(n, a);
-    }
-    const claves = new Set(Array.from(compBy.keys()).concat(Array.from(venBy.keys())));
-    const filas = Array.from(claves).map((n) => {
-      const tc = compBy.has(n), tv = venBy.has(n);
-      return {
-        sucursal: compBy.get(n)?.disp ?? venBy.get(n)?.disp ?? n,
-        compra: tc, ventas: tv,
-        estado: tc && tv ? "OK" : tc ? "COMPRA SIN VENTAS" : "VENTAS SIN COMPRA",
-        cantidad: tc ? Math.round(compBy.get(n)!.cant) : 0,
-        importe: tc ? Math.round(compBy.get(n)!.imp) : 0,
-        unidades: tv ? Math.round(venBy.get(n)!.u) : 0,
-      };
+  function informePDF() {
+    const nombreMarca = marca === "D" ? "Desembarco" : marca === "T" ? "Mr Tasty" : "Todas las marcas";
+    const nombreTipo = propias === "1" ? "propios" : propias === "0" ? "franquicias" : "todos";
+    const nombreLocal = sucursal ? sucursales.find((s) => String(s.id) === sucursal)?.nombre ?? "" : "";
+    const subtitulo = [nombreMarca, `tipo: ${nombreTipo}`, nombreLocal && `local: ${nombreLocal}`].filter(Boolean).join(" · ");
+    abrirInformePDF({
+      titulo: "Consumo (CMV) vs Ventas",
+      subtitulo,
+      mesA: mesLabel(mesA), mesB: mesLabel(mesB),
+      generado: new Date().toLocaleString("es-AR"),
+      resumen,
+      topInsumos: porInsumo,
+      variaciones: comparativo
+        .filter((v) => v.costoA >= 500_000 || v.costoB >= 500_000)
+        .slice()
+        .sort((a, b) => (b.varCosto ?? -1e9) - (a.varCosto ?? -1e9)),
+      mesLabel,
     });
-    const orden = { "COMPRA SIN VENTAS": 0, "VENTAS SIN COMPRA": 1, OK: 2 } as Record<string, number>;
-    return filas.sort((a, b) => orden[a.estado] - orden[b.estado] || a.sucursal.localeCompare(b.sucursal));
-  }, [compras, ventasSuc]);
-
-  const alertas = cobertura.filter((c) => c.estado === "COMPRA SIN VENTAS").length;
-  const totalImporte = useMemo(() => compras.reduce((s, c) => s + c.importe, 0), [compras]);
-
-  function exportar() {
-    if (tab === "cobertura")
-      descargarCSV("compras_cobertura", ["Local", "Tiene compra", "Tiene ventas", "Estado", "Cantidad comprada", "Importe comprado", "Unidades vendidas"],
-        cobertura.map((c) => [c.sucursal, c.compra ? "sí" : "no", c.ventas ? "sí" : "no", c.estado, c.cantidad, c.importe, c.unidades]));
-    else if (tab === "proveedor")
-      descargarCSV("compras_por_proveedor", ["Proveedor", "Líneas", "Insumos", "Cantidad", "Importe"],
-        porProveedor.map((p) => [p.proveedor, p.lineas, p.insumos.size, Math.round(p.cantidad), Math.round(p.importe)]));
-    else if (tab === "sucursal")
-      descargarCSV("compras_por_local", ["Local", "Líneas", "Cantidad", "Importe"],
-        porSucursal.map((p) => [p.sucursal, p.lineas, Math.round(p.cantidad), Math.round(p.importe)]));
-    else
-      descargarCSV("compras_por_insumo", ["Código", "Insumo", "Cantidad total", "Importe total", tieneProv ? "Proveedores" : "Locales"],
-        porInsumo.map((p) => [p.codigo, p.descripcion, Math.round(p.cantidad), Math.round(p.importe), p.refs.size]));
   }
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Compras vs Ventas</h1>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
-          Subí el CSV de compras (lo que cada local compró/recibió) y audita la cobertura contra las ventas de
-          Tango del mismo período: qué locales compraron y no registran ventas (y viceversa). Exportable a Google Sheets/Excel.
+        <h1 className="font-display text-xl font-semibold text-ink">Consumo (CMV) vs Ventas</h1>
+        <p className="mt-0.5 max-w-3xl text-sm text-muted">
+          Rentabilidad real del grupo: consumo de insumos valorizado (CMV, de Tango) contra ventas, mes a mes.
+          Detectá qué se consume más/menos y dónde se mueve el margen. Datos reales, actualizados a diario.
         </p>
       </div>
 
-      {/* Carga + mini-tutorial */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="cursor-pointer rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">
-            Elegir CSV de compras…
-            <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => subir(e.target.files?.[0])} />
-          </label>
-          {archivo && <span className="text-2xs text-faint">{archivo}</span>}
-          {rango && <span className="text-2xs text-faint">· período {rango.desde} → {rango.hasta}</span>}
-          {cargando && <span className="text-2xs text-action">trayendo ventas…</span>}
+      {/* Filtros globales */}
+      <Card className="flex flex-wrap items-end gap-3 p-3">
+        <Selector label="Marca" value={marca} onChange={(v) => setMarca(v as any)}
+          opciones={[["", "Todas"], ["D", "Desembarco"], ["T", "Mr Tasty"]]} />
+        <Selector label="Tipo" value={propias} onChange={(v) => setPropias(v as any)}
+          opciones={[["", "Todos"], ["1", "Propios"], ["0", "Franquicias"]]} />
+        <label className="text-2xs text-faint">
+          <span className="mb-1 block font-medium uppercase tracking-wide">Local</span>
+          <select value={sucursal} onChange={(e) => setSucursal(e.target.value)}
+            className="rounded-lg border border-line bg-surface px-2 py-1.5 text-xs text-ink">
+            <option value="">Todos</option>
+            {sucursales
+              .filter((s) => (!marca || s.marca === marca) && (propias === "" || s.esPropia === (propias === "1")))
+              .map((s) => <option key={s.id} value={s.id}>{s.nombre}{s.marca === "T" ? " · MrT" : ""}</option>)}
+          </select>
+        </label>
+        <div className="ml-auto flex items-end gap-2">
+          <Selector label="Mes A" value={mesA} onChange={setMesA} opciones={mesesOpc} />
+          <span className="pb-1.5 text-xs text-faint">vs</span>
+          <Selector label="Mes B" value={mesB} onChange={setMesB} opciones={mesesOpc} />
         </div>
-
-        {/* Columnas detectadas (feedback de que entendió el archivo) */}
-        {compras.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {CAMPOS.map((c) => (
-              <span key={c} className={`rounded-full px-2 py-0.5 text-2xs font-medium ${detectadas[c] ? "bg-ok/10 text-ok" : "bg-ink/5 text-faint line-through"}`}>
-                {detectadas[c] ? "✓ " : "— "}{ETIQUETA[c]}
-              </span>
-            ))}
-          </div>
-        )}
       </Card>
 
       {error && <Card className="p-3 text-sm text-bad">{error}</Card>}
-
-      {/* Estado vacío = mini-tutorial */}
-      {compras.length === 0 && !error && (
-        <Card className="p-5">
-          <p className="font-display text-sm font-semibold text-ink">Cómo usarlo (3 pasos)</p>
-          <ol className="mt-3 space-y-2.5 text-sm text-muted">
-            <li className="flex gap-2"><b className="text-action">1.</b> <span>Conseguí el CSV de compras: exportalo de Tango/ERP, o si tenés Excel, guardalo como <b>CSV</b> (Archivo → Guardar como → CSV).</span></li>
-            <li className="flex gap-2"><b className="text-action">2.</b> <span>Tocá <b>“Elegir CSV de compras…”</b> y subilo. La pantalla <b>detecta las columnas solas</b> y te muestra cuáles reconoció.</span></li>
-            <li className="flex gap-2"><b className="text-action">3.</b> <span>Mirá las pestañas (<b>Cobertura, Por proveedor, Por insumo, Por local</b>) y exportá la que quieras con <b>⬇ Exportar</b>.</span></li>
-          </ol>
-          <div className="mt-4 rounded-lg border border-line bg-paper/60 p-3">
-            <p className="text-2xs font-medium uppercase tracking-wide text-faint">Columnas que reconoce (flexible)</p>
-            <p className="mt-1 text-xs text-muted">
-              <b>fecha</b> · <b>proveedor</b> · <b>local/sucursal</b> · <b>código</b> · <b>descripción</b> · <b>cantidad</b> · <b>importe $</b> · <b>comprobante</b>.
-              Acepta separador <code className="rounded bg-paper px-1">;</code> o <code className="rounded bg-paper px-1">,</code> y números en formato argentino (1.234,56).
-              Mínimo necesita <b>código o descripción</b> + <b>cantidad o importe</b>. Para el cruce contra ventas necesita la columna <b>local/sucursal</b>.
-            </p>
-          </div>
-        </Card>
+      {mesBParcial && !error && (
+        <Card className="p-2.5 text-2xs text-warn">⚠ El mes B ({mesLabel(mesB)}) está en curso: sus totales son parciales. Para comparar meses completos elegí meses anteriores.</Card>
       )}
 
-      {compras.length > 0 && (
-        <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi label="Líneas de compra" value={String(compras.length)} />
-            <Kpi label={tieneProv ? "Proveedores" : "Locales"} value={String(tieneProv ? porProveedor.length : porSucursal.length)} />
-            <Kpi label="Insumos" value={String(porInsumo.length)} />
-            {tieneImporte
-              ? <Kpi label="$ Total comprado" value={"$" + money(totalImporte)} money />
-              : <Kpi label={tieneSuc ? "🔴 Compra sin ventas" : "Comprobantes"} value={tieneSuc ? (cargando ? "…" : String(alertas)) : String(new Set(compras.map((c) => c.comprobante).filter(Boolean)).size)} tone={tieneSuc && alertas ? "bad" : undefined} />}
-          </div>
+      {/* Pestañas */}
+      <Card className="flex flex-wrap items-center gap-2 p-2">
+        <div className="flex flex-wrap gap-1 rounded-lg border border-line p-0.5">
+          <TabBtn activo={tab === "rentabilidad"} onClick={() => setTab("rentabilidad")}>Rentabilidad</TabBtn>
+          <TabBtn activo={tab === "movimientos"} onClick={() => setTab("movimientos")}>Más / menos consumido</TabBtn>
+          <TabBtn activo={tab === "insumo"} onClick={() => setTab("insumo")}>Por insumo</TabBtn>
+          <TabBtn activo={tab === "local"} onClick={() => setTab("local")}>Por local (foodcost)</TabBtn>
+          <TabBtn activo={tab === "csv"} onClick={() => setTab("csv")}>Compras (CSV)</TabBtn>
+        </div>
+        {cargando && <span className="text-2xs text-action">actualizando…</span>}
+        {tab !== "csv" && (
+          <button onClick={informePDF} disabled={!resumen.length}
+            title="Genera un informe imprimible del período y filtros actuales (Guardar como PDF)"
+            className="ml-auto rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action disabled:opacity-40">
+            ⬇ Informe PDF
+          </button>
+        )}
+      </Card>
 
-          <Card className="flex flex-wrap items-center gap-3 p-3">
-            <div className="flex flex-wrap gap-1 rounded-lg border border-line p-0.5">
-              {tieneSuc && <Tab activo={tab === "cobertura"} onClick={() => setTab("cobertura")}>Cobertura (audit)</Tab>}
-              {tieneProv && <Tab activo={tab === "proveedor"} onClick={() => setTab("proveedor")}>Por proveedor</Tab>}
-              <Tab activo={tab === "insumo"} onClick={() => setTab("insumo")}>Por insumo</Tab>
-              {tieneSuc && <Tab activo={tab === "sucursal"} onClick={() => setTab("sucursal")}>Por local</Tab>}
-            </div>
-            <button
-              onClick={exportar}
-              title="Exporta la pestaña activa a CSV (Excel / Google Sheets)"
-              className="ml-auto shrink-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
-            >
-              ⬇ Exportar {tab === "cobertura" ? "cobertura" : tab === "proveedor" ? "por proveedor" : tab === "sucursal" ? "por local" : "por insumo"}
-            </button>
-          </Card>
-
-          {/* Cruce vs ventas sin fecha en el CSV: pedir período manual */}
-          {tab === "cobertura" && tieneSuc && !rango && (
-            <Card className="flex flex-wrap items-end gap-3 p-3">
-              <span className="text-2xs text-faint">El CSV no trae fecha. Elegí el período para traer las ventas de Tango:</span>
-              <label className="text-2xs text-faint">Desde<input type="date" value={manual.desde} onChange={(e) => setManual((m) => ({ ...m, desde: e.target.value }))} className="ml-1 rounded border border-line bg-surface px-2 py-1 text-xs text-ink" /></label>
-              <label className="text-2xs text-faint">Hasta<input type="date" value={manual.hasta} onChange={(e) => setManual((m) => ({ ...m, hasta: e.target.value }))} className="ml-1 rounded border border-line bg-surface px-2 py-1 text-xs text-ink" /></label>
-              <button onClick={() => { setRango(manual); fetchVentas(manual.desde, manual.hasta); }} disabled={!manual.desde || !manual.hasta}
-                className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action disabled:opacity-40">
-                Traer ventas
-              </button>
-            </Card>
-          )}
-
-          <Card className="overflow-hidden">
-            {tab === "cobertura" && tieneSuc && (
-              <Tabla cols={["Local", "Compra", "Ventas", "Estado", "Cant. comprada", "Importe $", "Unidades vend."]}
-                filas={cobertura.map((c) => [
-                  <span key="s" className="text-sm text-ink">{c.sucursal}</span>,
-                  <span key="c">{c.compra ? "✅" : "—"}</span>,
-                  <span key="v">{c.ventas ? "✅" : "—"}</span>,
-                  <Estado key="e" v={c.estado} />,
-                  <span key="q" className="font-mono tnum text-muted">{money(c.cantidad)}</span>,
-                  <span key="i" className="font-mono tnum text-muted monto">{tieneImporte ? "$" + money(c.importe) : "—"}</span>,
-                  <span key="u" className="font-mono tnum text-muted">{money(c.unidades)}</span>,
-                ])} />
-            )}
-            {tab === "proveedor" && tieneProv && (
-              <Tabla cols={["Proveedor", "Líneas", "Insumos", "Cantidad", "Importe $"]}
-                filas={porProveedor.map((p) => [
-                  <span key="p" className="text-sm text-ink">{p.proveedor}</span>,
-                  <span key="l" className="font-mono tnum text-faint">{p.lineas}</span>,
-                  <span key="n" className="font-mono tnum text-faint">{p.insumos.size}</span>,
-                  <b key="q" className="font-mono tnum text-ink">{money(p.cantidad)}</b>,
-                  <b key="i" className="font-mono tnum text-ink monto">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
-                ])} />
-            )}
-            {tab === "insumo" && (
-              <Tabla cols={["Código", "Insumo", "Cantidad total", "Importe $", tieneProv ? "Proveedores" : "Locales"]}
-                filas={porInsumo.map((p) => [
-                  <span key="c" className="font-mono text-2xs text-faint">{p.codigo || "—"}</span>,
-                  <span key="d" className="text-sm text-ink">{p.descripcion}</span>,
-                  <b key="q" className="font-mono tnum text-ink">{money(p.cantidad)}</b>,
-                  <b key="i" className="font-mono tnum text-ink monto">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
-                  <span key="r" className="text-2xs text-faint">{p.refs.size}</span>,
-                ])} />
-            )}
-            {tab === "sucursal" && tieneSuc && (
-              <Tabla cols={["Local", "Líneas", "Cantidad", "Importe $"]}
-                filas={porSucursal.map((p) => [
-                  <span key="s" className="text-sm text-ink">{p.sucursal}</span>,
-                  <span key="l" className="font-mono tnum text-faint">{p.lineas}</span>,
-                  <b key="q" className="font-mono tnum text-ink">{money(p.cantidad)}</b>,
-                  <b key="i" className="font-mono tnum text-ink monto">{tieneImporte ? "$" + money(p.importe) : "—"}</b>,
-                ])} />
-            )}
-          </Card>
-
-          {tab === "cobertura" && tieneSuc && (
-            <p className="text-2xs text-faint">
-              "COMPRA SIN VENTAS" = el local compró/recibió pero no registra ventas en Tango en el período (revisar: merma, robo, o falta de carga). "VENTAS
-              SIN COMPRA" = vende pero no figura compra en el período (se abastece por otra vía). El cruce es a nivel <b>local</b>;
-              el detalle unidad-a-unidad insumo↔producto necesita la receta (BOM).
-            </p>
-          )}
-        </>
+      {tab === "rentabilidad" && (
+        <RentabilidadTab resumen={resumen} rowA={rowA} rowB={rowB} mesA={mesA} mesB={mesB} />
+      )}
+      {tab === "movimientos" && (
+        <MovimientosTab comparativo={comparativo} mesA={mesA} mesB={mesB} />
+      )}
+      {tab === "insumo" && (
+        <InsumoTab porInsumo={porInsumo} mesA={mesA} mesB={mesB} />
+      )}
+      {tab === "local" && (
+        <LocalTab locales={porLocal} mesA={mesA} mesB={mesB} />
+      )}
+      {tab === "csv" && (
+        <Card className="p-4"><ComprasCsvView /></Card>
       )}
     </div>
   );
 }
 
-function Estado({ v }: { v: string }) {
-  const tono = v === "OK" ? "bg-ok/10 text-ok" : v === "COMPRA SIN VENTAS" ? "bg-bad/10 text-bad" : "bg-warn/10 text-warn";
-  return <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${tono}`}>{v}</span>;
+// ---------------------------------------------------------------- Rentabilidad
+
+function RentabilidadTab({ resumen, rowA, rowB, mesA, mesB }: {
+  resumen: ResumenMes[]; rowA?: ResumenMes; rowB?: ResumenMes; mesA: string; mesB: string;
+}) {
+  const delta = (a?: number, b?: number) => (a == null || b == null || a === 0 ? null : ((b - a) / a) * 100);
+  const exportar = () => descargarCSV("rentabilidad_mensual",
+    ["Mes", "Ventas", "CMV", "Margen $", "Margen %", "Unidades"],
+    resumen.map((r) => [mesLabel(r.mes), Math.round(r.ventas), Math.round(r.cmv), Math.round(r.margen), r.margenPct?.toFixed(1) ?? "", Math.round(r.unidades)]));
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi label={`Ventas · ${mesB ? mesLabel(mesB) : ""}`} value={rowB ? moneyC(rowB.ventas) : "—"} delta={delta(rowA?.ventas, rowB?.ventas)} />
+        <Kpi label={`CMV · ${mesB ? mesLabel(mesB) : ""}`} value={rowB ? moneyC(rowB.cmv) : "—"} delta={delta(rowA?.cmv, rowB?.cmv)} deltaInverso />
+        <Kpi label="Margen bruto" value={rowB ? pct(rowB.margenPct) : "—"} delta={rowA?.margenPct != null && rowB?.margenPct != null ? rowB.margenPct - rowA.margenPct : null} deltaPuntos />
+        <Kpi label="Unidades" value={rowB ? int(rowB.unidades) : "—"} delta={delta(rowA?.unidades, rowB?.unidades)} />
+      </div>
+      <p className="-mt-1 text-2xs text-faint">
+        <b>Margen bruto</b> = (Ventas − CMV) / Ventas. Es margen sobre insumos: <b>no</b> descuenta regalías, alquiler,
+        sueldos ni impuestos (no es rentabilidad neta). Ventas tomadas como las registra Tango.
+      </p>
+
+      <Card className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-[15px] font-semibold text-ink">Ventas vs CMV por mes</h2>
+          <button onClick={exportar} className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">⬇ Exportar</button>
+        </div>
+        <BarrasMensuales datos={resumen} destacar={[mesA, mesB]} />
+      </Card>
+
+      <Card className="overflow-hidden">
+        <TablaSimple
+          cols={["Mes", "Ventas", "CMV", "Margen $", "Margen %", "Unidades"]}
+          alinearDesde={1}
+          filas={resumen.map((r) => [
+            mesLabel(r.mes), money(r.ventas), money(r.cmv), money(r.margen),
+            <b key="m" className={r.margenPct != null && r.margenPct >= 60 ? "text-ok" : "text-warn"}>{pct(r.margenPct)}</b>,
+            int(r.unidades),
+          ])}
+        />
+      </Card>
+      <p className="text-2xs text-faint">
+        <b>CMV</b> = costo de los insumos consumidos (real, de Tango). <b>Margen bruto</b> = (Ventas − CMV) / Ventas;
+        no descuenta regalías, alquileres ni mano de obra. Base desde jun-2026 (el comparativo año contra año se habilita al haber histórico 2025).
+      </p>
+    </div>
+  );
 }
 
-function Kpi({ label, value, tone, money }: { label: string; value: string; tone?: "bad"; money?: boolean }) {
+// Gráfico de barras agrupadas Ventas vs CMV por mes (SVG propio, sin librería).
+function BarrasMensuales({ datos, destacar }: { datos: ResumenMes[]; destacar: string[] }) {
+  if (!datos.length) return <p className="py-8 text-center text-sm text-faint">Sin datos.</p>;
+  const max = Math.max(...datos.map((d) => d.ventas), 1);
+  const W = Math.max(360, datos.length * 120), H = 220, padB = 42, padT = 12, padL = 8;
+  const bw = 26, gap = 10;
+  const grupoW = W / datos.length;
+  const y = (v: number) => padT + (H - padT - padB) * (1 - v / max);
+  return (
+    <div className="overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxWidth: W }} role="img" aria-label="Ventas vs CMV por mes">
+        {[0.25, 0.5, 0.75, 1].map((f) => (
+          <line key={f} x1={padL} x2={W} y1={y(max * f)} y2={y(max * f)} className="stroke-line" strokeWidth={1} />
+        ))}
+        {datos.map((d, i) => {
+          const cx = i * grupoW + grupoW / 2;
+          const dest = destacar.includes(d.mes);
+          return (
+            <g key={d.mes}>
+              <rect x={cx - bw - gap / 2} y={y(d.ventas)} width={bw} height={y(0) - y(d.ventas)} rx={3}
+                className={dest ? "fill-action" : "fill-action/50"} />
+              <rect x={cx + gap / 2} y={y(d.cmv)} width={bw} height={y(0) - y(d.cmv)} rx={3}
+                className={dest ? "fill-warn" : "fill-warn/50"} />
+              <text x={cx} y={y(0) + 14} textAnchor="middle" className="fill-muted text-[10px]">{mesLabel(d.mes)}</text>
+              <text x={cx} y={y(0) + 28} textAnchor="middle" className="fill-ink text-[10px] font-semibold">{pct(d.margenPct)}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="mt-1 flex justify-center gap-4 text-2xs text-muted">
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-action" /> Ventas</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-warn" /> CMV</span>
+        <span>· % = margen bruto</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Movimientos
+
+function MovimientosTab({ comparativo, mesA, mesB }: { comparativo: InsumoComp[]; mesA: string; mesB: string }) {
+  const [orden, setOrden] = useState<"consumo" | "suba" | "baja">("consumo");
+  // Umbral RELATIVO al período/filtro (QA #4): ignora insumos < 0,1% del consumo del mes B,
+  // con un piso de $50k. Así escala igual mirando el grupo entero o un solo local.
+  const MIN = useMemo(() => {
+    const totalB = comparativo.reduce((s, x) => s + x.costoB, 0);
+    return Math.max(50_000, totalB * 0.001);
+  }, [comparativo]);
+
+  const filas = useMemo(() => {
+    const c = comparativo.slice();
+    if (orden === "consumo") return c.sort((a, b) => b.costoB - a.costoB);
+    const conBase = c.filter((x) => x.costoA >= MIN || x.costoB >= MIN);
+    if (orden === "suba") return conBase.sort((a, b) => (b.varCosto ?? -1e9) - (a.varCosto ?? -1e9));
+    return conBase.sort((a, b) => (a.varCosto ?? 1e9) - (b.varCosto ?? 1e9));
+  }, [comparativo, orden, MIN]);
+
+  const exportar = () => descargarCSV(`consumo_${mesA}_vs_${mesB}`,
+    ["Código", "Insumo", "Unidad", `Costo ${mesA}`, `Costo ${mesB}`, "Variación %", `Cant ${mesA}`, `Cant ${mesB}`],
+    comparativo.map((r) => [r.codigo, r.descripcion, r.unidad, Math.round(r.costoA), Math.round(r.costoB), r.varCosto?.toFixed(1) ?? "", r.cantA, r.cantB]));
+
+  return (
+    <div className="space-y-3">
+      <Card className="flex flex-wrap items-center gap-2 p-3">
+        <span className="text-2xs uppercase tracking-wide text-faint">Ordenar por</span>
+        <TabBtn activo={orden === "consumo"} onClick={() => setOrden("consumo")}>Más consumido ({mesLabel(mesB)})</TabBtn>
+        <TabBtn activo={orden === "suba"} onClick={() => setOrden("suba")}>Mayores subas</TabBtn>
+        <TabBtn activo={orden === "baja"} onClick={() => setOrden("baja")}>Mayores bajas</TabBtn>
+        <button onClick={exportar} className="ml-auto rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">⬇ Exportar</button>
+      </Card>
+      <Card className="overflow-hidden">
+        <TablaSimple
+          cols={["Insumo", "Un.", `Costo ${mesLabel(mesA)}`, `Costo ${mesLabel(mesB)}`, "Variación"]}
+          alinearDesde={2}
+          filas={filas.slice(0, 300).map((r) => [
+            <span key="d"><span className="text-sm text-ink">{r.descripcion}</span><span className="ml-1 font-mono text-2xs text-faint">{r.codigo}</span></span>,
+            <span key="u" className="text-2xs text-faint">{r.unidad}</span>,
+            <span key="a" className="font-mono tnum text-muted">{money(r.costoA)}</span>,
+            <b key="b" className="font-mono tnum text-ink">{money(r.costoB)}</b>,
+            <Variacion key="v" v={r.varCosto} />,
+          ])}
+        />
+      </Card>
+      <p className="text-2xs text-faint">Las variaciones ignoran insumos con consumo menor a {moneyC(MIN)} en ambos meses (ruido). "Más consumido" ordena por costo de {mesLabel(mesB)}.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Por insumo
+
+function InsumoTab({ porInsumo, mesA, mesB }: { porInsumo: InsumoPer[]; mesA: string; mesB: string }) {
+  const [busca, setBusca] = useState("");
+  const total = useMemo(() => porInsumo.reduce((s, r) => s + r.costo, 0), [porInsumo]);
+  const filas = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return porInsumo.filter((r) => !q || r.descripcion.toLowerCase().includes(q) || r.codigo.includes(q));
+  }, [porInsumo, busca]);
+  const rango = mesA === mesB ? mesLabel(mesA) : `${mesLabel(mesA < mesB ? mesA : mesB)} → ${mesLabel(mesA < mesB ? mesB : mesA)}`;
+  const exportar = () => descargarCSV("consumo_por_insumo",
+    ["Código", "Insumo", "Unidad", "Cantidad", "Costo", "% del CMV", "Locales"],
+    filas.map((r) => [r.codigo, r.descripcion, r.unidad, r.cantidad, Math.round(r.costo), total ? (100 * r.costo / total).toFixed(2) : "", r.locales]));
+
+  return (
+    <div className="space-y-3">
+      <Card className="flex flex-wrap items-center gap-3 p-3">
+        <span className="text-2xs uppercase tracking-wide text-faint">Período {rango} · CMV total {moneyC(total)}</span>
+        <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar insumo o código…"
+          className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink placeholder:text-faint" />
+        <button onClick={exportar} className="ml-auto rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">⬇ Exportar</button>
+      </Card>
+      <Card className="overflow-hidden">
+        <TablaSimple
+          cols={["Insumo", "Un.", "Cantidad", "Costo", "% CMV", "Locales"]}
+          alinearDesde={2}
+          filas={filas.slice(0, 400).map((r) => [
+            <span key="d"><span className="text-sm text-ink">{r.descripcion}</span><span className="ml-1 font-mono text-2xs text-faint">{r.codigo}</span></span>,
+            <span key="u" className="text-2xs text-faint">{r.unidad}</span>,
+            <span key="q" className="font-mono tnum text-muted">{int(r.cantidad)}</span>,
+            <b key="c" className="font-mono tnum text-ink">{money(r.costo)}</b>,
+            <span key="p" className="font-mono tnum text-faint">{total ? (100 * r.costo / total).toFixed(1).replace(".", ",") + "%" : "—"}</span>,
+            <span key="l" className="text-2xs text-faint">{r.locales}</span>,
+          ])}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Por local
+
+function LocalTab({ locales, mesA, mesB }: { locales: LocalRentab[]; mesA: string; mesB: string }) {
+  const [orden, setOrden] = useState<"peor" | "mejor" | "ventas">("peor");
+  const rango = mesA === mesB ? mesLabel(mesA) : `${mesLabel(mesA < mesB ? mesA : mesB)} → ${mesLabel(mesA < mesB ? mesB : mesA)}`;
+
+  // Cobertura: locales con ambas fuentes vs con datos incompletos (QA de negocio #2).
+  const conVentas = locales.filter((l) => l.ventas > 0).length;
+  const conConsumo = locales.filter((l) => l.cmv > 0).length;
+  const incompletos = locales.filter((l) => l.sinConsumo || l.sinVentas).length;
+
+  const filas = useMemo(() => {
+    const l = locales.slice();
+    if (orden === "ventas") return l.sort((a, b) => b.ventas - a.ventas);
+    // Ranking por foodcost: peor = mayor CMV%. Los sin cobertura completa van al fondo.
+    const val = (x: LocalRentab) => (x.sinConsumo || x.sinVentas || x.cmvPct == null ? null : x.cmvPct);
+    return l.sort((a, b) => {
+      const va = val(a), vb = val(b);
+      if (va == null && vb == null) return b.ventas - a.ventas;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      return orden === "peor" ? vb - va : va - vb;
+    });
+  }, [locales, orden]);
+
+  const exportar = () => descargarCSV(`foodcost_por_local_${mesA}_${mesB}`,
+    ["Local", "Marca", "Tipo", "Ventas", "CMV", "Foodcost %", "Margen %", "Cobertura"],
+    locales.map((l) => [l.nombre, l.marca === "T" ? "Mr Tasty" : "Desembarco", l.esPropia ? "propio" : "franquicia",
+      Math.round(l.ventas), Math.round(l.cmv), l.cmvPct?.toFixed(1) ?? "", l.margenPct?.toFixed(1) ?? "",
+      l.sinConsumo ? "sin consumo" : l.sinVentas ? "sin ventas" : "completa"]));
+
+  return (
+    <div className="space-y-3">
+      {incompletos > 0 && (
+        <Card className="p-2.5 text-2xs text-warn">
+          ⚠ Cobertura despareja: {conVentas} locales con ventas y {conConsumo} con consumo cargado en el período.
+          {" "}{incompletos} tienen datos incompletos (marcados abajo): en esos el foodcost/margen no es confiable — típico del mes en curso o cargas atrasadas.
+        </Card>
+      )}
+      <Card className="flex flex-wrap items-center gap-2 p-3">
+        <span className="text-2xs uppercase tracking-wide text-faint">Período {rango} · ordenar por</span>
+        <TabBtn activo={orden === "peor"} onClick={() => setOrden("peor")}>Peor foodcost</TabBtn>
+        <TabBtn activo={orden === "mejor"} onClick={() => setOrden("mejor")}>Mejor foodcost</TabBtn>
+        <TabBtn activo={orden === "ventas"} onClick={() => setOrden("ventas")}>Más ventas</TabBtn>
+        <button onClick={exportar} className="ml-auto rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action">⬇ Exportar</button>
+      </Card>
+      <Card className="overflow-hidden">
+        <TablaSimple
+          cols={["Local", "Ventas", "CMV", "Foodcost", "Margen"]}
+          alinearDesde={1}
+          filas={filas.slice(0, 250).map((l) => [
+            <span key="n">
+              <span className="text-sm text-ink">{l.nombre}</span>
+              {l.marca === "T" && <span className="ml-1 text-2xs text-faint">MrT</span>}
+              {l.sinConsumo && <span className="ml-1 rounded bg-warn/10 px-1 text-2xs text-warn">sin consumo</span>}
+              {l.sinVentas && <span className="ml-1 rounded bg-warn/10 px-1 text-2xs text-warn">sin ventas</span>}
+            </span>,
+            <span key="v" className="font-mono tnum text-muted">{moneyC(l.ventas)}</span>,
+            <span key="c" className="font-mono tnum text-muted">{moneyC(l.cmv)}</span>,
+            <b key="f" className={`font-mono tnum ${l.cmvPct == null || l.sinConsumo ? "text-faint" : l.cmvPct > 40 ? "text-bad" : l.cmvPct > 35 ? "text-warn" : "text-ok"}`}>
+              {l.sinConsumo || l.cmvPct == null ? "—" : pct(l.cmvPct)}
+            </b>,
+            <span key="m" className="font-mono tnum text-muted">{l.sinConsumo || l.margenPct == null ? "—" : pct(l.margenPct)}</span>,
+          ])}
+        />
+      </Card>
+      <p className="text-2xs text-faint">
+        <b>Foodcost</b> = CMV / Ventas (cuánto de cada venta se va en insumos). Rojo &gt; 40 %, ámbar 35–40 %, verde &lt; 35 %.
+        Los locales "sin consumo" venden pero no cargaron insumos en el período: revisá la carga en Tango antes de sacar conclusiones.
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Primitivas
+
+function Kpi({ label, value, delta, deltaInverso, deltaPuntos }: {
+  label: string; value: string; delta?: number | null; deltaInverso?: boolean; deltaPuntos?: boolean;
+}) {
+  const up = delta != null && delta > 0;
+  const bueno = delta == null ? null : deltaInverso ? !up : up;
   return (
     <Card className="p-3">
       <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-lg font-semibold ${tone === "bad" ? "text-bad" : "text-ink"} ${money ? "monto" : ""}`}>{value}</p>
+      <p className="mt-0.5 font-display text-lg font-semibold text-ink">{value}</p>
+      {delta != null && (
+        <p className={`mt-0.5 text-2xs font-medium ${bueno ? "text-ok" : "text-bad"}`}>
+          {up ? "▲" : "▼"} {Math.abs(delta).toFixed(1).replace(".", ",")}{deltaPuntos ? " pts" : " %"} vs mes A
+        </p>
+      )}
     </Card>
   );
 }
 
-function Tab({ children, activo, onClick }: { children: React.ReactNode; activo: boolean; onClick: () => void }) {
+function Variacion({ v }: { v: number | null }) {
+  if (v == null) return <span className="text-2xs text-faint">nuevo</span>;
+  const up = v > 0;
+  return <span className={`font-mono tnum text-xs font-semibold ${up ? "text-bad" : "text-ok"}`}>{up ? "▲" : "▼"} {Math.abs(v).toFixed(1).replace(".", ",")}%</span>;
+}
+
+function Selector({ label, value, onChange, opciones }: {
+  label: string; value: string; onChange: (v: string) => void; opciones: [string, string][];
+}) {
+  return (
+    <label className="text-2xs text-faint">
+      <span className="mb-1 block font-medium uppercase tracking-wide">{label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="rounded-lg border border-line bg-surface px-2 py-1.5 text-xs text-ink">
+        {opciones.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function TabBtn({ children, activo, onClick }: { children: React.ReactNode; activo: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${activo ? "bg-action text-white" : "text-muted hover:text-ink"}`}>
       {children}
@@ -430,14 +527,14 @@ function Tab({ children, activo, onClick }: { children: React.ReactNode; activo:
   );
 }
 
-function Tabla({ cols, filas }: { cols: string[]; filas: React.ReactNode[][] }) {
+function TablaSimple({ cols, filas, alinearDesde = 99 }: { cols: string[]; filas: React.ReactNode[][]; alinearDesde?: number }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-line">
             {cols.map((c, i) => (
-              <th key={c} className={`px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint ${i > 3 ? "text-right" : ""}`}>{c}</th>
+              <th key={c} className={`px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint ${i >= alinearDesde ? "text-right" : ""}`}>{c}</th>
             ))}
           </tr>
         </thead>
@@ -445,10 +542,10 @@ function Tabla({ cols, filas }: { cols: string[]; filas: React.ReactNode[][] }) 
           {filas.length === 0 ? (
             <tr><td colSpan={cols.length} className="px-4 py-6 text-center text-sm text-faint">Sin datos.</td></tr>
           ) : (
-            filas.slice(0, 800).map((f, i) => (
+            filas.map((f, i) => (
               <tr key={i} className="border-b border-line last:border-0 hover:bg-ink/5">
                 {f.map((c, j) => (
-                  <td key={j} className={`px-4 py-2 align-middle ${j > 3 ? "text-right" : ""}`}>{c}</td>
+                  <td key={j} className={`px-4 py-2 align-middle ${j >= alinearDesde ? "text-right" : ""}`}>{c}</td>
                 ))}
               </tr>
             ))
