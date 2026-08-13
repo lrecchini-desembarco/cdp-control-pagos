@@ -186,4 +186,7 @@ export const homeDe = (rol: Rol) => ROLES[rol].nav[0];
 
 // Versiones "config-aware": operan sobre un array de nav (el del store, editable).
 export const puedeVerNav = (nav: string[], href: string): boolean => UNIVERSALES.includes(href) || nav.includes(href);
-export const homeDeNav = (nav: string[]): string => nav.find((h) => h !== "/guia") ?? nav[0] ?? "/guia";
+// La home es la primera pantalla "de trabajo": no /guia ni los Tutoriales, que
+// son universales y quedarían de home para cualquiera sin rol asignado.
+export const homeDeNav = (nav: string[]): string =>
+  nav.find((h) => h !== "/guia" && !h.startsWith("/tutoriales")) ?? "/guia";
