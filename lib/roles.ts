@@ -1,6 +1,8 @@
 // Roles y qué ve cada uno. Es config pura (sin fs), así la puede usar el
 // middleware (edge) y también el server.
 
+import { EMAILS_CREDENCIALES } from "./credenciales";
+
 export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia" | "apps-gerencia" | "pendiente";
 
 export interface RolInfo {
@@ -86,6 +88,12 @@ export interface NavItem {
   section?: string;  // encabezado de sección en el menú (ej. "Costos")
   fresh?: Fresh;     // tag de frescura del dato (default: carga)
   desc?: string;     // qué podés hacer ahí (para el cartel de bienvenida y la guía)
+  /**
+   * Lista blanca de emails. Si está, la pantalla NO se rige por el rol: solo la ven
+   * esos usuarios (ni siquiera el admin, que normalmente ve todo el catálogo).
+   * Es el gating del sidebar; la página y la API lo vuelven a chequear por su cuenta.
+   */
+  soloEmails?: string[];
 }
 // Los `beta: true` dependen de datos externos que aún no están (Raven token / recetas
 // reales / vista de Sistemas). El resto es productivo.
@@ -134,17 +142,40 @@ export const NAV_CATALOG: NavItem[] = [
   // Sistema — configuración y salud
   { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema", fresh: "carga", desc: "Enseñale al sistema las recetas y los códigos de sucursal." },
   { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga", desc: "Alta de usuarios y qué puede ver cada uno." },
+  { href: "/credenciales", label: "Credenciales", icon: "🔑", section: "Sistema", fresh: "carga", soloEmails: EMAILS_CREDENCIALES, desc: "Bóveda de usuarios y contraseñas de los sistemas. Acceso restringido a sistemas." },
   { href: "/estado", label: "Salud y endpoints", icon: "⚙", section: "Sistema", fresh: "vivo", desc: "Salud del sistema y de las conexiones, en vivo." },
   { href: "/qa", label: "QA diario", icon: "✓", section: "Sistema", fresh: "vivo", desc: "El bot que audita los datos todos los días (reconciliación, margen, identidad, mapeo, frescura) y avisa si algo se rompe." },
+  // Tutoriales — repositorio de instructivos por sistema (los ve todo el mundo)
+  { href: "/tutoriales/tango", label: "Tango", icon: "▷", section: "Tutoriales", fresh: "carga", desc: "Instructivos de Tango: verlos online o descargar el archivo original." },
+  { href: "/tutoriales/ayres", label: "Ayres", icon: "▷", section: "Tutoriales", fresh: "carga", desc: "Instructivos de Ayres POS: verlos online o descargar el archivo original." },
+  { href: "/tutoriales/raven", label: "Raven", icon: "▷", section: "Tutoriales", fresh: "carga", desc: "Instructivos de Raven: verlos online o descargar el archivo original." },
+  { href: "/tutoriales/qlik", label: "Qlik", icon: "▷", section: "Tutoriales", fresh: "carga", desc: "Instructivos de Qlik Sense: verlos online o descargar el archivo original." },
   // Ayuda y herramientas
   { href: "/firmas", label: "Firmas", icon: "✎", section: "Ayuda", fresh: "carga", desc: "Generador de firmas de email para el equipo." },
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?", section: "Ayuda", fresh: "carga", desc: "La guía completa: qué podés hacer y cómo, paso a paso." },
 ];
 
 // Rutas universales: las ve todo el mundo, no se pueden sacar (evita autobloqueo).
-// Solo /guia (ayuda). /organigrama es togglable por rol/usuario desde Usuarios.
-export const UNIVERSALES = ["/guia"];
+// /guia (ayuda) y los Tutoriales (documentación: todos ven y descargan; subir es
+// solo admin y eso lo corta la API). /organigrama es togglable desde Usuarios.
+// "/tutoriales" (a secas) es la sección padre: el layout gatea por el primer
+// segmento de la ruta, así que sin ella las 4 subpáginas rebotan al home.
+export const UNIVERSALES = ["/guia", "/tutoriales", "/tutoriales/tango", "/tutoriales/ayres", "/tutoriales/raven", "/tutoriales/qlik"];
 export const NAV_SIEMPRE = UNIVERSALES;
+
+/**
+ * Saca del listado las pantallas de lista blanca (soloEmails) que este usuario no
+ * puede ver. Va SIEMPRE combinado con el filtro por rol: el rol dice qué módulos
+ * ve, esto dice qué pantallas son de acceso restringido por persona.
+ * Lo usan el sidebar, el cartel de bienvenida y cualquier otro listado del catálogo.
+ */
+export const visiblePara = (items: NavItem[], email?: string | null): NavItem[] => {
+  const e = String(email ?? "").trim().toLowerCase();
+  return items.filter((i) => !i.soloEmails || i.soloEmails.includes(e));
+};
+
+/** Pantallas cuyo permiso NO se administra por rol (se gatean por email). */
+export const NAV_POR_EMAIL = NAV_CATALOG.filter((i) => i.soloEmails).map((i) => i.href);
 
 /** Las universales las ve cualquiera; el resto según el rol (defaults de ROLES). */
 export function puedeVer(rol: Rol, href: string): boolean {

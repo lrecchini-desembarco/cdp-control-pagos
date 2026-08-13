@@ -1,54 +1,41 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Card, Field, inputClass, Button, Skeleton, EmptyState } from "@/components/ui/primitives";
-import { descargarCSV } from "@/lib/exportar-csv";
-import { ESTADOS_INV, CATEGORIAS_INV, estadoInv, aprobacionInv, necesitaAprobacion, type GrupoInv } from "@/lib/inventario";
+import { Button, Card, Field, Skeleton, inputClass } from "@/components/ui/primitives";
+import { ESTADOS_PC, FLAGS_PC, TIPOS_PC, estadoPC, flagPC, toneCls } from "@/lib/parque";
+import ParquePCs, { type EquipoPC } from "@/components/views/ParquePCs";
+import RecursosIT from "@/components/views/RecursosIT";
 
-interface Item {
-  id: string;
-  nombre: string;
-  categoria: string;
-  cantidad: number;
-  estado: string;
-  nota?: string;
-  aprobacion: string;
-  aprobadoPor?: string;
-  actualizado: string;
-}
+// Inventario de IT en tres pestañas:
+//   Inventario -> parque de computadoras en uso (relevamiento por usuario/área)
+//   Compras    -> equipos comprados o en proceso de alta (con aprobación del Dueño)
+//   Faltantes  -> equipos a reemplazar o puestos sin máquina
+type Tab = "inventario" | "compras" | "faltantes";
 
-const toneCls = (t: string) =>
-  ({
-    ok: "bg-ok/10 text-ok border-ok/30",
-    action: "bg-action/10 text-action border-action/30",
-    warn: "bg-warn/10 text-warn border-warn/30",
-    bad: "bg-bad/10 text-bad border-bad/30",
-    neutral: "bg-ink/5 text-muted border-line",
-    muted: "bg-ink/5 text-faint border-line",
-  }[t] || "bg-ink/5 text-muted border-line");
-
-const fecha = (iso: string) =>
-  iso ? new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }) : "";
+const EQUIPO_VACIO = {
+  usuario: "", area: "", tipo: "Notebook", hostname: "", marca: "", modelo: "",
+  cpu: "", ram: "", almacenamiento: "", gpu: "", so: "", correo: "", observaciones: "",
+  estado: "en-uso",
+};
 
 export default function InventarioView() {
-  const [items, setItems] = useState<Item[]>([]);
+  const [equipos, setEquipos] = useState<EquipoPC[]>([]);
   const [estado, setEstado] = useState<"loading" | "ok" | "error">("loading");
   const [rol, setRol] = useState("");
-  const [nuevo, setNuevo] = useState({ nombre: "", categoria: "Notebooks", cantidad: 1, estado: "por-comprar", nota: "" });
-  const [q, setQ] = useState("");
-  const [fGrupo, setFGrupo] = useState<"todos" | "pendientes" | GrupoInv>("todos");
-  const [fCat, setFCat] = useState("");
+  const [tab, setTab] = useState<Tab>("inventario");
   const [msg, setMsg] = useState("");
+  const [alta, setAlta] = useState(false);
+  const [nuevo, setNuevo] = useState(EQUIPO_VACIO);
+  const [guardando, setGuardando] = useState(false);
 
   const esAdmin = rol === "admin";
-  const puedeAprobar = rol === "admin";
 
   async function cargar() {
     setEstado("loading");
     try {
-      const j = await (await fetch("/api/inventario")).json();
+      const j = await (await fetch("/api/inventario/parque")).json();
       if (!j.ok) throw new Error();
-      setItems(j.items);
+      setEquipos(j.equipos);
       setEstado("ok");
     } catch {
       setEstado("error");
@@ -62,244 +49,208 @@ export default function InventarioView() {
       .catch(() => {});
   }, []);
 
-  async function guardar(patch: Record<string, unknown>) {
+  async function editar(id: string, patch: Record<string, string>) {
+    setMsg("");
+    setEquipos((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
     try {
       const j = await (
-        await fetch("/api/inventario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })
+        await fetch("/api/inventario/parque", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, ...patch }),
+        })
       ).json();
-      if (j.ok) setItems(j.items);
+      if (j.ok) setEquipos(j.equipos);
       else setMsg(j.error || "No se pudo guardar.");
     } catch {
       setMsg("Error de red.");
     }
   }
 
-  function editar(id: string, patch: Partial<Item>, persistir = true) {
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
-    if (persistir) guardar({ id, ...patch });
-  }
-  function aprobar(id: string, aprobacion: string) {
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, aprobacion } : it)));
-    guardar({ id, aprobacion });
-  }
-
+  // Alta manual: se pide solo el usuario/puesto; el resto se puede completar después
+  // desde el detalle de la fila. Las alertas las calcula el server con los mismos
+  // umbrales que el relevamiento.
   async function agregar(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
-    if (!nuevo.nombre.trim()) return;
-    await guardar(nuevo);
-    setNuevo({ nombre: "", categoria: nuevo.categoria, cantidad: 1, estado: "por-comprar", nota: "" });
+    if (!nuevo.usuario.trim()) return;
+    setGuardando(true);
+    try {
+      const j = await (
+        await fetch("/api/inventario/parque", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nuevo),
+        })
+      ).json();
+      if (!j.ok) throw new Error(j.error);
+      setEquipos(j.equipos);
+      setNuevo(EQUIPO_VACIO);
+      setAlta(false);
+    } catch (err) {
+      setMsg(err instanceof Error && err.message ? err.message : "No se pudo agregar el equipo.");
+    } finally {
+      setGuardando(false);
+    }
   }
 
-  async function quitar(id: string, nombre: string) {
-    if (!confirm(`¿Quitar "${nombre}" del inventario?`)) return;
-    const j = await (await fetch(`/api/inventario?id=${encodeURIComponent(id)}`, { method: "DELETE" })).json();
-    if (j.ok) setItems(j.items);
+  async function quitar(eq: { id: string; usuario: string }) {
+    if (!confirm(`¿Quitar el equipo de "${eq.usuario}" del inventario?`)) return;
+    const j = await (await fetch(`/api/inventario/parque?id=${encodeURIComponent(eq.id)}`, { method: "DELETE" })).json();
+    if (j.ok) setEquipos(j.equipos);
+    else setMsg(j.error || "No se pudo quitar.");
   }
 
-  const pendientes = useMemo(() => items.filter((it) => necesitaAprobacion(it.estado) && it.aprobacion === "pendiente").length, [items]);
+  const campo = (k: keyof typeof EQUIPO_VACIO) => ({
+    value: nuevo[k],
+    onChange: (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setNuevo((n) => ({ ...n, [k]: ev.target.value })),
+  });
 
-  const filtrados = useMemo(() => {
-    let l = items;
-    if (fGrupo === "pendientes") l = l.filter((it) => necesitaAprobacion(it.estado) && it.aprobacion === "pendiente");
-    else if (fGrupo !== "todos") l = l.filter((it) => estadoInv(it.estado).grupo === fGrupo);
-    if (fCat) l = l.filter((it) => it.categoria === fCat);
-    const t = q.trim().toLowerCase();
-    if (t) l = l.filter((it) => `${it.nombre} ${it.categoria} ${it.nota ?? ""}`.toLowerCase().includes(t));
-    return l;
-  }, [items, fGrupo, fCat, q]);
+  const enUso = useMemo(() => equipos.filter((e) => estadoPC(e.estado).tab === "inventario"), [equipos]);
+  const faltantes = useMemo(() => equipos.filter((e) => estadoPC(e.estado).tab === "faltantes"), [equipos]);
 
-  const kpis = useMemo(() => {
-    const suma = (pred: (it: Item) => boolean) => items.filter(pred).reduce((s, it) => s + (it.cantidad || 0), 0);
-    return {
-      stock: suma((it) => estadoInv(it.estado).grupo === "tenemos"),
-      porComprar: suma((it) => it.estado === "por-comprar"),
-      enCamino: suma((it) => ["pedido", "comprado", "llego"].includes(it.estado)),
-    };
-  }, [items]);
+  // Cuántos equipos tiene cada alerta (sobre el parque en uso): es el resumen que
+  // mira sistemas para priorizar upgrades.
+  const porFlag = useMemo(
+    () => FLAGS_PC.map((f) => ({ ...f, total: enUso.filter((e) => e.flags.includes(f.id)).length })).filter((f) => f.total > 0),
+    [enUso]
+  );
 
-  function exportar() {
-    descargarCSV(
-      "inventario-it",
-      ["Ítem", "Categoría", "Cantidad", "Estado", "Aprobación", "Nota", "Actualizado"],
-      filtrados.map((it) => [it.nombre, it.categoria, it.cantidad, estadoInv(it.estado).label, necesitaAprobacion(it.estado) ? aprobacionInv(it.aprobacion).label : "", it.nota ?? "", fecha(it.actualizado)])
-    );
-  }
-
-  const grupos: { id: "todos" | "pendientes" | GrupoInv; label: string }[] = [
-    { id: "todos", label: "Todo" },
-    { id: "pendientes", label: `⚠ Por aprobar${pendientes ? ` (${pendientes})` : ""}` },
-    { id: "tenemos", label: "Tenemos" },
-    { id: "comprar", label: "A comprar" },
-    { id: "otros", label: "Bajas" },
+  const tabs: { id: Tab; label: string; total?: number }[] = [
+    { id: "inventario", label: "Inventario", total: enUso.length },
+    { id: "compras", label: "Compras" },
+    { id: "faltantes", label: "Faltantes", total: faltantes.length },
   ];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-xl font-semibold text-ink">Inventario · IT / Infraestructura</h1>
-          <p className="mt-0.5 max-w-2xl text-sm text-muted">
-            Qué recursos tenemos, en qué estado están y qué falta comprar. Editá cantidad, estado y aprobación de las compras directo en la tabla.
-          </p>
-        </div>
-        <Button variant="outline" onClick={exportar} disabled={!filtrados.length}>⬇ Exportar</Button>
+      <div>
+        <h1 className="font-display text-xl font-semibold text-ink">Inventario · IT / Infraestructura</h1>
+        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+          El parque de computadoras por usuario y área, lo que está en proceso de compra y lo que falta reemplazar.
+        </p>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="En stock" value={kpis.stock} sub="unidades que tenemos" tone="ok" />
-        <Kpi label="Por comprar" value={kpis.porComprar} sub="falta pedir" tone={kpis.porComprar ? "bad" : undefined} />
-        <Kpi label="En camino" value={kpis.enCamino} sub="pedido / comprado / llegó" tone={kpis.enCamino ? "warn" : undefined} />
-        <Kpi label="Por aprobar" value={pendientes} sub="compras esperando OK" tone={pendientes ? "warn" : undefined} />
+      <div className="flex flex-wrap gap-1.5">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`rounded-full border px-3.5 py-1.5 text-2xs font-medium ${
+              tab === t.id ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+            {t.total !== undefined && <span className="ml-1.5 font-mono tnum opacity-70">{t.total}</span>}
+          </button>
+        ))}
       </div>
 
-      {/* Alta (solo IT/admin) */}
-      {esAdmin && (
-        <Card className="p-4">
-          <p className="mb-2 text-2xs font-medium uppercase tracking-wide text-faint">Agregar recurso</p>
-          <form onSubmit={agregar} className="grid grid-cols-1 gap-3 sm:grid-cols-[1.4fr_1fr_80px_1fr_auto] sm:items-end">
-            <Field label="Ítem">
-              <input className={inputClass} placeholder="Notebook, Mouse, Monitor 24…" value={nuevo.nombre} onChange={(e) => setNuevo((n) => ({ ...n, nombre: e.target.value }))} />
-            </Field>
-            <Field label="Categoría">
-              <select className={inputClass} value={nuevo.categoria} onChange={(e) => setNuevo((n) => ({ ...n, categoria: e.target.value }))}>
-                {CATEGORIAS_INV.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label="Cant.">
-              <input type="number" min={0} className={inputClass} value={nuevo.cantidad} onChange={(e) => setNuevo((n) => ({ ...n, cantidad: Number(e.target.value) }))} />
-            </Field>
-            <Field label="Estado">
-              <select className={inputClass} value={nuevo.estado} onChange={(e) => setNuevo((n) => ({ ...n, estado: e.target.value }))}>
-                {ESTADOS_INV.map((es) => <option key={es.id} value={es.id}>{es.label}</option>)}
-              </select>
-            </Field>
-            <Button type="submit" disabled={!nuevo.nombre.trim()}>Agregar</Button>
-          </form>
-          <input className={`${inputClass} mt-3`} placeholder="Nota (opcional): marca, modelo, para quién, presupuesto…" value={nuevo.nota} onChange={(e) => setNuevo((n) => ({ ...n, nota: e.target.value }))} />
-          {msg && <p className="mt-2 text-2xs text-bad">{msg}</p>}
-        </Card>
+      {msg && <p className="text-2xs text-bad">{msg}</p>}
+
+      {tab === "compras" ? (
+        <RecursosIT rol={rol} />
+      ) : estado === "loading" ? (
+        <Card className="space-y-2 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</Card>
+      ) : estado === "error" ? (
+        <Card className="p-4 text-sm text-bad">No se pudo cargar el parque de computadoras.</Card>
+      ) : tab === "inventario" ? (
+        <>
+          {esAdmin && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-2xs font-medium uppercase tracking-wide text-faint">Agregar equipo a mano</p>
+                <button onClick={() => setAlta((v) => !v)} className="text-2xs font-medium text-action hover:underline">
+                  {alta ? "Cancelar" : "+ Agregar equipo"}
+                </button>
+              </div>
+              {alta && (
+                <form onSubmit={agregar} className="mt-3 space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <Field label="Usuario o puesto *">
+                      <input className={inputClass} placeholder="Ej: Sabrina · Caja Berisso" {...campo("usuario")} />
+                    </Field>
+                    <Field label="Área / local">
+                      <input className={inputClass} placeholder="Administración, Sistemas…" {...campo("area")} />
+                    </Field>
+                    <Field label="Tipo">
+                      <select className={inputClass} {...campo("tipo")}>
+                        {TIPOS_PC.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Estado">
+                      <select className={inputClass} {...campo("estado")}>
+                        {ESTADOS_PC.map((e2) => <option key={e2.id} value={e2.id}>{e2.label}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Hostname"><input className={inputClass} {...campo("hostname")} /></Field>
+                    <Field label="Marca"><input className={inputClass} placeholder="DELL, Lenovo, HP…" {...campo("marca")} /></Field>
+                    <Field label="Modelo"><input className={inputClass} placeholder="Inspiron 15 3535" {...campo("modelo")} /></Field>
+                    <Field label="CPU"><input className={inputClass} placeholder="Intel Core i5-1335U" {...campo("cpu")} /></Field>
+                    <Field label="RAM"><input className={inputClass} placeholder="16 GB" {...campo("ram")} /></Field>
+                    <Field label="Almacenamiento"><input className={inputClass} placeholder="512 GB SSD" {...campo("almacenamiento")} /></Field>
+                    <Field label="SO"><input className={inputClass} placeholder="Windows 11 Pro" {...campo("so")} /></Field>
+                    <Field label="Correo"><input className={inputClass} placeholder="usuario@eldesembarco.com" {...campo("correo")} /></Field>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="min-w-[260px] flex-1">
+                      <Field label="Observaciones">
+                        <input className={inputClass} placeholder="Cuenta local, monitor, acta firmada…" {...campo("observaciones")} />
+                      </Field>
+                    </div>
+                    <Button type="submit" disabled={!nuevo.usuario.trim() || guardando}>
+                      {guardando ? "Guardando…" : "Agregar"}
+                    </Button>
+                  </div>
+                  <p className="text-2xs text-faint">
+                    Con la RAM, el disco y las observaciones el sistema calcula solo las alertas (RAM baja, SSD chico,
+                    cuenta local…). Podés dejar campos vacíos y completarlos después desde el detalle de la fila.
+                  </p>
+                </form>
+              )}
+            </Card>
+          )}
+
+          {porFlag.length > 0 && (
+            <Card className="flex flex-wrap items-center gap-2 p-3">
+              <span className="text-2xs uppercase tracking-wide text-faint">A revisar</span>
+              {porFlag.map((f) => (
+                <span key={f.id} title={f.desc} className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${toneCls(f.tone)}`}>
+                  {f.label} · {f.total}
+                </span>
+              ))}
+            </Card>
+          )}
+          <ParquePCs
+            equipos={enUso}
+            esAdmin={esAdmin}
+            onEditar={editar}
+            onQuitar={quitar}
+            vacio={{ title: "Sin equipos cargados", desc: "Corré el seed del relevamiento (ver docs/inventario.md)." }}
+          />
+        </>
+      ) : (
+        <>
+          <Card className="p-3 text-2xs text-muted">
+            Equipos marcados <b className="font-medium text-ink">A reemplazar</b> o puestos <b className="font-medium text-ink">Sin equipo</b>.
+            Cuando se pide el reemplazo, cargalo en <b className="font-medium text-ink">Compras</b> para que quede la aprobación.
+          </Card>
+          <ParquePCs
+            equipos={faltantes}
+            esAdmin={esAdmin}
+            onEditar={editar}
+            onQuitar={quitar}
+            vacio={{ title: "No falta nada", desc: "Ningún equipo está marcado para reemplazo ni hay puestos sin máquina." }}
+          />
+        </>
       )}
 
-      {/* Filtros */}
-      <Card className="flex flex-wrap items-center gap-3 p-3">
-        <div className="flex flex-wrap gap-1.5">
-          {grupos.map((g) => (
-            <button key={g.id} onClick={() => setFGrupo(g.id)}
-              className={`rounded-full border px-3 py-1 text-2xs font-medium ${fGrupo === g.id ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"}`}>
-              {g.label}
-            </button>
-          ))}
-        </div>
-        <select className={`${inputClass} max-w-[180px] py-1`} value={fCat} onChange={(e) => setFCat(e.target.value)}>
-          <option value="">Todas las categorías</option>
-          {CATEGORIAS_INV.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <input className={`${inputClass} max-w-[220px] py-1`} placeholder="Buscar…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <span className="ml-auto text-2xs text-faint">{filtrados.length} ítems</span>
-      </Card>
-
-      {/* Tabla */}
-      <Card className="overflow-hidden">
-        {estado === "loading" ? (
-          <div className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
-        ) : estado === "error" ? (
-          <div className="p-4 text-sm text-bad">No se pudo cargar el inventario.</div>
-        ) : filtrados.length === 0 ? (
-          <EmptyState title="Sin ítems" desc={esAdmin ? "Agregá el primer recurso arriba (ej: 4 notebooks listas, 10 mouse por comprar…)." : "No hay ítems para mostrar con este filtro."} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
-                  <th className="px-4 py-2 font-medium">Ítem</th>
-                  <th className="px-3 py-2 font-medium">Categoría</th>
-                  <th className="px-3 py-2 text-center font-medium">Cant.</th>
-                  <th className="px-3 py-2 font-medium">Estado</th>
-                  <th className="px-3 py-2 font-medium">Aprobación</th>
-                  <th className="px-3 py-2 font-medium">Nota</th>
-                  <th className="px-3 py-2 font-medium">Act.</th>
-                  {esAdmin && <th className="px-3 py-2"></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filtrados.map((it) => {
-                  const es = estadoInv(it.estado);
-                  return (
-                    <tr key={it.id} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
-                      <td className="px-4 py-2 font-medium text-ink">{it.nombre}</td>
-                      <td className="px-3 py-2">
-                        {esAdmin ? (
-                          <select className="rounded-md border border-line bg-surface px-2 py-1 text-2xs text-muted" value={it.categoria} onChange={(e) => editar(it.id, { categoria: e.target.value })}>
-                            {CATEGORIAS_INV.map((c) => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        ) : <span className="text-2xs text-muted">{it.categoria}</span>}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        {esAdmin ? (
-                          <div className="inline-flex items-center gap-1">
-                            <button onClick={() => editar(it.id, { cantidad: Math.max(0, it.cantidad - 1) })} className="grid h-6 w-6 place-items-center rounded border border-line text-muted hover:text-ink">−</button>
-                            <input type="number" min={0} value={it.cantidad}
-                              onChange={(e) => editar(it.id, { cantidad: Math.max(0, Number(e.target.value) || 0) }, false)}
-                              onBlur={(e) => guardar({ id: it.id, cantidad: Math.max(0, Number(e.target.value) || 0) })}
-                              className="w-12 rounded-md border border-line bg-surface px-1 py-1 text-center font-mono tnum text-ink" />
-                            <button onClick={() => editar(it.id, { cantidad: it.cantidad + 1 })} className="grid h-6 w-6 place-items-center rounded border border-line text-muted hover:text-ink">+</button>
-                          </div>
-                        ) : <span className="font-mono tnum text-ink">{it.cantidad}</span>}
-                      </td>
-                      <td className="px-3 py-2">
-                        {esAdmin ? (
-                          <select value={it.estado} onChange={(e) => editar(it.id, { estado: e.target.value })}
-                            className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${toneCls(es.tone)}`}>
-                            {ESTADOS_INV.map((e2) => <option key={e2.id} value={e2.id} className="bg-surface text-ink">{e2.label}</option>)}
-                          </select>
-                        ) : <span className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${toneCls(es.tone)}`}>{es.label}</span>}
-                      </td>
-                      <td className="px-3 py-2">
-                        {necesitaAprobacion(it.estado) ? (
-                          <div className="inline-flex items-center gap-1">
-                            <button title="Aprobar" disabled={!puedeAprobar} onClick={() => aprobar(it.id, "aprobado")}
-                              className={`grid h-6 w-7 place-items-center rounded text-xs font-bold ${it.aprobacion === "aprobado" ? "bg-ok text-white" : "border border-ok/40 text-ok hover:bg-ok/10"} ${!puedeAprobar ? "opacity-40" : ""}`}>✓</button>
-                            <button title="Rechazar" disabled={!puedeAprobar} onClick={() => aprobar(it.id, "rechazado")}
-                              className={`grid h-6 w-7 place-items-center rounded text-xs font-bold ${it.aprobacion === "rechazado" ? "bg-bad text-white" : "border border-bad/40 text-bad hover:bg-bad/10"} ${!puedeAprobar ? "opacity-40" : ""}`}>✗</button>
-                            {it.aprobacion === "pendiente" && <span className="ml-1 text-2xs font-medium text-warn">Pendiente</span>}
-                            {it.aprobacion !== "pendiente" && it.aprobadoPor && <span className="ml-1 text-2xs text-faint" title={it.aprobadoPor}>· {it.aprobadoPor.split("@")[0]}</span>}
-                          </div>
-                        ) : <span className="text-2xs text-faint">—</span>}
-                      </td>
-                      <td className="px-3 py-2">
-                        {esAdmin ? (
-                          <input defaultValue={it.nota ?? ""} placeholder="—"
-                            onBlur={(e) => { if (e.target.value !== (it.nota ?? "")) guardar({ id: it.id, nota: e.target.value }); }}
-                            className="w-40 rounded-md border border-transparent bg-transparent px-1 py-1 text-2xs text-muted hover:border-line focus:border-action focus:bg-surface" />
-                        ) : <span className="text-2xs text-muted">{it.nota || "—"}</span>}
-                      </td>
-                      <td className="px-3 py-2 text-2xs text-faint">{fecha(it.actualizado)}</td>
-                      {esAdmin && (
-                        <td className="px-3 py-2 text-right">
-                          <button onClick={() => quitar(it.id, it.nombre)} className="text-2xs font-medium text-bad hover:underline">Quitar</button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      {tab === "inventario" && esAdmin && (
+        <p className="text-2xs text-faint">
+          Las alertas ({FLAGS_PC.map((f) => flagPC(f.id).label).join(" · ")}) salen del relevamiento; se recalculan al correr el seed.
+        </p>
+      )}
     </div>
-  );
-}
-
-function Kpi({ label, value, sub, tone }: { label: string; value: number; sub?: string; tone?: "ok" | "warn" | "bad" }) {
-  const c = tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : "text-ink";
-  return (
-    <Card className="p-3">
-      <p className="text-2xs uppercase tracking-wide text-faint">{label}</p>
-      <p className={`mt-0.5 font-display text-2xl font-semibold ${c}`}>{value.toLocaleString("es-AR")}</p>
-      {sub && <p className="text-2xs text-faint">{sub}</p>}
-    </Card>
   );
 }

@@ -5,14 +5,18 @@ import { ROLES, ROLES_LIST, NAV_CATALOG, UNIVERSALES, puedeVerNav, homeDeNav, ty
 // Si el store está vacío, usa los defaults de ROLES (comportamiento actual).
 export type NavByRol = Record<Rol, string[]>;
 
-const CATALOGO = new Set(NAV_CATALOG.map((i) => i.href));
+// Rutas que SÍ se administran por rol (el catálogo menos las de lista blanca).
+const ADMINISTRABLES = NAV_CATALOG.filter((i) => !i.soloEmails).map((i) => i.href);
+const CATALOGO = new Set(ADMINISTRABLES);
 const defaults = (): NavByRol =>
   Object.fromEntries(ROLES_LIST.map((r) => [r, [...ROLES[r].nav]])) as NavByRol;
 
 // Garantías anti-autobloqueo: /guia siempre. El ADMIN es superusuario y SIEMPRE ve
 // todo el catálogo (así las rutas nuevas aparecen solas, sin habilitarlas a mano).
 export function blindar(rol: Rol, nav: string[]): string[] {
-  if (rol === "admin") return NAV_CATALOG.map((i) => i.href);
+  // Las pantallas de lista blanca (Credenciales) nunca entran en el nav de un rol:
+  // su permiso es por email y lo resuelven el layout, la página y su API.
+  if (rol === "admin") return ADMINISTRABLES;
   const limpio = nav.filter((h) => CATALOGO.has(h));
   const set = new Set(limpio);
   for (const u of UNIVERSALES) set.add(u);

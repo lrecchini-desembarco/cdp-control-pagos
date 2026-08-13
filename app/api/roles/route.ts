@@ -11,7 +11,9 @@ async function soloAdmin() {
 }
 
 const meta = () => ({
-  catalog: NAV_CATALOG,
+  // Las pantallas de lista blanca (Credenciales) no se administran por rol: se
+  // sacan del catálogo para que no aparezcan como asignables en /usuarios.
+  catalog: NAV_CATALOG.filter((i) => !i.soloEmails),
   roles: ROLES_LIST.map((r) => ({ id: r, label: ROLES[r].label })),
   fijas: NAV_SIEMPRE, // no se pueden desmarcar
 });

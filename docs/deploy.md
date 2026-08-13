@@ -35,6 +35,23 @@ TANGO_BRIDGE_SECRET=<el mismo BRIDGE_SECRET del bridge>
 > Sin estas, Ventas y Precios muestran datos de ejemplo (mock) y lo indican con un badge.
 > El **Cruce** además necesita `RAVEN_TOKEN` (pedidos reales) para ser útil.
 
+**c-ter. Credenciales (obligatoria si se usa la pantalla `/credenciales`):** las contraseñas se
+guardan cifradas y sin esta clave la pantalla no funciona (no hay fallback a texto plano).
+Generala con `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`:
+```
+CREDENCIALES_KEY=<32 bytes en base64>
+```
+> Si se pierde o se cambia, las contraseñas guardadas no se recuperan. Ver `docs/credenciales.md`.
+
+**c-bis. Tutoriales en la carpeta de red (opcional):** por defecto los tutoriales salen del
+seed (`public/tutoriales`) y de lo que se sube desde la UI (KV). Si la app corre **dentro de la
+red de la oficina**, puede usar el SMB del Proxmox como fuente de verdad:
+```
+TUTORIALES_DIR=\\proxmox\documentacion\tutoriales    # o /mnt/… si está montado
+```
+> Desde Vercel no sirve: la app en la nube no llega al SMB (misma limitación que Tango).
+> Ver `docs/tutoriales.md`.
+
 **d. Notificaciones por email — Google Workspace (opcional):**
 ```
 NOTIFY_CHANNEL=email
@@ -57,6 +74,8 @@ Ver detalle en `docs/notificaciones.md`.
 | `TANGO_BRIDGE_URL` / `TANGO_BRIDGE_SECRET` | Puente al SQL interno | Solo para Tango |
 | `RAVEN_TOKEN` | Pedidos reales (Cruce) | Solo para Cruce |
 | `NOTIFY_CHANNEL=email` + `SMTP_USER`/`SMTP_PASS`/`NOTIFY_EMAIL_TO` | Notificaciones por email (Workspace) | Opcional |
+| `TUTORIALES_DIR` | Tutoriales desde el SMB de la oficina | Solo si la app corre en la red |
+| `CREDENCIALES_KEY` | Cifra las contraseñas de `/credenciales` | Sí, si se usa esa pantalla |
 
 ## 3) Persistencia — provisionar Vercel KV  ⚠️ importante
 - Project → **Storage** → crear una base **KV** (Upstash) y conectarla al proyecto.

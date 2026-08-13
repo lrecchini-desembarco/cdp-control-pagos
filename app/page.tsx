@@ -8,7 +8,7 @@ import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { pedidosSourceName } from "@/lib/sources";
 import { getSesion } from "@/lib/session";
 import { navDeSesion } from "@/lib/roles-store";
-import { NAV_CATALOG, puedeVerNav } from "@/lib/roles";
+import { NAV_CATALOG, puedeVerNav, visiblePara } from "@/lib/roles";
 import { Card } from "@/components/ui/primitives";
 import BienvenidaGuia from "@/components/views/BienvenidaGuia";
 import type { CruceRow } from "@/lib/types";
@@ -37,7 +37,7 @@ export default async function Page() {
   // Herramientas que este usuario puede ver (para el cartel de bienvenida).
   const sesion = await getSesion();
   const miNav = sesion ? await navDeSesion(sesion) : [];
-  const misHerramientas = NAV_CATALOG.filter((i) => puedeVerNav(miNav, i.href));
+  const misHerramientas = visiblePara(NAV_CATALOG, sesion?.email).filter((i) => puedeVerNav(miNav, i.href));
   const nombre = sesion?.email ? capitalizar(sesion.email.split("@")[0].split(/[._-]/)[0]) : undefined;
 
   const ultimaFecha = cruce.map((r) => r.fecha).sort().reverse()[0] ?? "—";
