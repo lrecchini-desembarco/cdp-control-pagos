@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Card, inputClass, Button, EmptyState } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { ESTADOS_PC, FLAGS_PC, estadoPC, flagPC, toneCls } from "@/lib/parque";
@@ -75,7 +75,7 @@ export default function ParquePCs({
 }: {
   equipos: EquipoPC[];
   esAdmin: boolean;
-  onEditar: (id: string, patch: Record<string, string>) => void;
+  onEditar: (id: string, patch: Record<string, string>) => Promise<void> | void;
   onQuitar?: (eq: EquipoPC) => void;
   vacio: { title: string; desc: string };
 }) {
@@ -231,66 +231,7 @@ export default function ParquePCs({
                       {abierto && (
                         <tr className="border-b border-line/70 bg-ink/[0.02]">
                           <td colSpan={COLUMNAS.length + 2} className="px-4 py-3">
-                            {e.manual && esAdmin ? (
-                              // Cargado a mano: se corrige acá mismo (guarda al salir del campo).
-                              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                {EDITABLES.map((c) => (
-                                  <label key={c.id} className="block">
-                                    <span className="text-[10px] uppercase tracking-wide text-faint">{c.label}</span>
-                                    <input
-                                      defaultValue={String(e[c.id] ?? "")}
-                                      onBlur={(ev) => { if (ev.target.value !== String(e[c.id] ?? "")) onEditar(e.id, { [c.id]: ev.target.value }); }}
-                                      className={`${inputClass} py-1 text-2xs`}
-                                    />
-                                  </label>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="grid gap-x-6 gap-y-1 text-2xs text-muted sm:grid-cols-2 lg:grid-cols-3">
-                                <p><span className="text-faint">Hostname:</span> {e.hostname || "—"}</p>
-                                <p><span className="text-faint">CPU:</span> {e.cpu || "—"}</p>
-                                <p><span className="text-faint">RAM:</span> {e.ram || "—"}</p>
-                                <p><span className="text-faint">Almacenamiento:</span> {e.almacenamiento || "—"}</p>
-                                <p><span className="text-faint">GPU:</span> {e.gpu || "—"}</p>
-                                <p><span className="text-faint">SO:</span> {e.so || "—"}</p>
-                                <p><span className="text-faint">Correo:</span> {e.correo || "—"}</p>
-                              </div>
-                            )}
-                            {e.manual && esAdmin ? (
-                              <label className="mt-3 block">
-                                <span className="text-[10px] uppercase tracking-wide text-faint">Observaciones</span>
-                                <input
-                                  defaultValue={e.observaciones ?? ""}
-                                  placeholder="Cuenta local, monitor, acta firmada…"
-                                  onBlur={(ev) => { if (ev.target.value !== (e.observaciones ?? "")) onEditar(e.id, { observaciones: ev.target.value }); }}
-                                  className={`${inputClass} py-1 text-2xs`}
-                                />
-                              </label>
-                            ) : (
-                              e.observaciones && <p className="mt-2 text-2xs text-muted"><span className="text-faint">Observaciones del relevamiento:</span> {e.observaciones}</p>
-                            )}
-                            {e.flags.length > 0 && (
-                              <ul className="mt-2 space-y-0.5">
-                                {e.flags.map((f) => (
-                                  <li key={f} className="text-2xs text-muted">· <b className="font-medium text-ink">{flagPC(f).label}</b> — {flagPC(f).desc}</li>
-                                ))}
-                              </ul>
-                            )}
-                            {esAdmin && (
-                              <input
-                                defaultValue={e.nota ?? ""}
-                                placeholder="Nota de sistemas (qué se decidió, a quién se le asigna…)"
-                                onBlur={(ev) => { if (ev.target.value !== (e.nota ?? "")) onEditar(e.id, { nota: ev.target.value }); }}
-                                className={`${inputClass} mt-3 max-w-xl py-1 text-2xs`}
-                              />
-                            )}
-                            {!esAdmin && e.nota && <p className="mt-2 text-2xs text-muted"><span className="text-faint">Nota:</span> {e.nota}</p>}
-                            {esAdmin && e.manual && onQuitar && (
-                              <div className="mt-3 flex items-center gap-3">
-                                <button onClick={() => onQuitar(e)} className="text-2xs font-medium text-bad hover:underline">Quitar equipo</button>
-                                <span className="text-2xs text-faint">Cargado a mano · las alertas se recalculan solas al guardar.</span>
-                              </div>
-                            )}
+                            <Detalle equipo={e} esAdmin={esAdmin} onEditar={onEditar} onQuitar={onQuitar} />
                           </td>
                         </tr>
                       )}
@@ -302,6 +243,141 @@ export default function ParquePCs({
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+/**
+ * Panel de detalle de un equipo. Los cargados a mano se editan campo por campo;
+ * los del relevamiento son de solo lectura y solo aceptan la nota de sistemas.
+ * En los dos casos los cambios se guardan con el botón, nunca solos: así se ve
+ * qué quedó pendiente de guardar y no se dispara un request por cada campo.
+ */
+function Detalle({
+  equipo,
+  esAdmin,
+  onEditar,
+  onQuitar,
+}: {
+  equipo: EquipoPC;
+  esAdmin: boolean;
+  onEditar: (id: string, patch: Record<string, string>) => Promise<void> | void;
+  onQuitar?: (eq: EquipoPC) => void;
+}) {
+  const editable = Boolean(equipo.manual) && esAdmin;
+  const original = useMemo(() => {
+    const base: Record<string, string> = { nota: equipo.nota ?? "" };
+    if (editable) {
+      for (const c of EDITABLES) base[c.id] = String(equipo[c.id] ?? "");
+      base.observaciones = equipo.observaciones ?? "";
+    }
+    return base;
+  }, [equipo, editable]);
+
+  const [form, setForm] = useState(original);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  // Si el equipo se actualiza desde afuera (el guardado que vuelve del server, una
+  // recarga), se re-sincroniza. El cartel "Guardado ✓" no se toca acá: lo limpia el
+  // próximo tecleo, si no lo borraría este mismo efecto al llegar la respuesta.
+  useEffect(() => {
+    setForm(original);
+  }, [original]);
+
+  const cambios = Object.keys(form).filter((k) => form[k] !== original[k]);
+  const set = (k: string, v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setGuardado(false);
+  };
+
+  async function guardar() {
+    if (!cambios.length) return;
+    setGuardando(true);
+    try {
+      await onEditar(equipo.id, Object.fromEntries(cambios.map((k) => [k, form[k]])));
+      setGuardado(true);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      {editable ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {EDITABLES.map((c) => (
+            <label key={c.id} className="block">
+              <span className="text-[10px] uppercase tracking-wide text-faint">{c.label}</span>
+              <input value={form[c.id] ?? ""} onChange={(ev) => set(c.id, ev.target.value)} className={`${inputClass} py-1 text-2xs`} />
+            </label>
+          ))}
+          <label className="block sm:col-span-2 lg:col-span-3">
+            <span className="text-[10px] uppercase tracking-wide text-faint">Observaciones</span>
+            <input
+              value={form.observaciones ?? ""}
+              onChange={(ev) => set("observaciones", ev.target.value)}
+              placeholder="Cuenta local, monitor, acta firmada…"
+              className={`${inputClass} py-1 text-2xs`}
+            />
+          </label>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-x-6 gap-y-1 text-2xs text-muted sm:grid-cols-2 lg:grid-cols-3">
+            <p><span className="text-faint">Hostname:</span> {equipo.hostname || "—"}</p>
+            <p><span className="text-faint">CPU:</span> {equipo.cpu || "—"}</p>
+            <p><span className="text-faint">RAM:</span> {equipo.ram || "—"}</p>
+            <p><span className="text-faint">Almacenamiento:</span> {equipo.almacenamiento || "—"}</p>
+            <p><span className="text-faint">GPU:</span> {equipo.gpu || "—"}</p>
+            <p><span className="text-faint">SO:</span> {equipo.so || "—"}</p>
+            <p><span className="text-faint">Correo:</span> {equipo.correo || "—"}</p>
+          </div>
+          {equipo.observaciones && (
+            <p className="mt-2 text-2xs text-muted"><span className="text-faint">Observaciones del relevamiento:</span> {equipo.observaciones}</p>
+          )}
+        </>
+      )}
+
+      {equipo.flags.length > 0 && (
+        <ul className="mt-2 space-y-0.5">
+          {equipo.flags.map((f) => (
+            <li key={f} className="text-2xs text-muted">· <b className="font-medium text-ink">{flagPC(f).label}</b> — {flagPC(f).desc}</li>
+          ))}
+        </ul>
+      )}
+
+      {esAdmin ? (
+        <label className="mt-3 block max-w-xl">
+          <span className="text-[10px] uppercase tracking-wide text-faint">Nota de sistemas</span>
+          <input
+            value={form.nota ?? ""}
+            onChange={(ev) => set("nota", ev.target.value)}
+            placeholder="Qué se decidió, a quién se le asigna…"
+            className={`${inputClass} py-1 text-2xs`}
+          />
+        </label>
+      ) : (
+        equipo.nota && <p className="mt-2 text-2xs text-muted"><span className="text-faint">Nota:</span> {equipo.nota}</p>
+      )}
+
+      {esAdmin && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button onClick={guardar} disabled={!cambios.length || guardando}>
+            {guardando ? "Guardando…" : "Guardar cambios"}
+          </Button>
+          {cambios.length > 0 && !guardando && (
+            <span className="text-2xs text-warn">{cambios.length} cambio{cambios.length === 1 ? "" : "s"} sin guardar</span>
+          )}
+          {guardado && !cambios.length && <span className="text-2xs text-ok">Guardado ✓</span>}
+          {editable && <span className="text-2xs text-faint">Las alertas se recalculan al guardar.</span>}
+          {editable && onQuitar && (
+            <button onClick={() => onQuitar(equipo)} className="ml-auto text-2xs font-medium text-bad hover:underline">
+              Quitar equipo
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
