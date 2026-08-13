@@ -9,7 +9,7 @@ import EstadoSeccion from "@/components/layout/EstadoSeccion";
 import { MobileNavProvider } from "@/components/layout/MobileNav";
 import { PrivacidadProvider } from "@/components/layout/Privacidad";
 import { getSesion } from "@/lib/session";
-import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav } from "@/lib/roles";
+import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav, visiblePara, NAV_POR_EMAIL } from "@/lib/roles";
 import { getRolesNav, blindar } from "@/lib/roles-store";
 import { googlePlacesConfigurado } from "@/lib/google-places";
 
@@ -41,15 +41,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       ? blindar(sesion.rol, sesion.nav)
       : navByRol?.[sesion.rol] ?? []
     : [];
-  // Gating por rol: si el rol no puede ver esta ruta, lo mandamos a su home (las TV se saltan).
-  if (sesion && pathname && !esPantallaTv && !puedeVerNav(miNav, ruta)) {
+  // Gating: las pantallas de lista blanca (Credenciales) no dependen del rol sino
+  // del email; el resto, del nav del usuario. Si no puede, va a su home (las TV se saltan).
+  const porEmail = visiblePara(NAV_CATALOG, sesion?.email).filter((i) => i.soloEmails).map((i) => i.href);
+  const puedeEntrar = (r: string) => (NAV_POR_EMAIL.includes(r) ? porEmail.includes(r) : puedeVerNav(miNav, r));
+  if (sesion && pathname && !esPantallaTv && !puedeEntrar(ruta)) {
     redirect(homeDeNav(miNav));
   }
   // Items del menú que ve este rol (con su ícono/label del catálogo). Si Google
   // Places está configurado, Reseñas deja de ser "revisar" (foto) y pasa a "en vivo".
   const placesOn = googlePlacesConfigurado();
-  const itemsNav = NAV_CATALOG
-    .filter((i) => puedeVerNav(miNav, i.href))
+  // visiblePara: saca las pantallas de lista blanca (ej. Credenciales) si este
+  // usuario no está en ellas. No las ve ni el admin. La página y su API lo
+  // vuelven a chequear igual: esto es solo el menú.
+  const itemsNav = visiblePara(NAV_CATALOG, sesion?.email)
+    .filter((i) => puedeEntrar(i.href))
     .map((i) => (placesOn && i.href === "/resenas" ? { ...i, fresh: "vivo" as const } : i));
 
   const body = (
