@@ -14,8 +14,20 @@ export interface Sesion {
  * store de usuarios (fuente de verdad), así no se puede escalar tocando la cookie.
  */
 export async function getSesion(): Promise<Sesion | null> {
-  const email = await leerSesionCookie(cookies().get(COOKIE)?.value);
+  const email = await leerSesionCookie(cookies().get(COOKIE)?.value) || sesionDevEmail();
   if (!email) return null;
   const u = await findUsuario(email);
+  // En dev, si el email de auto-login no está en el store, se entra igual como admin.
+  if (!u && sesionDevEmail() === email) return { email, rol: "admin" };
   return u ? { email: u.email, rol: u.rol, ...(u.nav ? { nav: u.nav } : {}) } : null;
+}
+
+/**
+ * Email de auto-login para desarrollo LOCAL, o "" si no aplica. Doble candado para
+ * que NUNCA corra en producción: exige NODE_ENV != production Y la var DEV_AUTOLOGIN
+ * (que solo está en el .env.local de la máquina, no en Vercel).
+ */
+function sesionDevEmail(): string {
+  if (process.env.NODE_ENV === "production") return "";
+  return process.env.DEV_AUTOLOGIN ?? "";
 }

@@ -11,8 +11,12 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const esPublica = PUBLICAS.some((p) => pathname === p || pathname.startsWith(p + "/"));
   const tieneSesion = Boolean(await leerSesionCookie(req.cookies.get(COOKIE)?.value));
+  // Auto-login SOLO en dev local: si NO es producción y está DEV_AUTOLOGIN, no manda al
+  // login (la sesión sintética la arma getSesion). Nunca aplica en Vercel (NODE_ENV=production
+  // y la var no existe allá). Ver lib/session.ts.
+  const devAuto = process.env.NODE_ENV !== "production" && Boolean(process.env.DEV_AUTOLOGIN);
 
-  if (!tieneSesion && !esPublica) {
+  if (!tieneSesion && !esPublica && !devAuto) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
