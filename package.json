@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/matar-dev.ps1",
+    "predev": "node scripts/matar-dev.mjs",
     "dev": "next dev",
     "dev:limpio": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-limpio.ps1",
     "build": "next build",
