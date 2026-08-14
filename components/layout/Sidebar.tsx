@@ -7,10 +7,22 @@ import { FRESH_META } from "@/lib/roles";
 import { useMobileNav } from "@/components/layout/MobileNav";
 import type { Rol, NavItem, Fresh } from "@/lib/roles";
 
+const norm = (s: string) =>
+  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
 export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) {
   const path = usePathname();
   const { abierto, setAbierto } = useMobileNav();
   const verAlertas = items.some((n) => n.href === "/alertas");
+
+  // Buscador de ítems del menú: filtra por nombre, sección o descripción (sin acentos).
+  const [q, setQ] = useState("");
+  const visibles = q.trim()
+    ? items.filter((n) => {
+        const t = norm(q);
+        return norm(n.label).includes(t) || norm(n.section ?? "").includes(t) || norm(n.desc ?? "").includes(t);
+      })
+    : items;
 
   const [urgentes, setUrgentes] = useState(0);
   useEffect(() => {
@@ -42,11 +54,30 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
         </div>
       </div>
 
+      {/* Buscador de ítems del menú */}
+      <div className="px-3 pb-2">
+        <div className="relative">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-sidebar-muted">⌕</span>
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar en el menú…"
+            aria-label="Buscar ítems del menú"
+            className="w-full rounded-lg border border-sidebar-line bg-white/5 py-1.5 pl-7 pr-2 text-sm text-white placeholder:text-sidebar-muted focus:border-white/30 focus:outline-none"
+          />
+        </div>
+      </div>
+
       <nav data-tour="nav" className="flex-1 overflow-y-auto px-3 py-2">
-        {items.map((n, i) => {
+        {visibles.length === 0 && (
+          <p className="px-3 py-4 text-xs text-sidebar-muted">Sin resultados para “{q}”.</p>
+        )}
+        {visibles.map((n, i) => {
           const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
           // Encabezado de sección: se muestra cuando la sección cambia respecto al ítem anterior.
-          const header = n.section && n.section !== items[i - 1]?.section ? n.section : null;
+          // (Al filtrar se calcula sobre la lista visible, no la completa.)
+          const header = n.section && n.section !== visibles[i - 1]?.section ? n.section : null;
           return (
             <div key={n.href}>
               {header && (
