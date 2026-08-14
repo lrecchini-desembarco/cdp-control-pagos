@@ -29,7 +29,12 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const sesion = await getSesion();
   const pathname = headers().get("x-pathname") ?? "";
-  const ruta = pathname === "/" ? "/" : "/" + (pathname.split("/").filter(Boolean)[0] ?? "");
+  const segs = pathname.split("/").filter(Boolean);
+  const ruta = pathname === "/" ? "/" : "/" + (segs[0] ?? "");
+  // Los tutoriales se gatean por la subruta específica (tango/ayres/...), no solo por
+  // el padre "/tutoriales", así un rol restringido no entra a los que no le tocan.
+  const rutaGate = ruta === "/tutoriales" && segs[1] ? `/tutoriales/${segs[1]}` : ruta;
+  const enOnboarding = ruta === "/franquiciado";
 
   // Pantallas de TV: tablero puro, SIN menú lateral ni barra superior (aunque haya sesión).
   const esPantallaTv = ruta === "/tv" || ruta === "/cartelera";
@@ -45,7 +50,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // del email; el resto, del nav del usuario. Si no puede, va a su home (las TV se saltan).
   const porEmail = visiblePara(NAV_CATALOG, sesion?.email).filter((i) => i.soloEmails).map((i) => i.href);
   const puedeEntrar = (r: string) => (NAV_POR_EMAIL.includes(r) ? porEmail.includes(r) : puedeVerNav(miNav, r));
-  if (sesion && pathname && !esPantallaTv && !puedeEntrar(ruta)) {
+  // Onboarding del franquiciado: sin perfil (puesto) va a completarlo; con perfil, o si
+  // no es franquiciado, no puede quedarse en esa pantalla.
+  if (sesion && !esPantallaTv) {
+    if (sesion.rol === "franquiciado" && !sesion.puesto && !enOnboarding) redirect("/franquiciado");
+    if (enOnboarding && (sesion.rol !== "franquiciado" || sesion.puesto)) redirect(homeDeNav(miNav));
+  }
+  if (sesion && pathname && !esPantallaTv && !enOnboarding && !puedeEntrar(rutaGate)) {
     redirect(homeDeNav(miNav));
   }
   // Items del menú que ve este rol (con su ícono/label del catálogo). Si Google
@@ -63,7 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans">
         {/* Anti-flash: aplica el modo privacidad ANTES de pintar (evita mostrar los montos por un frame). */}
         <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('cdp_privacy')==='1')document.documentElement.dataset.privacy='on'}catch(e){}` }} />
-        {sesion && !esPantallaTv ? (
+        {sesion && !esPantallaTv && !enOnboarding ? (
           <PrivacidadProvider>
             <MobileNavProvider>
               <div className="flex h-screen overflow-hidden">

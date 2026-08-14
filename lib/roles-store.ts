@@ -1,5 +1,5 @@
 import { readStore, writeStore } from "./store";
-import { ROLES, ROLES_LIST, NAV_CATALOG, UNIVERSALES, puedeVerNav, homeDeNav, type Rol } from "./roles";
+import { ROLES, ROLES_LIST, NAV_CATALOG, UNIVERSALES_BASE, TUTORIALES_TODOS, puedeVerNav, homeDeNav, type Rol } from "./roles";
 
 // Qué items del menú ve cada rol. Editable desde /usuarios y persistido (KV/file).
 // Si el store está vacío, usa los defaults de ROLES (comportamiento actual).
@@ -19,7 +19,11 @@ export function blindar(rol: Rol, nav: string[]): string[] {
   if (rol === "admin") return ADMINISTRABLES;
   const limpio = nav.filter((h) => CATALOGO.has(h));
   const set = new Set(limpio);
-  for (const u of UNIVERSALES) set.add(u);
+  // /guia siempre (anti-autobloqueo).
+  set.add("/guia");
+  // Roles restringidos (franquiciado): solo ven lo que dice su nav — NO se les suman
+  // todos los tutoriales. Los roles normales sí ven las 4 secciones de tutoriales.
+  if (!ROLES[rol].restringido) for (const u of TUTORIALES_TODOS) set.add(u);
   // preserva el orden del catálogo
   return NAV_CATALOG.map((i) => i.href).filter((h) => set.has(h));
 }

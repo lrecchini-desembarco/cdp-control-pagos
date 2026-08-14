@@ -1,12 +1,16 @@
 import { cookies } from "next/headers";
 import { findUsuario } from "./users-store";
 import { COOKIE, leerSesionCookie } from "./auth-cookie";
-import type { Rol } from "./roles";
+import type { Rol, Puesto } from "./roles";
 
 export interface Sesion {
   email: string;
   rol: Rol;
   nav?: string[]; // pantallas propias del usuario (pisan el rol); undefined = usar el rol
+  // Perfil del franquiciado (lo completa en su primer ingreso).
+  marca?: string;
+  local?: string;
+  puesto?: Puesto;
 }
 
 /**
@@ -19,7 +23,15 @@ export async function getSesion(): Promise<Sesion | null> {
   const u = await findUsuario(email);
   // En dev, si el email de auto-login no está en el store, se entra igual como admin.
   if (!u && sesionDevEmail() === email) return { email, rol: "admin" };
-  return u ? { email: u.email, rol: u.rol, ...(u.nav ? { nav: u.nav } : {}) } : null;
+  return u
+    ? {
+        email: u.email, rol: u.rol,
+        ...(u.nav ? { nav: u.nav } : {}),
+        ...(u.marca ? { marca: u.marca } : {}),
+        ...(u.local ? { local: u.local } : {}),
+        ...(u.puesto ? { puesto: u.puesto } : {}),
+      }
+    : null;
 }
 
 /**

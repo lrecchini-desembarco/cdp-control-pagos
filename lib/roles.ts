@@ -3,12 +3,24 @@
 
 import { EMAILS_CREDENCIALES } from "./credenciales";
 
-export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia" | "apps-gerencia" | "pendiente";
+export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia" | "apps-gerencia" | "franquiciado" | "pendiente";
+
+// Puestos del franquiciado (los elige el usuario en su primer ingreso). Por ahora
+// no cambian los ítems que ve (todos ven Tutoriales Tango+Ayres); queda el gancho
+// para que más adelante cada puesto habilite distintas pantallas.
+export type Puesto = "cajero" | "supervisor" | "gerente";
+export const PUESTOS: { id: Puesto; label: string }[] = [
+  { id: "cajero", label: "Cajero" },
+  { id: "supervisor", label: "Supervisor" },
+  { id: "gerente", label: "Gerente" },
+];
+export const esPuesto = (v: unknown): v is Puesto => v === "cajero" || v === "supervisor" || v === "gerente";
 
 export interface RolInfo {
   label: string;
   nav: string[];          // rutas que ve en el menú (la primera es su "home")
   gestionaUsuarios: boolean;
+  restringido?: boolean;  // true = NO hereda las universales (solo ve lo que dice su nav + /guia)
 }
 
 export const ROLES: Record<Rol, RolInfo> = {
@@ -53,6 +65,14 @@ export const ROLES: Record<Rol, RolInfo> = {
     nav: ["/ventas", "/precios", "/compras", "/facturacion", "/actividad", "/organigrama", "/guia"],
     gestionaUsuarios: false,
   },
+  franquiciado: {
+    label: "Franquiciado",
+    // Acceso restringido (restringido: true): NO ve las universales generales, solo
+    // los Tutoriales de Tango y Ayres + la Guía. Elige marca/local/puesto al entrar.
+    nav: ["/tutoriales/tango", "/tutoriales/ayres", "/guia"],
+    gestionaUsuarios: false,
+    restringido: true,
+  },
   pendiente: {
     label: "Sin acceso",
     // Auto-provisionado (entró con Google pero el admin todavía no le asignó rol).
@@ -62,10 +82,10 @@ export const ROLES: Record<Rol, RolInfo> = {
   },
 };
 
-export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion", "resenas", "gerencia", "apps-gerencia", "pendiente"];
+export const ROLES_LIST: Rol[] = ["admin", "operaciones", "local", "comparacion", "resenas", "gerencia", "apps-gerencia", "franquiciado", "pendiente"];
 
 export const esRol = (v: unknown): v is Rol =>
-  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion" || v === "resenas" || v === "gerencia" || v === "apps-gerencia" || v === "pendiente";
+  v === "admin" || v === "operaciones" || v === "local" || v === "comparacion" || v === "resenas" || v === "gerencia" || v === "apps-gerencia" || v === "franquiciado" || v === "pendiente";
 
 // Catálogo maestro de items del menú (href + label + ícono). El QUÉ VE cada rol
 // se define eligiendo de acá (editable desde /usuarios, persistido en el store).
@@ -160,7 +180,13 @@ export const NAV_CATALOG: NavItem[] = [
 // solo admin y eso lo corta la API). /organigrama es togglable desde Usuarios.
 // "/tutoriales" (a secas) es la sección padre: el layout gatea por el primer
 // segmento de la ruta, así que sin ella las 4 subpáginas rebotan al home.
-export const UNIVERSALES = ["/guia", "/tutoriales", "/tutoriales/tango", "/tutoriales/ayres", "/tutoriales/raven", "/tutoriales/qlik"];
+// Universales: las ve cualquier rol NO restringido y no se pueden sacar. /guia y el
+// padre "/tutoriales" (routing) son para TODOS, incluso los restringidos. Las 4
+// subpáginas de tutoriales son universales para los roles normales, pero NO para los
+// restringidos (que solo ven las que tengan en su nav) — por eso van aparte.
+export const UNIVERSALES_BASE = ["/guia", "/tutoriales"];
+export const TUTORIALES_TODOS = ["/tutoriales/tango", "/tutoriales/ayres", "/tutoriales/raven", "/tutoriales/qlik"];
+export const UNIVERSALES = [...UNIVERSALES_BASE, ...TUTORIALES_TODOS];
 export const NAV_SIEMPRE = UNIVERSALES;
 
 /**
@@ -177,16 +203,21 @@ export const visiblePara = (items: NavItem[], email?: string | null): NavItem[] 
 /** Pantallas cuyo permiso NO se administra por rol (se gatean por email). */
 export const NAV_POR_EMAIL = NAV_CATALOG.filter((i) => i.soloEmails).map((i) => i.href);
 
-/** Las universales las ve cualquiera; el resto según el rol (defaults de ROLES). */
+/** Las universales base las ve cualquiera; los tutoriales, todos salvo los restringidos. */
 export function puedeVer(rol: Rol, href: string): boolean {
-  if (UNIVERSALES.includes(href)) return true;
+  if (UNIVERSALES_BASE.includes(href)) return true;
+  if (!ROLES[rol].restringido && TUTORIALES_TODOS.includes(href)) return true;
   return ROLES[rol].nav.includes(href);
 }
 export const homeDe = (rol: Rol) => ROLES[rol].nav[0];
 
-// Versiones "config-aware": operan sobre un array de nav (el del store, editable).
-export const puedeVerNav = (nav: string[], href: string): boolean => UNIVERSALES.includes(href) || nav.includes(href);
-// La home es la primera pantalla "de trabajo": no /guia ni los Tutoriales, que
-// son universales y quedarían de home para cualquiera sin rol asignado.
+// Versiones "config-aware": operan sobre un array de nav (el del store, ya "blindado").
+// Los tutoriales NO son universales acá: cada rol los tiene (o no) en su nav según
+// blindar() — así un rol restringido solo ve los tutoriales que le corresponden.
+export const puedeVerNav = (nav: string[], href: string): boolean => UNIVERSALES_BASE.includes(href) || nav.includes(href);
+// La home es la primera pantalla "de trabajo"; si el rol solo tiene tutoriales
+// (franquiciado), cae al primer tutorial; último recurso, la guía.
 export const homeDeNav = (nav: string[]): string =>
-  nav.find((h) => h !== "/guia" && !h.startsWith("/tutoriales")) ?? "/guia";
+  nav.find((h) => h !== "/guia" && !h.startsWith("/tutoriales")) ??
+  nav.find((h) => h.startsWith("/tutoriales/")) ??
+  "/guia";

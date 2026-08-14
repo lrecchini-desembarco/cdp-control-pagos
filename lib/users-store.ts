@@ -1,13 +1,17 @@
 import { readStore, writeStore } from "./store";
-import { esRol } from "./roles";
+import { esRol, esPuesto } from "./roles";
 import { hashPassword } from "./auth-hash";
-import type { Rol } from "./roles";
+import type { Rol, Puesto } from "./roles";
 
 export interface Usuario {
   email: string;
   rol: Rol;
   pass?: string;   // hash de su clave propia; si falta, usa la clave genérica
   nav?: string[];  // pantallas que ve ESTE usuario (pisa el nav del rol). Si falta, usa el del rol.
+  // Perfil del franquiciado (lo completa en su primer ingreso).
+  marca?: string;
+  local?: string;
+  puesto?: Puesto;
 }
 
 // Usuarios sembrados (sirven de ejemplo y garantizan que siempre haya un admin).
@@ -43,9 +47,32 @@ export async function addUsuario(email: string, rol: Rol, password?: string, nav
   // nav propio: si mandan un array lo usa (aunque sea vacío = solo lo fijo); si es
   // undefined, conserva el que tenía. Los admin ven todo igual (blindar lo maneja).
   const navPropio = nav !== undefined ? nav : previo?.nav;
-  users.push({ email: norm(email), rol, ...(pass ? { pass } : {}), ...(navPropio ? { nav: navPropio } : {}) });
+  users.push({
+    email: norm(email), rol,
+    ...(pass ? { pass } : {}),
+    ...(navPropio ? { nav: navPropio } : {}),
+    // Conserva el perfil de franquiciado al editar el rol/clave.
+    ...(previo?.marca ? { marca: previo.marca } : {}),
+    ...(previo?.local ? { local: previo.local } : {}),
+    ...(previo?.puesto ? { puesto: previo.puesto } : {}),
+  });
   await writeStore("usuarios", users);
   return users;
+}
+
+/** Guarda el perfil de franquiciado (marca/local/puesto) que el propio usuario elige al entrar. */
+export async function setPerfilFranquiciado(email: string, marca: string, local: string, puesto: string): Promise<Usuario> {
+  const e = norm(email);
+  if (!esPuesto(puesto)) throw new Error("Puesto inválido.");
+  if (!marca.trim() || !local.trim()) throw new Error("Marca y local son obligatorios.");
+  const actuales = await getUsuarios();
+  const u = actuales.find((x) => norm(x.email) === e);
+  if (!u) throw new Error("Usuario no encontrado.");
+  u.marca = marca.trim();
+  u.local = local.trim();
+  u.puesto = puesto;
+  await writeStore("usuarios", actuales);
+  return u;
 }
 
 /**
