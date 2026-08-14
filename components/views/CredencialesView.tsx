@@ -105,6 +105,15 @@ export default function CredencialesView() {
     onChange: (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setNueva((n) => ({ ...n, [k]: ev.target.value })),
   });
 
+  // Cuántas credenciales tiene cada categoría (para el filtro) y cuántos sistemas
+  // distintos hay en total: con 40+ filas, el número de filas solo no dice nada.
+  const porCategoria = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const c of items) m[c.categoria] = (m[c.categoria] ?? 0) + 1;
+    return m;
+  }, [items]);
+  const sistemas = useMemo(() => new Set(items.map((c) => c.sistema.toLowerCase())).size, [items]);
+
   const filtrados = useMemo(() => {
     let l = items;
     if (fCat) l = l.filter((c) => c.categoria === fCat);
@@ -175,15 +184,32 @@ export default function CredencialesView() {
       <ImportarMasivo items={items} onImportado={(l, aviso) => { setItems(l); setMsg(aviso); }} />
 
       <Card className="flex flex-wrap items-center gap-3 p-3">
-        <select className={`${inputClass} max-w-[190px] py-1`} value={fCat} onChange={(e) => setFCat(e.target.value)}>
-          <option value="">Todas las categorías</option>
-          {CATEGORIAS_CRED.map((c) => <option key={c} value={c}>{c}</option>)}
+        {/* Con la cuenta al lado no hay que abrir el filtro para saber si tiene algo. */}
+        <select className={`${inputClass} max-w-[220px] py-1`} value={fCat} onChange={(e) => setFCat(e.target.value)}>
+          <option value="">Todas las categorías ({items.length})</option>
+          {CATEGORIAS_CRED.filter((c) => porCategoria[c]).map((c) => (
+            <option key={c} value={c}>{c} ({porCategoria[c]})</option>
+          ))}
         </select>
         <input className={`${inputClass} max-w-[240px] py-1`} placeholder="Buscar sistema, usuario…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <span className="ml-auto text-2xs text-faint">{filtrados.length} credenciales</span>
+        {(fCat || q) && (
+          <button onClick={() => { setFCat(""); setQ(""); }} className="text-2xs font-medium text-muted hover:text-ink">
+            Limpiar
+          </button>
+        )}
+        <span className="ml-auto text-2xs text-faint">
+          {filtrados.length === items.length ? `${items.length} credenciales` : `${filtrados.length} de ${items.length}`}
+          {" · "}
+          {sistemas} sistemas
+        </span>
       </Card>
 
-      {msg && <p className="text-2xs text-muted">{msg}</p>}
+      {msg && (
+        <Card className="flex items-start gap-3 border-action/30 bg-action/5 p-3">
+          <p className="flex-1 text-2xs text-ink">{msg}</p>
+          <button onClick={() => setMsg("")} className="shrink-0 text-2xs font-medium text-muted hover:text-ink">Cerrar</button>
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         {estado === "loading" ? (
@@ -196,59 +222,85 @@ export default function CredencialesView() {
             desc={items.length ? "Probá aflojando los filtros." : "Agregá la primera con el formulario de arriba."}
           />
         ) : (
-          <div className="overflow-x-auto">
+          // La tabla scrollea adentro de su caja (no la página): así el encabezado
+          // sticky tiene contra qué pegarse y no se pierde con 40+ credenciales.
+          <div className="max-h-[70vh] overflow-auto">
             <table className="w-full text-left text-sm">
-              <thead>
+              {/* El encabezado acompaña el scroll: con 40+ credenciales, si no, se pierde. */}
+              <thead className="sticky top-0 z-10 bg-surface">
                 <tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
                   <th className="px-4 py-2 font-medium">Sistema</th>
-                  <th className="px-3 py-2 font-medium">Categoría</th>
                   <th className="px-3 py-2 font-medium">Usuario</th>
                   <th className="px-3 py-2 font-medium">Contraseña</th>
+                  <th className="px-3 py-2 font-medium">Categoría</th>
                   <th className="px-3 py-2 font-medium">Actualizada</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((c) => (
-                  <tr key={c.id} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
-                    <td className="px-4 py-2">
-                      <p className="font-medium text-ink">{c.sistema}</p>
-                      {c.url && (
-                        <a href={c.url} target="_blank" rel="noreferrer" className="text-2xs text-action hover:underline">
-                          {c.url.replace(/^https?:\/\//, "").slice(0, 40)}
-                        </a>
-                      )}
-                      {c.nota && <p className="text-2xs text-faint">{c.nota}</p>}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="rounded-full border border-line bg-ink/5 px-2.5 py-1 text-2xs font-medium text-muted">{c.categoria}</span>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-2xs text-muted">{c.usuario || "—"}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <code className="rounded bg-ink/5 px-2 py-1 font-mono text-2xs text-ink">
-                          {visibles[c.id] ?? "••••••••"}
-                        </code>
-                        <button onClick={() => ver(c.id)} className="text-2xs font-medium text-action hover:underline">
-                          {visibles[c.id] ? "Ocultar" : "Ver"}
-                        </button>
-                        <button onClick={() => copiar(c.id)} className="text-2xs font-medium text-muted hover:text-ink">Copiar</button>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-2xs text-faint">
-                      {fecha(c.actualizado)}
-                      {c.actualizadoPor && <span title={c.actualizadoPor}> · {c.actualizadoPor.split("@")[0]}</span>}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => setEditando(editando === c.id ? null : c.id)} className="text-2xs font-medium text-muted hover:text-ink">
-                          {editando === c.id ? "Cerrar" : "Editar"}
-                        </button>
-                        <button onClick={() => quitar(c)} className="text-2xs font-medium text-bad hover:underline">Borrar</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filtrados.map((c, i) => {
+                  // Un sistema con varias claves (BI Ventas, Cierres de caja…) se escribe
+                  // una sola vez: las filas siguientes cuelgan de la primera.
+                  const primera = filtrados[i - 1]?.sistema !== c.sistema;
+                  const abierta = visibles[c.id] !== undefined;
+                  return (
+                    <tr
+                      key={c.id}
+                      className={`last:border-0 hover:bg-ink/[0.02] ${primera ? "border-t border-line/70" : ""}`}
+                    >
+                      <td className="px-4 py-2 align-top">
+                        {primera ? (
+                          <>
+                            <p className="font-medium text-ink">{c.sistema}</p>
+                            {c.url && (
+                              <a href={c.url} target="_blank" rel="noreferrer" className="text-2xs text-action hover:underline">
+                                {c.url.replace(/^https?:\/\//, "").slice(0, 40)}
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <span className="sr-only">{c.sistema}</span>
+                        )}
+                        {c.nota && <p className="max-w-xs text-2xs leading-snug text-faint">{c.nota}</p>}
+                      </td>
+                      <td className="px-3 py-2 align-top font-mono text-2xs text-muted">{c.usuario || "—"}</td>
+                      <td className="px-3 py-2 align-top">
+                        <div className="flex items-center gap-2">
+                          {/* Ancho fijo (no max-): tapada o revelada mide igual, así al
+                              apretar "Ver" la columna no se ensancha ni corre a las demás.
+                              Si la clave no entra, se trunca y queda entera en el title. */}
+                          <code
+                            title={abierta ? visibles[c.id] : undefined}
+                            className="block w-[140px] shrink-0 truncate rounded bg-ink/5 px-2 py-1 font-mono text-2xs text-ink"
+                          >
+                            {visibles[c.id] ?? "••••••••"}
+                          </code>
+                          <button onClick={() => ver(c.id)} className="shrink-0 text-2xs font-medium text-action hover:underline">
+                            {abierta ? "Ocultar" : "Ver"}
+                          </button>
+                          <button onClick={() => copiar(c.id)} className="shrink-0 text-2xs font-medium text-muted hover:text-ink">Copiar</button>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <span className="inline-block whitespace-nowrap rounded-full border border-line bg-ink/5 px-2.5 py-1 text-2xs font-medium text-muted">
+                          {c.categoria}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 align-top text-2xs text-faint">
+                        {fecha(c.actualizado)}
+                        {c.actualizadoPor && <span title={c.actualizadoPor}> · {c.actualizadoPor.split("@")[0]}</span>}
+                      </td>
+                      <td className="px-3 py-2 text-right align-top">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => setEditando(editando === c.id ? null : c.id)} className="text-2xs font-medium text-muted hover:text-ink">
+                            {editando === c.id ? "Cerrar" : "Editar"}
+                          </button>
+                          <button onClick={() => quitar(c)} className="text-2xs font-medium text-bad hover:underline">Borrar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -395,7 +447,7 @@ function ImportarMasivo({
           {filas.length > 0 && (
             <div className="max-h-72 overflow-auto rounded-lg border border-line">
               <table className="w-full text-left text-2xs">
-                <thead className="sticky top-0 bg-card">
+                <thead className="sticky top-0 z-10 bg-surface">
                   <tr className="border-b border-line uppercase tracking-wide text-faint">
                     <th className="px-3 py-2 font-medium">#</th>
                     <th className="px-3 py-2 font-medium">Sistema</th>
