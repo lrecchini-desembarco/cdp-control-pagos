@@ -17,13 +17,20 @@ export function blindar(rol: Rol, nav: string[]): string[] {
   // Las pantallas de lista blanca (Credenciales) nunca entran en el nav de un rol:
   // su permiso es por email y lo resuelven el layout, la página y su API.
   if (rol === "admin") return ADMINISTRABLES;
+  // Roles restringidos (franquiciado): SIEMPRE su nav por defecto (los tutoriales que
+  // le tocan + la guía), ignorando cualquier override. Así nunca ven reseñas, validar
+  // cupones, firmas, organigrama ni ninguna otra pantalla — pase lo que pase.
+  if (ROLES[rol].restringido) {
+    const fijo = new Set(ROLES[rol].nav.filter((h) => CATALOGO.has(h)));
+    fijo.add("/guia");
+    return NAV_CATALOG.map((i) => i.href).filter((h) => fijo.has(h));
+  }
   const limpio = nav.filter((h) => CATALOGO.has(h));
   const set = new Set(limpio);
   // /guia siempre (anti-autobloqueo).
   set.add("/guia");
-  // Roles restringidos (franquiciado): solo ven lo que dice su nav — NO se les suman
-  // todos los tutoriales. Los roles normales sí ven las 4 secciones de tutoriales.
-  if (!ROLES[rol].restringido) for (const u of TUTORIALES_TODOS) set.add(u);
+  // Roles normales: ven las 4 secciones de tutoriales (universales para ellos).
+  for (const u of TUTORIALES_TODOS) set.add(u);
   // preserva el orden del catálogo
   return NAV_CATALOG.map((i) => i.href).filter((h) => set.has(h));
 }
