@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, Field, inputClass, Button, Skeleton, EmptyState } from "@/components/ui/primitives";
 import { CATEGORIAS_CRED, EMAILS_CREDENCIALES, type CredencialPublica } from "@/lib/credenciales";
+import { COLUMNAS_PLANTILLA, parsearCredenciales, resumenImport, type FilaImport } from "@/lib/credenciales-import";
 
 const VACIA = { sistema: "", categoria: "Sistemas", usuario: "", secreto: "", url: "", nota: "" };
 
@@ -171,6 +172,8 @@ export default function CredencialesView() {
         )}
       </Card>
 
+      <ImportarMasivo items={items} onImportado={(l, aviso) => { setItems(l); setMsg(aviso); }} />
+
       <Card className="flex flex-wrap items-center gap-3 p-3">
         <select className={`${inputClass} max-w-[190px] py-1`} value={fCat} onChange={(e) => setFCat(e.target.value)}>
           <option value="">Todas las categorías</option>
@@ -254,6 +257,193 @@ export default function CredencialesView() {
 
       {editando && <Editar credencial={items.find((c) => c.id === editando)!} guardando={guardando} onGuardar={guardar} onCerrar={() => setEditando(null)} />}
     </div>
+  );
+}
+
+/**
+ * Carga masiva desde CSV/Excel. El archivo se lee y se previsualiza EN EL NAVEGADOR:
+ * el binario con contraseñas nunca se sube. Recién al confirmar viajan las filas
+ * válidas al endpoint, que las cifra con CREDENCIALES_KEY como cualquier alta.
+ */
+function ImportarMasivo({
+  items,
+  onImportado,
+}: {
+  items: CredencialPublica[];
+  onImportado: (items: CredencialPublica[], aviso: string) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [archivo, setArchivo] = useState("");
+  const [filas, setFilas] = useState<FilaImport[]>([]);
+  const [error, setError] = useState("");
+  const [subiendo, setSubiendo] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+
+  const limpiar = () => {
+    setArchivo("");
+    setFilas([]);
+    setError("");
+    if (input.current) input.current.value = "";
+  };
+
+  async function leer(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setError("");
+    setFilas([]);
+    setArchivo(f.name);
+    try {
+      // xlsx pesa: se carga on-demand, solo cuando alguien importa de verdad.
+      const { filasDeArchivo } = await import("@/lib/bancos");
+      const r = parsearCredenciales(filasDeArchivo(f.name, await f.arrayBuffer()), items);
+      if (r.fatal) setError(r.fatal);
+      setFilas(r.filas);
+    } catch {
+      setError("No pude leer el archivo. Tiene que ser .csv, .xlsx o .xls.");
+    }
+  }
+
+  // Plantilla de ejemplo, para que nadie tenga que adivinar los encabezados.
+  function plantilla() {
+    const csv = [
+      COLUMNAS_PLANTILLA.join(","),
+      "Tango Gestion,Tango,admin,LA-CLAVE-ACA,https://tango.local,Usuario de sistemas",
+      "Banco Galicia,Bancos y pagos,30-11111111-1,LA-CLAVE-ACA,https://www.bancogalicia.com,Token en el celular de admin",
+    ].join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "plantilla-credenciales.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function importar() {
+    const validas = filas.filter((f) => f.accion !== "error");
+    if (validas.length === 0) return;
+    if (!confirm(`¿Importar ${validas.length} credenciales? Las repetidas (mismo sistema y usuario) se pisan con la contraseña del archivo.`)) return;
+    setSubiendo(true);
+    setError("");
+    try {
+      const j = await (
+        await fetch("/api/credenciales/importar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filas: validas.map(({ sistema, categoria, usuario, secreto, url, nota }) => ({ sistema, categoria, usuario, secreto, url, nota })),
+          }),
+        })
+      ).json();
+      if (!j.ok) throw new Error(j.error);
+      onImportado(j.items, `Importadas: ${j.altas} nuevas y ${j.actualizadas} actualizadas. Acordate de borrar el archivo con las contraseñas.`);
+      limpiar();
+      setAbierto(false);
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "No se pudo importar.");
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  const r = resumenImport(filas);
+  const validas = r.altas + r.actualiza;
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-2xs font-medium uppercase tracking-wide text-faint">Carga masiva · CSV o Excel</p>
+        <button
+          onClick={() => { setAbierto((v) => !v); if (abierto) limpiar(); }}
+          className="text-2xs font-medium text-action hover:underline"
+        >
+          {abierto ? "Cancelar" : "+ Importar archivo"}
+        </button>
+      </div>
+
+      {abierto && (
+        <div className="mt-3 space-y-3">
+          <p className="text-2xs text-muted">
+            Columnas: <b className="font-medium text-ink">Sistema</b> y <b className="font-medium text-ink">Contraseña</b> son
+            obligatorias; <span className="text-ink">Categoría</span>, <span className="text-ink">Usuario</span>,{" "}
+            <span className="text-ink">URL</span> y <span className="text-ink">Nota</span> son opcionales. No importa el orden
+            ni las mayúsculas, y valen los sinónimos habituales (Clave, Password, Servicio, Mail…). Si el sistema y el usuario
+            ya existen, se actualiza esa credencial en vez de duplicarla.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              ref={input}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={leer}
+              className="text-2xs text-muted file:mr-3 file:rounded-lg file:border file:border-line file:bg-ink/5 file:px-3 file:py-1.5 file:text-2xs file:font-medium file:text-ink hover:file:bg-ink/10"
+            />
+            <button onClick={plantilla} className="text-2xs font-medium text-action hover:underline">
+              Descargar plantilla
+            </button>
+          </div>
+
+          {archivo && !error && (
+            <p className="text-2xs text-faint">
+              {archivo} · <b className="font-medium text-ok">{r.altas} nuevas</b> ·{" "}
+              <b className="font-medium text-ink">{r.actualiza} se actualizan</b>
+              {r.errores > 0 && <> · <b className="font-medium text-bad">{r.errores} con problemas</b></>}
+            </p>
+          )}
+
+          {error && <p className="text-2xs text-bad">{error}</p>}
+
+          {filas.length > 0 && (
+            <div className="max-h-72 overflow-auto rounded-lg border border-line">
+              <table className="w-full text-left text-2xs">
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b border-line uppercase tracking-wide text-faint">
+                    <th className="px-3 py-2 font-medium">#</th>
+                    <th className="px-3 py-2 font-medium">Sistema</th>
+                    <th className="px-3 py-2 font-medium">Categoría</th>
+                    <th className="px-3 py-2 font-medium">Usuario</th>
+                    <th className="px-3 py-2 font-medium">Contraseña</th>
+                    <th className="px-3 py-2 font-medium">Qué pasa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filas.map((f) => (
+                    <tr key={f.fila} className={`border-b border-line/70 last:border-0 ${f.accion === "error" ? "bg-bad/5" : ""}`}>
+                      <td className="px-3 py-1.5 text-faint">{f.fila}</td>
+                      <td className="px-3 py-1.5 text-ink">{f.sistema || "—"}</td>
+                      <td className="px-3 py-1.5 text-muted">{f.categoria}</td>
+                      <td className="px-3 py-1.5 font-mono text-muted">{f.usuario || "—"}</td>
+                      {/* La contraseña se previsualiza tapada: alcanza con saber que vino. */}
+                      <td className="px-3 py-1.5 font-mono text-faint">{f.secreto ? "•".repeat(Math.min(f.secreto.length, 12)) : "—"}</td>
+                      <td className="px-3 py-1.5">
+                        {f.accion === "alta" ? (
+                          <span className="text-ok">Se agrega</span>
+                        ) : f.accion === "actualiza" ? (
+                          <span className="text-ink">Actualiza la existente</span>
+                        ) : (
+                          <span className="text-bad">{f.error}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {validas > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={importar} disabled={subiendo}>
+                {subiendo ? "Importando…" : `Importar ${validas} credenciales`}
+              </Button>
+              <button onClick={limpiar} className="text-2xs font-medium text-muted hover:text-ink">Descartar</button>
+              <span className="text-2xs text-faint">
+                El archivo se lee en tu navegador; no se sube. Borralo cuando termines.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 

@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "crypto";
 import { readStore, writeStore } from "./store";
 import type { CredencialPublica } from "./credenciales";
+import { claveCred } from "./credenciales-import";
 
 // Bóveda de credenciales (server-only).
 //
@@ -17,6 +18,9 @@ interface Credencial extends CredencialPublica {
 }
 
 const KEY = "credenciales";
+
+/** Tope de filas por archivo en la carga masiva (evita colgar el KV de un saque). */
+const MAX_IMPORT = 500;
 
 /** Clave de 32 bytes derivada de CREDENCIALES_KEY. Sin la env, no se puede operar. */
 function clave(): Buffer {
@@ -108,6 +112,62 @@ export async function upsertCredencial(
 
   await writeStore(KEY, lista);
   return getCredenciales();
+}
+
+/**
+ * Carga masiva (CSV/Excel). Escribe UNA sola vez al store en vez de una por fila:
+ * si son 200 credenciales no queremos 200 lecturas + escrituras contra el KV.
+ * Las filas ya vienen validadas del cliente, pero se re-valida acá: la API es la
+ * frontera de confianza, no el navegador.
+ */
+export async function importarCredenciales(
+  entradas: Array<Partial<CredencialPublica> & { secreto?: string }>,
+  email: string
+): Promise<{ items: CredencialPublica[]; altas: number; actualizadas: number; omitidas: number }> {
+  if (!Array.isArray(entradas) || entradas.length === 0) throw new Error("No hay filas para importar.");
+  if (entradas.length > MAX_IMPORT) throw new Error(`Demasiadas filas (máximo ${MAX_IMPORT} por archivo).`);
+
+  const lista = await todas();
+  const ahora = new Date().toISOString();
+  // Mismo criterio de identidad que el previsualizador: sistema + usuario.
+  const indice = new Map(lista.map((c, i) => [claveCred(c.sistema, c.usuario), i]));
+
+  let altas = 0;
+  let actualizadas = 0;
+  let omitidas = 0;
+
+  for (const e of entradas) {
+    const sistema = String(e.sistema ?? "").trim();
+    const secreto = String(e.secreto ?? "");
+    if (!sistema || !secreto) {
+      omitidas++;
+      continue;
+    }
+    const usuario = String(e.usuario ?? "").trim();
+    const comun = {
+      sistema,
+      categoria: e.categoria || "Otros",
+      usuario,
+      url: String(e.url ?? "").trim(),
+      nota: String(e.nota ?? ""),
+      secreto: cifrar(secreto),
+      actualizado: ahora,
+      actualizadoPor: email,
+    };
+
+    const i = indice.get(claveCred(sistema, usuario));
+    if (i === undefined) {
+      indice.set(claveCred(sistema, usuario), lista.length);
+      lista.push({ id: nuevoId(), ...comun });
+      altas++;
+    } else {
+      lista[i] = { ...lista[i], ...comun };
+      actualizadas++;
+    }
+  }
+
+  await writeStore(KEY, lista);
+  return { items: await getCredenciales(), altas, actualizadas, omitidas };
 }
 
 export async function removeCredencial(id: string): Promise<CredencialPublica[]> {
