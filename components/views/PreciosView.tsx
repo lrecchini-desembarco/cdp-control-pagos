@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, inputClass } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import { fmtCompacto } from "@/lib/brands";
+import { fmtCompacto } from "@/lib/brands";import ActualizadoTango from "@/components/layout/ActualizadoTango";
+
 
 interface General {
   sku: string;
@@ -152,6 +153,8 @@ export default function PreciosView() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">Precios de productos</h1>
+
+          <ActualizadoTango className="mt-1.5" />
           <p className="mt-0.5 max-w-2xl text-sm text-muted">
             Precio vigente por producto (el efectivo de la última venta en Tango). Neto y con impuestos, general o por sucursal.
           </p>

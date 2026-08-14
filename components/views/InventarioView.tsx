@@ -10,7 +10,7 @@ import RecursosIT from "@/components/views/RecursosIT";
 //   Inventario -> parque de computadoras en uso (relevamiento por usuario/área)
 //   Compras    -> equipos comprados o en proceso de alta (con aprobación del Dueño)
 //   Faltantes  -> equipos a reemplazar o puestos sin máquina
-type Tab = "inventario" | "compras" | "faltantes";
+type Tab = "inventario" | "compras" | "faltantes" | "disponibles";
 
 const EQUIPO_VACIO = {
   usuario: "", area: "", tipo: "Notebook", hostname: "", marca: "", modelo: "",
@@ -109,6 +109,7 @@ export default function InventarioView() {
 
   const enUso = useMemo(() => equipos.filter((e) => estadoPC(e.estado).tab === "inventario"), [equipos]);
   const faltantes = useMemo(() => equipos.filter((e) => estadoPC(e.estado).tab === "faltantes"), [equipos]);
+  const disponibles = useMemo(() => equipos.filter((e) => estadoPC(e.estado).tab === "disponibles"), [equipos]);
 
   // Cuántos equipos tiene cada alerta (sobre el parque en uso): es el resumen que
   // mira sistemas para priorizar upgrades.
@@ -119,6 +120,7 @@ export default function InventarioView() {
 
   const tabs: { id: Tab; label: string; total?: number }[] = [
     { id: "inventario", label: "Inventario", total: enUso.length },
+    { id: "disponibles", label: "Disponibles", total: disponibles.length },
     { id: "compras", label: "Compras" },
     { id: "faltantes", label: "Faltantes", total: faltantes.length },
   ];
@@ -228,6 +230,20 @@ export default function InventarioView() {
             onEditar={editar}
             onQuitar={quitar}
             vacio={{ title: "Sin equipos cargados", desc: "Corré el seed del relevamiento (ver docs/inventario.md)." }}
+          />
+        </>
+      ) : tab === "disponibles" ? (
+        <>
+          <Card className="p-3 text-2xs text-muted">
+            Equipos y dispositivos <b className="font-medium text-ink">sin asignar</b>: PCs y notebooks
+            <b className="font-medium text-ink"> disponibles</b> para entregar, y lo que está <b className="font-medium text-ink">en reparación</b>.
+          </Card>
+          <ParquePCs
+            equipos={disponibles}
+            esAdmin={esAdmin}
+            onEditar={editar}
+            onQuitar={quitar}
+            vacio={{ title: "Sin equipos disponibles", desc: "No hay equipos marcados como disponibles ni en reparación." }}
           />
         </>
       ) : (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { abrirInformePDF } from "@/lib/informe-consumo";
+import ActualizadoTango from "@/components/layout/ActualizadoTango";
 import ComprasCsvView from "./ComprasCsvView";
 
 // Tablero "Consumo (CMV) vs Ventas" — datos REALES de la base del grupo (Neon),
@@ -160,8 +161,9 @@ export default function ComprasView() {
         <h1 className="font-display text-xl font-semibold text-ink">Consumo (CMV) vs Ventas</h1>
         <p className="mt-0.5 max-w-3xl text-sm text-muted">
           Rentabilidad real del grupo: consumo de insumos valorizado (CMV, de Tango) contra ventas, mes a mes.
-          Detectá qué se consume más/menos y dónde se mueve el margen. Datos reales, actualizados a diario.
+          Detectá qué se consume más/menos y dónde se mueve el margen.
         </p>
+        <ActualizadoTango className="mt-1.5" />
       </div>
 
       {/* Filtros globales */}

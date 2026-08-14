@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/components/ui/primitives";
-import { descargarCSV } from "@/lib/exportar-csv";
+import { descargarCSV } from "@/lib/exportar-csv";import ActualizadoTango from "@/components/layout/ActualizadoTango";
+
 
 interface LocalActividad {
   sucursal: string; marca: string; unidades: number; ultimaVenta: string;
@@ -95,6 +96,8 @@ export default function ActividadView() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">Actividad de ventas</h1>
+
+          <ActualizadoTango className="mt-1.5" />
           <p className="mt-0.5 max-w-2xl text-sm text-muted">
             Qué locales están vendiendo (y hace cuánto que no) y qué productos se durmieron. Datos reales de Tango.
           </p>

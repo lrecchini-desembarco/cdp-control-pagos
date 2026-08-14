@@ -74,6 +74,17 @@ export default function InsumosView() {
         <Button onClick={() => setEdit("nuevo")}>+ Nuevo insumo</Button>
       </div>
 
+      {kpis.viejos > 0 && (
+        <Card className="border-warn/30 bg-warn/5 p-3">
+          <p className="text-2xs text-warn">
+            ⚠ <b>{kpis.viejos} de {kpis.total} insumos tienen el costo desactualizado</b> (más de {VIEJO_DIAS} días).
+            Este maestro se carga a mano: <b>no se sincroniza solo con Tango</b>. Los márgenes de Precios y margen,
+            Rentabilidad y el costo estimado de Estimación de insumos salen de acá, así que con costos viejos
+            <b> el margen queda sobreestimado</b> — no los uses para decidir precios hasta actualizarlos.
+          </p>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Insumos" value={String(kpis.total)} />
         <Kpi label="Costo desactualizado" value={String(kpis.viejos)} sub={`+${VIEJO_DIAS} días`} tone={kpis.viejos ? "warn" : undefined} />

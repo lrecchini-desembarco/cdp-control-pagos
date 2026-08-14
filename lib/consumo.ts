@@ -229,6 +229,37 @@ export async function getSucursales(): Promise<Sucursal[]> {
   return rows.map((r) => ({ id: r.id, nombre: r.nombre, marca: r.marca, esPropia: r.es_propia }));
 }
 
+export interface EstadoSync {
+  ultimaSync: string | null;   // ISO: cuándo corrió la última sincronización con Tango
+  ultimoDato: string | null;   // ISO (fecha): hasta qué día hay datos cargados
+  filas: number | null;        // filas de insumos del último día sincronizado
+  atrasoHoras: number | null;  // horas desde la última sincronización
+}
+
+/**
+ * Estado REAL de actualización de los datos de Tango: cuándo fue la última sincronización
+ * (fecha y hora) y hasta qué día llega el dato. Sale de cierres.venta_tango_sync, que
+ * escribe el proceso de carga en cada corrida — no es una estimación.
+ * Lo usan las pantallas que dependen de Tango para mostrar "Actualizado: <fecha hora>".
+ */
+export async function getEstadoSync(): Promise<EstadoSync> {
+  const rows = await q<{ sincronizado_en: string | null; fecha: string | null; filas_insumos: number | null }>(
+    `SELECT sincronizado_en, fecha, filas_insumos
+     FROM cierres.venta_tango_sync
+     ORDER BY sincronizado_en DESC NULLS LAST
+     LIMIT 1`
+  );
+  const r = rows[0];
+  if (!r?.sincronizado_en) return { ultimaSync: null, ultimoDato: null, filas: null, atrasoHoras: null };
+  const sync = new Date(r.sincronizado_en);
+  return {
+    ultimaSync: sync.toISOString(),
+    ultimoDato: r.fecha ? new Date(r.fecha).toISOString() : null,
+    filas: r.filas_insumos ?? null,
+    atrasoHoras: Math.max(0, Math.round((Date.now() - sync.getTime()) / 3_600_000)),
+  };
+}
+
 /** Meses disponibles en la base (para poblar los selectores), más nuevo primero. */
 export async function getMesesDisponibles(): Promise<string[]> {
   const rows = await q<{ mes: string }>(

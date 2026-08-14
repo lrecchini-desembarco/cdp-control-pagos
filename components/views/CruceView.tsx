@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BRANDS, brandById, fmtInt, fmtPct, severidad, todayISO } from "@/lib/brands";
 import type { BrandId, CruceRow, CruceComponente } from "@/lib/types";
 import { Badge, Card, EmptyState, ErrorState, Field, inputClass, Skeleton } from "@/components/ui/primitives";
+import ActualizadoTango from "@/components/layout/ActualizadoTango";
 import DetalleModal from "@/components/views/DetalleModal";
 
 type RowDev = CruceRow & { dev: number; pct: number; periodo?: string; dias?: number };
@@ -168,6 +169,11 @@ export default function CruceView() {
     return { pedido, venta, fuera, total: rows.length, neto };
   }, [rows]);
 
+  // Cobertura de recetas: filas donde la venta NO se pudo traducir a insumo (sin
+  // componentes). Son las que aparecen como "sobre-pedido" sin serlo — el desvío
+  // que se ve es del recetario incompleto, no de la operación.
+  const sinReceta = useMemo(() => rows.filter((r) => !r.componentes || r.componentes.length === 0).length, [rows]);
+
   return (
     <div className="space-y-5">
       <div className="flex items-end justify-between gap-4">
@@ -176,6 +182,7 @@ export default function CruceView() {
           <p className="mt-0.5 text-sm text-muted">
             Lo que cada sucursal pidió al CDP contra lo que vendió, traducido a insumo.
           </p>
+          <ActualizadoTango className="mt-1.5" />
         </div>
       </div>
 
@@ -302,6 +309,18 @@ export default function CruceView() {
           })}
         </div>
       </Card>
+
+      {/* Cobertura del recetario: sin receta, la venta no se traduce y la línea se ve
+          como sobre-pedido aunque no lo sea. Avisarlo evita leer "todo rojo" como real. */}
+      {sinReceta > 0 && (
+        <Card className="border-warn/30 bg-warn/5 p-3">
+          <p className="text-2xs text-warn">
+            ⚠ <b>{sinReceta} de {kpis.total} líneas no se pudieron traducir a insumo</b> porque falta la receta del
+            producto. Esas aparecen como sobre-pedido sin serlo: el desvío que ves es del <b>recetario incompleto</b>,
+            no de la operación. Cargá las recetas faltantes en <b>Mapeos / Recetas</b> para que el cruce sea confiable.
+          </p>
+        </Card>
+      )}
 
       {/* KPIs */}
       <div data-tour="cruce-kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4">

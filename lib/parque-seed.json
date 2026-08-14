@@ -457,5 +457,23 @@
     "so": "Windows 10 (fuera de soporte desde 14/10/2025)",
     "correo": "",
     "observaciones": "⚠️ Equipo más antiguo de la flota (HP ProDesk 600 G1 de 2014) · CPU Haswell 4ª Gen · RAM DDR3 · SSD 112 GB · Windows 10 EOL · Equipo supervisado y protegido — candidato PRIORITARIO a reemplazo"
+  },
+  {
+    "id": "cel-motog32",
+    "nro": 28,
+    "usuario": "",
+    "area": "Sistemas",
+    "tipo": "Celular",
+    "hostname": "",
+    "marca": "Motorola",
+    "modelo": "Moto G32",
+    "cpu": "Qualcomm Snapdragon 680",
+    "ram": "",
+    "almacenamiento": "",
+    "gpu": "",
+    "so": "Android 12",
+    "correo": "",
+    "estado": "en-reparacion",
+    "observaciones": "📱 EN REPARACIÓN · Motorola Moto G32 · Pantalla 6,5\" IPS LCD 90 Hz, Full HD+ (2400×1080) · Snapdragon 680 · RAM 4/6 GB · Almacenamiento 64/128 GB · MicroSD hasta 1 TB · Cámaras: 50 MP principal + 8 MP ultra gran angular + 2 MP macro/profundidad · Frontal 16 MP · Batería 5.000 mAh, carga rápida 30 W TurboPower · 4G LTE · Wi-Fi a/b/g/n/ac · Bluetooth 5.2 · Parlantes estéreo Dolby Atmos · Jack 3,5 mm · Huella lateral · USB-C · IP52 (repelente al agua) · ~184 g"
   }
 ]

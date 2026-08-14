@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { guard } from "@/lib/api-guard";
 import {
   getResumenMensual, getComparativo, getConsumoPorInsumo, getPorLocal, getSucursales, getMesesDisponibles,
+  getEstadoSync,
   type FiltrosConsumo,
 } from "@/lib/consumo";
 
@@ -36,6 +37,9 @@ export async function GET(req: NextRequest) {
     }
     if (modo === "meses") {
       return NextResponse.json({ ok: true, meses: await getMesesDisponibles() });
+    }
+    if (modo === "sync") {
+      return NextResponse.json({ ok: true, sync: await getEstadoSync() });
     }
     if (modo === "comparativo") {
       const mesA = sp.get("mesA") ?? "";

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Field, inputClass, Skeleton } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
 import { fmtCompacto } from "@/lib/brands";
-import { costoInsumo, tieneCosto, COSTOS_VIGENCIA, mesesDesactualizado } from "@/lib/costos";
+import { costoInsumo, tieneCosto, COSTOS_VIGENCIA, mesesDesactualizado } from "@/lib/costos";import ActualizadoTango from "@/components/layout/ActualizadoTango";
+
 
 // $ en riesgo de un local = lo que pidió al CDP (por insumo) valorizado al costo
 // de elaboración, contando SOLO los locales que pidieron y no vendieron nada.
@@ -173,6 +174,8 @@ export default function PedidosView() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">CDP vs Ventas por local</h1>
+
+          <ActualizadoTango className="mt-1.5" />
           <p className="mt-0.5 max-w-2xl text-sm text-muted">
             Lo que cada local <b>pidió al CDP</b> (Raven, en vivo: Bolas + Tuki) contra lo que <b>vendió</b> (Tango),
             separado por <b>propios vs franquicias</b>. {puedeEditar && "Podés reclasificar y marcar locales no operativos."}

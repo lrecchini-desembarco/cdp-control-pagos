@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Card, ErrorState, Skeleton } from "@/components/ui/primitives";
-import type { ResumenHoras } from "@/lib/horas";
+import type { ResumenHoras } from "@/lib/horas";import ActualizadoTango from "@/components/layout/ActualizadoTango";
+
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 const moneyC = (n: number) => {
@@ -46,6 +47,8 @@ export default function HorasView() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">Ticket y horarios</h1>
+
+          <ActualizadoTango className="mt-1.5" />
           <p className="mt-0.5 max-w-2xl text-sm text-muted">Cuánto vale cada ticket y a qué hora se mueve la venta. Sale de los comprobantes de Tango (importe + cantidad de tickets por hora).</p>
         </div>
         <div data-tour="horas-periodo" className="flex gap-1">

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, Button, inputClass, Skeleton, EmptyState, Badge } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
-import RecetaModal from "@/components/RecetaModal";
+import RecetaModal from "@/components/RecetaModal";import ActualizadoTango from "@/components/layout/ActualizadoTango";
+
 
 interface FactProducto { sku: string; nombre: string; marca: string; unidades: number; precio: number; facturacion: number; acumulado?: number; clase?: "A" | "B" | "C"; costoUnit?: number; margen?: number; margenPct?: number; tieneCosto?: boolean; tieneReceta?: boolean; recetaTango?: boolean; costoDudoso?: boolean; }
 interface FactLocal { sucursal: string; marca: string; unidades: number; facturacion: number; cobertura: number; margen: number; }
@@ -131,6 +132,8 @@ export default function FacturacionView() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold text-ink">Facturación</h1>
+
+          <ActualizadoTango className="mt-1.5" />
           <p className="mt-0.5 max-w-2xl text-sm text-muted">
             Cuánta plata mueve cada producto, local y marca.{" "}
             {d?.exacta

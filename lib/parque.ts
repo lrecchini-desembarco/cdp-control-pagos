@@ -2,7 +2,7 @@
 // Las flags las calcula scripts/seed-inventario-pcs.mjs desde el CSV del
 // relevamiento; acá viven las etiquetas y los colores con los que se muestran.
 
-export type EstadoPC = "en-uso" | "reemplazar" | "sin-equipo";
+export type EstadoPC = "en-uso" | "reemplazar" | "sin-equipo" | "disponible" | "en-reparacion";
 export type Tone = "ok" | "action" | "warn" | "bad" | "neutral" | "muted";
 
 export interface EstadoPCInfo {
@@ -10,11 +10,13 @@ export interface EstadoPCInfo {
   label: string;
   tone: Tone;
   /** En qué pestaña cae. */
-  tab: "inventario" | "faltantes";
+  tab: "inventario" | "faltantes" | "disponibles";
 }
 
 export const ESTADOS_PC: EstadoPCInfo[] = [
   { id: "en-uso", label: "En uso", tone: "ok", tab: "inventario" },
+  { id: "disponible", label: "Disponible", tone: "action", tab: "disponibles" },
+  { id: "en-reparacion", label: "En reparación", tone: "warn", tab: "disponibles" },
   { id: "reemplazar", label: "A reemplazar", tone: "bad", tab: "faltantes" },
   { id: "sin-equipo", label: "Sin equipo", tone: "warn", tab: "faltantes" },
 ];
@@ -44,7 +46,7 @@ export const FLAGS_PC: FlagInfo[] = [
 export const flagPC = (id: string): FlagInfo =>
   FLAGS_PC.find((f) => f.id === id) ?? { id, label: id, corto: id, tone: "neutral", desc: "" };
 
-export const TIPOS_PC = ["PC Escritorio", "Notebook"];
+export const TIPOS_PC = ["PC Escritorio", "Notebook", "Celular", "Tablet", "Otro"];
 
 // --- Derivación de specs y alertas -------------------------------------------
 // Vale igual para el relevamiento (CSV) y para lo que se carga a mano, así que

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { TURNOS } from "@/lib/turnos";
 import { BRANDS, brandById, fmtInt, todayISO } from "@/lib/brands";
 import { Card, EmptyState, ErrorState, Field, inputClass, Skeleton } from "@/components/ui/primitives";
-import { descargarCSV } from "@/lib/exportar-csv";
+import { descargarCSV } from "@/lib/exportar-csv";import ActualizadoTango from "@/components/layout/ActualizadoTango";
+
 
 interface Articulo {
   sku: string;
@@ -81,6 +82,8 @@ export default function VentasView() {
     <div className="space-y-5">
       <div>
         <h1 className="font-display text-xl font-semibold text-ink">Ventas por turno</h1>
+
+        <ActualizadoTango className="mt-1.5" />
         <p className="mt-0.5 text-sm text-muted">
           Unidades vendidas de cada artículo, desglosadas por turno. Filtrá por fecha, marca y sucursal.
         </p>
