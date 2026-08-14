@@ -7,6 +7,9 @@ import { FRESH_META } from "@/lib/roles";
 import { useMobileNav } from "@/components/layout/MobileNav";
 import type { Rol, NavItem, Fresh } from "@/lib/roles";
 
+// Secciones del menú que el usuario dejó abiertas (se recuerdan entre visitas).
+const SECCIONES_KEY = "cdp:nav:secciones";
+
 const norm = (s: string) =>
   (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -23,6 +26,47 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
         return norm(n.label).includes(t) || norm(n.section ?? "").includes(t) || norm(n.desc ?? "").includes(t);
       })
     : items;
+
+  // Ítems agrupados por sección, respetando el orden en que vienen.
+  // Los que no tienen sección (Resumen, Alertas) van sueltos arriba, siempre visibles.
+  const sueltos = visibles.filter((n) => !n.section);
+  const grupos: { section: string; items: NavItem[] }[] = [];
+  for (const n of visibles) {
+    if (!n.section) continue;
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.section === n.section) ultimo.items.push(n);
+    else grupos.push({ section: n.section, items: [n] });
+  }
+
+  // Sección donde está parado el usuario: se abre sí o sí.
+  const seccionActiva = items.find((n) => (n.href === "/" ? path === "/" : path.startsWith(n.href)))?.section ?? null;
+
+  // Secciones abiertas (se recuerdan entre visitas). Al buscar se abre todo.
+  const [abiertas, setAbiertas] = useState<string[] | null>(null);
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem(SECCIONES_KEY);
+      setAbiertas(guardado ? (JSON.parse(guardado) as string[]) : seccionActiva ? [seccionActiva] : []);
+    } catch {
+      setAbiertas(seccionActiva ? [seccionActiva] : []);
+    }
+    // Solo al montar: después manda el estado del usuario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleSeccion = (s: string) => {
+    setAbiertas((prev) => {
+      const base = prev ?? [];
+      const next = base.includes(s) ? base.filter((x) => x !== s) : [...base, s];
+      try {
+        localStorage.setItem(SECCIONES_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const buscando = q.trim().length > 0;
+  const estaAbierta = (s: string) => buscando || s === seccionActiva || (abiertas ?? []).includes(s);
 
   const [urgentes, setUrgentes] = useState(0);
   useEffect(() => {
@@ -73,42 +117,33 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
         {visibles.length === 0 && (
           <p className="px-3 py-4 text-xs text-sidebar-muted">Sin resultados para “{q}”.</p>
         )}
-        {visibles.map((n, i) => {
-          const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
-          // Encabezado de sección: se muestra cuando la sección cambia respecto al ítem anterior.
-          // (Al filtrar se calcula sobre la lista visible, no la completa.)
-          const header = n.section && n.section !== visibles[i - 1]?.section ? n.section : null;
+        {sueltos.map((n) => (
+          <ItemLink key={n.href} n={n} path={path} urgentes={urgentes} onNavegar={() => setAbierto(false)} />
+        ))}
+
+        {grupos.map((g) => {
+          const open = estaAbierta(g.section);
+          const id = `nav-sec-${norm(g.section).replace(/\W+/g, "-")}`;
           return (
-            <div key={n.href}>
-              {header && (
-                <p className="mb-1 mt-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted/70">
-                  {header}
-                </p>
-              )}
-              <Link
-                href={n.href}
-                draggable={false}
-                onClick={() => setAbierto(false)}
-                title={n.desc}
-                aria-current={active ? "page" : undefined}
-                className={`group mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  active ? "bg-white/10 text-white" : "text-sidebar-muted hover:bg-white/5 hover:text-white"
-                }`}
+            <div key={g.section} className="mt-3 first:mt-2">
+              <button
+                type="button"
+                onClick={() => toggleSeccion(g.section)}
+                aria-expanded={open}
+                aria-controls={id}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted/70 transition-colors hover:bg-white/5 hover:text-white"
               >
-                <span className="w-4 text-center text-base opacity-80">{n.icon}</span>
-                <span className="flex-1 truncate">{n.label}</span>
-                {n.beta && (
-                  <span className="shrink-0 rounded bg-warn/25 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-warn" title="En construcción (beta)">
-                    beta
-                  </span>
-                )}
-                <FreshTag fresh={n.fresh ?? "carga"} />
-                {n.href === "/alertas" && urgentes > 0 && (
-                  <span className="grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white">
-                    {urgentes}
-                  </span>
-                )}
-              </Link>
+                <span className={`shrink-0 text-[9px] transition-transform duration-150 ${open ? "rotate-90" : ""}`}>▶</span>
+                <span className="flex-1 truncate text-left">{g.section}</span>
+                {!open && <span className="shrink-0 tabular-nums opacity-60">{g.items.length}</span>}
+              </button>
+              {open && (
+                <div id={id} className="mt-0.5">
+                  {g.items.map((n) => (
+                    <ItemLink key={n.href} n={n} path={path} urgentes={urgentes} onNavegar={() => setAbierto(false)} />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -125,6 +160,47 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
       </div>
     </aside>
     </>
+  );
+}
+
+// Un ítem del menú (link + tags de beta, frescura y alertas urgentes).
+function ItemLink({
+  n,
+  path,
+  urgentes,
+  onNavegar,
+}: {
+  n: NavItem;
+  path: string;
+  urgentes: number;
+  onNavegar: () => void;
+}) {
+  const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
+  return (
+    <Link
+      href={n.href}
+      draggable={false}
+      onClick={onNavegar}
+      title={n.desc}
+      aria-current={active ? "page" : undefined}
+      className={`group mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+        active ? "bg-white/10 text-white" : "text-sidebar-muted hover:bg-white/5 hover:text-white"
+      }`}
+    >
+      <span className="w-4 text-center text-base opacity-80">{n.icon}</span>
+      <span className="flex-1 truncate">{n.label}</span>
+      {n.beta && (
+        <span className="shrink-0 rounded bg-warn/25 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-warn" title="En construcción (beta)">
+          beta
+        </span>
+      )}
+      <FreshTag fresh={n.fresh ?? "carga"} />
+      {n.href === "/alertas" && urgentes > 0 && (
+        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white">
+          {urgentes}
+        </span>
+      )}
+    </Link>
   );
 }
 
