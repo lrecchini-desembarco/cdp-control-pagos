@@ -1,67 +1,59 @@
-# IPs libres (servidor propio de la empresa)
+# IPs libres (rollout de IPs fijas)
 
-Con las IPs fijas por dispositivo, sistemas quiere ver de un vistazo qué IPs están
-libres para asignar. Ese escaneo lo hace **un servidor propio dentro de la
-empresa** (no esta app): un proceso que corre 24/7 en la red interna y sabe qué
-direcciones están libres. El dashboard **solo lo consulta**, mismo espíritu que el
-bridge de Tango (`docs/tango-bridge.md`): Vercel no llega a la red interna, así
-que hace falta publicar una URL alcanzable (túnel) o una fija (VPN / reverse proxy).
+Sistemas está pasando los dispositivos a IP fija y necesita un checklist de qué
+IP está libre y cuál ya está asignada. El escaneo de la red lo hace **un script
+propio de sistemas** (no esta app): esta pantalla solo importa lo que ese script
+encuentra y deja tildar a mano, IP por IP, si está en uso.
 
+**Pantalla: Sistema → IPs libres** (solo admin).
+
+## Formato del CSV
+
+Una columna con la IP alcanza. Si el script también manda a qué red/VLAN
+pertenece cada una, se toma sola. El importador tolera con o sin encabezado, y
+varios nombres de columna habituales:
+
+| Columna | Alias aceptados |
+|---|---|
+| IP (obligatoria) | `ip`, `direccion`, `direccion ip`, `ip address`, `address`, `host` |
+| Red (opcional) | `red`, `vlan`, `subred`, `network`, `rango` |
+
+Ejemplos válidos:
 ```
-Vercel (app)  ──HTTPS──>  túnel / URL fija  ──>  servidor de IPs (red interna)
-              GET /ip-libres (admin)          GET /ips-libres (con secreto)
+ip,red
+192.168.1.50,192.168.1.0/24
+192.168.1.62,192.168.1.0/24
 ```
-
-## Qué tiene que exponer el servidor
-
-Un endpoint `GET /ips-libres` que devuelva JSON con las IPs libres, en cualquiera
-de estas formas (la app tolera las tres):
-
-```json
-["192.168.1.50", "192.168.1.62"]
 ```
-```json
-{ "ips": ["192.168.1.50", "192.168.1.62"] }
-```
-```json
-{ "ips": [{ "ip": "192.168.1.50", "red": "192.168.1.0/24", "vistoLibreEn": "2026-08-19T10:00:00Z" }] }
-```
-
-Si se manda el header `x-ip-libres-secret` con el valor de `IP_LIBRES_SECRET`, el
-servidor debe validarlo y rechazar si no coincide (401).
-
-## Cómo se conecta
-
-**Opción A — URL fija** (VPN, IP pública con firewall, reverse proxy interno):
-```
-IP_LIBRES_URL=https://ip-server.tudominio.local
-IP_LIBRES_SECRET=un-token-largo-y-secreto      # opcional, pero recomendado
+192.168.1.50
+192.168.1.62
+192.168.1.80
 ```
 
-**Opción B — túnel que cambia de URL** (Cloudflare Tunnel gratis, igual que el
-bridge de Tango): un watchdog en esa máquina publica la URL vigente en el
-dashboard cada vez que levanta un túnel nuevo, así nunca hay que tocar Vercel.
+También acepta `.xlsx`/`.xls` (mismo lector que usa Bancos).
 
-```bash
-curl -X POST https://<tu-app>.vercel.app/api/ip-libres-url \
-  -H "x-tunel-secreto: <TUNEL_ADMIN_SECRETO>" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://algo-al-azar.trycloudflare.com"}'
-```
+## Cómo se importa
 
-`TUNEL_ADMIN_SECRETO` es el mismo secreto que ya usan el bridge de Tango y el
-admin de precios (ver `docs/tango-bridge.md`) — autoriza solo a *publicar* la URL,
-no a leer IPs: eso lo sigue guardando `IP_LIBRES_SECRET` en el propio servidor.
+1. **Sistema → IPs libres → Importar archivo**, elegir el CSV.
+2. Se previsualiza fila por fila (válida / repetida / no parece una IP) antes de
+   mandar nada — el archivo se lee en el navegador, no se sube tal cual.
+3. Al confirmar: las IPs nuevas entran como **libres**; las que ya estaban en la
+   lista **no pierden** su tilde de "en uso" ni su nota — solo se actualiza que
+   el script las volvió a ver. Así un re-escaneo no borra el trabajo manual ya
+   hecho.
 
-## Ver el resultado
+## Uso diario
 
-**Sistema → IPs libres** (solo admin). Se refresca sola cada 30 segundos y tiene
-un botón para actualizar al toque. Si no hay URL configurada (ni por KV ni por
-env), avisa "Sin configurar" en vez de romper.
+Cada fila tiene un checkbox **En uso**. Sin tildar = libre para asignar. La
+columna **Nota** es texto libre (a quién se le asignó, qué equipo, etc.) — para
+el equipo en sí, la IP se anota en **Inventario**, en el campo IP de cada
+equipo (ver `docs/inventario.md`).
 
-## Asignar una IP a un equipo
+## Implementación
 
-Copiala desde esta pantalla y pegala en el campo **IP** del equipo, en
-**Inventario → Inventario** (o **Disponibles** si todavía no tiene usuario). Ese
-campo es de texto libre: la app no valida que la IP esté realmente libre en la red
-en ese momento — la fuente de verdad sigue siendo el servidor propio.
+- `lib/ip-libres.ts` — tipo `IpEntry`.
+- `lib/ip-libres-import.ts` — parseo/validación del CSV (puro, corre en el
+  navegador para la previsualización).
+- `lib/ip-libres-store.ts` — persistencia (KV), import masivo sin pisar lo
+  tildado a mano, edición puntual (`usada`/`nota`), baja.
+- `app/api/ip-libres/route.ts` — API, solo admin.

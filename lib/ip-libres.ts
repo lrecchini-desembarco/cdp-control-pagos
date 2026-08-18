@@ -1,13 +1,20 @@
-// IPs libres de la red: tipos compartidos entre la API y la pantalla. Config pura.
+// IPs de la red (rollout de IPs fijas): config pura, usable en cliente y servidor.
 //
-// El dato lo genera un servidor propio dentro de la empresa, que escanea la LAN
-// todo el tiempo y publica cuáles IPs están libres. Esta app solo lo consulta
-// (ver app/api/ip-libres/route.ts) — no escanea nada ella misma.
+// El dato NO lo escanea esta app ni ningún servidor propio: sistemas corre su
+// propio script de escaneo y lo importa como CSV desde la pantalla. Después
+// cada IP se tilda a mano como "en uso" o se deja libre — ver
+// lib/ip-libres-store.ts y app/api/ip-libres/route.ts.
 
-export interface IpLibre {
+export interface IpEntry {
+  id: string;
   ip: string;
-  /** Red/VLAN a la que pertenece, si el servidor la manda (ej. "192.168.1.0/24"). */
+  /** Red/VLAN, si el CSV la trae (columna "Red", "VLAN", "Subred"...). */
   red?: string;
-  /** Hace cuánto la vio libre por última vez el escaneo (lo manda el servidor). */
-  vistoLibreEn?: string;
+  /** true = en uso (tildada a mano); false/undefined = libre. */
+  usada: boolean;
+  nota?: string;
+  /** Última vez que el script la vio en un CSV importado (ISO). */
+  vistaEn?: string;
+  actualizado: string;
+  actualizadoPor?: string;
 }
