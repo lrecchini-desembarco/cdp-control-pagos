@@ -8,7 +8,7 @@ import { estadoInicial, flagsDe, gbDisco, gbRam, type EstadoPC } from "./parque"
 //   1. seed      -> el relevamiento versionado (lib/parque-seed.json), que regenera
 //                   scripts/seed-inventario-pcs.mjs desde el CSV.
 //   2. manuales  -> equipos cargados a mano desde la UI (key "parque-manual").
-//   3. overrides -> estado y nota editados en la tabla (key "parque-overrides").
+//   3. overrides -> estado, nota e IP editados en la tabla (key "parque-overrides").
 //
 // Así un relevamiento nuevo actualiza las specs sin pisar lo que se cargó o decidió
 // a mano. Las specs derivadas (RAM/disco en GB y las alertas) se recalculan siempre
@@ -37,6 +37,9 @@ export interface EquipoPC {
   /** true = cargado a mano desde la UI (se puede quitar; el seed no). */
   manual?: boolean;
   nota?: string;
+  /** IP fija asignada (rollout de IPs fijas). Editable en cualquier equipo, sea
+   *  del relevamiento o manual: es dato posterior al CSV, no algo que traiga. */
+  ip?: string;
   actualizado?: string;
 }
 
@@ -45,7 +48,7 @@ type EquipoCrudo = Omit<EquipoPC, "ramGb" | "discoGb" | "flags" | "estado" | "ma
   estado?: EstadoPC;
 };
 
-type Override = { estado?: EstadoPC; nota?: string; actualizado?: string };
+type Override = { estado?: EstadoPC; nota?: string; ip?: string; actualizado?: string };
 
 const KEY_MANUAL = "parque-manual";
 const KEY_OVERRIDES = "parque-overrides";
@@ -92,6 +95,7 @@ export async function addEquipo(input: Record<string, unknown>): Promise<EquipoP
   const eq = { id: nuevoId(), nro, usuario } as EquipoCrudo;
   for (const c of CAMPOS) eq[c] = c === "usuario" ? usuario : String(input[c] ?? "").trim();
   if (input.estado) eq.estado = input.estado as EstadoPC;
+  if (input.ip !== undefined) eq.ip = String(input.ip).trim();
   eq.actualizado = new Date().toISOString();
 
   await writeStore(KEY_MANUAL, [...lista, eq]);
@@ -107,6 +111,7 @@ export async function setEquipo(id: string, patch: Record<string, unknown>): Pro
     const eq = { ...lista[i] };
     for (const c of CAMPOS) if (patch[c] !== undefined) eq[c] = String(patch[c]).trim();
     if (patch.nota !== undefined) eq.nota = String(patch.nota);
+    if (patch.ip !== undefined) eq.ip = String(patch.ip).trim();
     if (patch.estado !== undefined) eq.estado = patch.estado as EstadoPC;
     eq.actualizado = new Date().toISOString();
     lista[i] = eq;
@@ -120,6 +125,7 @@ export async function setEquipo(id: string, patch: Record<string, unknown>): Pro
     ...overrides[id],
     ...(patch.estado !== undefined ? { estado: patch.estado as EstadoPC } : {}),
     ...(patch.nota !== undefined ? { nota: String(patch.nota) } : {}),
+    ...(patch.ip !== undefined ? { ip: String(patch.ip).trim() } : {}),
     actualizado: new Date().toISOString(),
   };
   await writeStore(KEY_OVERRIDES, overrides);

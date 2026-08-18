@@ -27,6 +27,7 @@ export interface EquipoPC {
   estado: string;
   manual?: boolean;
   nota?: string;
+  ip?: string;
 }
 
 // Campos que se pueden corregir a mano en un equipo cargado desde la UI. Los del
@@ -46,11 +47,12 @@ const EDITABLES: { id: keyof EquipoPC; label: string }[] = [
   { id: "correo", label: "Correo" },
 ];
 
-type Campo = "nro" | "usuario" | "area" | "tipo" | "equipo" | "ramGb" | "discoGb" | "estado";
+type Campo = "nro" | "usuario" | "ip" | "area" | "tipo" | "equipo" | "ramGb" | "discoGb" | "estado";
 
 const COLUMNAS: { id: Campo; label: string; num?: boolean }[] = [
   { id: "nro", label: "#", num: true },
   { id: "usuario", label: "Usuario" },
+  { id: "ip", label: "IP" },
   { id: "area", label: "Área / local" },
   { id: "tipo", label: "Tipo" },
   { id: "equipo", label: "Marca y modelo" },
@@ -103,7 +105,7 @@ export default function ParquePCs({
     const t = q.trim().toLowerCase();
     if (t) {
       l = l.filter((e) =>
-        `${e.usuario} ${e.area} ${e.hostname} ${e.marca} ${e.modelo} ${e.cpu} ${e.correo} ${e.observaciones}`
+        `${e.usuario} ${e.ip ?? ""} ${e.area} ${e.hostname} ${e.marca} ${e.modelo} ${e.cpu} ${e.correo} ${e.observaciones}`
           .toLowerCase()
           .includes(t)
       );
@@ -124,9 +126,9 @@ export default function ParquePCs({
   function exportar() {
     descargarCSV(
       "parque-computadoras",
-      ["#", "Usuario", "Área", "Tipo", "Hostname", "Marca", "Modelo", "CPU", "RAM", "Almacenamiento", "SO", "Correo", "Estado", "Flags", "Observaciones", "Nota"],
+      ["#", "Usuario", "IP", "Área", "Tipo", "Hostname", "Marca", "Modelo", "CPU", "RAM", "Almacenamiento", "SO", "Correo", "Estado", "Flags", "Observaciones", "Nota"],
       filtrados.map((e) => [
-        e.nro, e.usuario, e.area, e.tipo, e.hostname, e.marca, e.modelo, e.cpu, e.ram, e.almacenamiento,
+        e.nro, e.usuario, e.ip ?? "", e.area, e.tipo, e.hostname, e.marca, e.modelo, e.cpu, e.ram, e.almacenamiento,
         e.so, e.correo, estadoPC(e.estado).label, e.flags.map((f) => flagPC(f).label).join(" · "), e.observaciones, e.nota ?? "",
       ])
     );
@@ -183,6 +185,21 @@ export default function ParquePCs({
                         <td className="px-3 py-2">
                           <p className="font-medium text-ink">{e.usuario || "—"}</p>
                           <p className="text-2xs text-faint">{e.hostname || "sin hostname"}</p>
+                        </td>
+                        <td className="px-3 py-2">
+                          {esAdmin ? (
+                            <input
+                              defaultValue={e.ip ?? ""}
+                              placeholder="192.168.1.—"
+                              onBlur={(ev) => {
+                                const v = ev.target.value.trim();
+                                if (v !== (e.ip ?? "")) onEditar(e.id, { ip: v });
+                              }}
+                              className={`${inputClass} w-32 py-1 font-mono text-2xs`}
+                            />
+                          ) : (
+                            <span className="font-mono text-2xs text-muted">{e.ip || "—"}</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-2xs text-muted">{e.area || "—"}</td>
                         <td className="px-3 py-2 text-2xs text-muted">{e.tipo || "—"}</td>

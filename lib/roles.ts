@@ -26,7 +26,7 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/qa", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/ip-libres", "/qa", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
@@ -164,6 +164,7 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga", desc: "Alta de usuarios y qué puede ver cada uno." },
   { href: "/credenciales", label: "Credenciales", icon: "🔑", section: "Sistema", fresh: "carga", soloEmails: EMAILS_CREDENCIALES, desc: "Bóveda de usuarios y contraseñas de los sistemas. Acceso restringido a sistemas." },
   { href: "/estado", label: "Salud y endpoints", icon: "⚙", section: "Sistema", fresh: "vivo", desc: "Salud del sistema y de las conexiones, en vivo." },
+  { href: "/ip-libres", label: "IPs libres", icon: "▣", section: "Sistema", fresh: "vivo", desc: "Direcciones IP libres en la red, según el servidor propio que escanea la LAN." },
   { href: "/qa", label: "QA diario", icon: "✓", section: "Sistema", fresh: "vivo", desc: "El bot que audita los datos todos los días (reconciliación, margen, identidad, mapeo, frescura) y avisa si algo se rompe." },
   // Tutoriales — repositorio de instructivos por sistema (los ve todo el mundo)
   { href: "/tutoriales/tango", label: "Tango", icon: "▷", section: "Tutoriales", fresh: "carga", desc: "Instructivos de Tango: verlos online o descargar el archivo original." },

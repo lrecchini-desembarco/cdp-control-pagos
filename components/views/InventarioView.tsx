@@ -15,7 +15,7 @@ type Tab = "inventario" | "compras" | "faltantes" | "disponibles";
 const EQUIPO_VACIO = {
   usuario: "", area: "", tipo: "Notebook", hostname: "", marca: "", modelo: "",
   cpu: "", ram: "", almacenamiento: "", gpu: "", so: "", correo: "", observaciones: "",
-  estado: "en-uso",
+  estado: "en-uso", ip: "",
 };
 
 export default function InventarioView() {
@@ -187,6 +187,7 @@ export default function InventarioView() {
                       </select>
                     </Field>
                     <Field label="Hostname"><input className={inputClass} {...campo("hostname")} /></Field>
+                    <Field label="IP asignada" hint="Si ya se le asignó una IP fija"><input className={inputClass} placeholder="192.168.1.—" {...campo("ip")} /></Field>
                     <Field label="Marca"><input className={inputClass} placeholder="DELL, Lenovo, HP…" {...campo("marca")} /></Field>
                     <Field label="Modelo"><input className={inputClass} placeholder="Inspiron 15 3535" {...campo("modelo")} /></Field>
                     <Field label="CPU"><input className={inputClass} placeholder="Intel Core i5-1335U" {...campo("cpu")} /></Field>
