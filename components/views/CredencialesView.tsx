@@ -161,7 +161,7 @@ export default function CredencialesView() {
                 <input className={inputClass} placeholder="usuario o email" autoComplete="off" {...campo("usuario")} />
               </Field>
               <Field label="Contraseña *">
-                <input className={inputClass} type="password" autoComplete="new-password" {...campo("secreto")} />
+                <CampoClave {...campo("secreto")} />
               </Field>
               <Field label="URL">
                 <input className={inputClass} placeholder="https://…" {...campo("url")} />
@@ -308,6 +308,61 @@ export default function CredencialesView() {
       </Card>
 
       {editando && <Editar credencial={items.find((c) => c.id === editando)!} guardando={guardando} onGuardar={guardar} onCerrar={() => setEditando(null)} />}
+    </div>
+  );
+}
+
+/**
+ * Input de contraseña con ojo para verla mientras se escribe: cargando una clave a
+ * mano el punteado no deja controlar si quedó bien tipeada. Mismo ícono que el modo
+ * privacidad del Topbar. Arranca siempre tapada.
+ */
+function CampoClave({
+  value,
+  onChange,
+  placeholder,
+  autoComplete = "new-password",
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  autoComplete?: string;
+}) {
+  const [ver, setVer] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        className={`${inputClass} pr-10`}
+        type={ver ? "text" : "password"}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={onChange}
+      />
+      {/* type="button": sin eso, dentro del form el ojo dispararía el submit. */}
+      <button
+        type="button"
+        onClick={() => setVer((v) => !v)}
+        title={ver ? "Ocultar la contraseña" : "Ver lo que escribí"}
+        aria-label={ver ? "Ocultar la contraseña" : "Mostrar la contraseña"}
+        aria-pressed={ver}
+        className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-faint transition-colors hover:bg-ink/5 hover:text-ink"
+      >
+        {ver ? (
+          // ojo tachado
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19M6.61 6.61A18.5 18.5 0 0 0 2 12s3 8 10 8a9.12 9.12 0 0 0 5.39-1.61" />
+            <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+            <line x1="2" y1="2" x2="22" y2="22" />
+          </svg>
+        ) : (
+          // ojo abierto
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }
@@ -546,7 +601,7 @@ function Editar({
         </Field>
         <Field label="Usuario"><input className={inputClass} autoComplete="off" {...campo("usuario")} /></Field>
         <Field label="Contraseña nueva" >
-          <input className={inputClass} type="password" placeholder="dejar vacío = no cambiarla" autoComplete="new-password" {...campo("secreto")} />
+          <CampoClave placeholder="dejar vacío = no cambiarla" {...campo("secreto")} />
         </Field>
         <Field label="URL"><input className={inputClass} {...campo("url")} /></Field>
         <div className="sm:col-span-2">
