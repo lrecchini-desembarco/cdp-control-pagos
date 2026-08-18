@@ -8,10 +8,12 @@ import Topbar from "@/components/layout/Topbar";
 import EstadoSeccion from "@/components/layout/EstadoSeccion";
 import { MobileNavProvider } from "@/components/layout/MobileNav";
 import { PrivacidadProvider } from "@/components/layout/Privacidad";
+import { TemaProvider } from "@/components/layout/Tema";
 import { getSesion } from "@/lib/session";
 import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav, visiblePara, NAV_POR_EMAIL } from "@/lib/roles";
 import { getRolesNav, blindar } from "@/lib/roles-store";
 import { googlePlacesConfigurado } from "@/lib/google-places";
+import { puedeElegirTema } from "@/lib/tema";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
@@ -62,6 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Items del menú que ve este rol (con su ícono/label del catálogo). Si Google
   // Places está configurado, Reseñas deja de ser "revisar" (foto) y pasa a "en vivo".
   const placesOn = googlePlacesConfigurado();
+  const temaPermitido = puedeElegirTema(sesion?.email);
   // visiblePara: saca las pantallas de lista blanca (ej. Credenciales) si este
   // usuario no está en ellas. No las ve ni el admin. La página y su API lo
   // vuelven a chequear igual: esto es solo el menú.
@@ -74,20 +77,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans">
         {/* Anti-flash: aplica el modo privacidad ANTES de pintar (evita mostrar los montos por un frame). */}
         <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('cdp_privacy')==='1')document.documentElement.dataset.privacy='on'}catch(e){}` }} />
+        {/* Modo oscuro: SOLO si la sesión es la de sistemas02@eldesembarco.com se manda
+            este script. Al resto de las cuentas ni les llega, así que aunque alguien
+            tenga "cdp_theme=dark" viejo en el localStorage de una compu compartida,
+            en su sesión no se aplica nunca. */}
+        {temaPermitido && (
+          <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('cdp_theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}` }} />
+        )}
         {sesion && !esPantallaTv && !enOnboarding ? (
           <PrivacidadProvider>
-            <MobileNavProvider>
-              <div className="flex h-screen overflow-hidden">
-                <Sidebar rol={sesion.rol} items={itemsNav} />
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} />
-                  <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
-                    <EstadoSeccion />
-                    {children}
-                  </main>
+            <TemaProvider permitido={temaPermitido}>
+              <MobileNavProvider>
+                <div className="flex h-screen overflow-hidden">
+                  <Sidebar rol={sesion.rol} items={itemsNav} />
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} temaPermitido={temaPermitido} />
+                    <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+                      <EstadoSeccion />
+                      {children}
+                    </main>
+                  </div>
                 </div>
-              </div>
-            </MobileNavProvider>
+              </MobileNavProvider>
+            </TemaProvider>
           </PrivacidadProvider>
         ) : (
           children

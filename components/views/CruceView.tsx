@@ -22,7 +22,8 @@ function isoMinusDays(iso: string, n: number): string {
 function DeviationBar({ pct }: { pct: number }) {
   // barra divergente centrada en 0: derecha = sobre-pedido, izquierda = sub-pedido
   const sev = severidad(pct);
-  const color = sev === "ok" ? "#2E7D52" : sev === "warn" ? "#C8841C" : "#C0392B";
+  // rgb(var(--x)): mismos tokens que el resto de la app, así la barra respeta el modo oscuro.
+  const color = sev === "ok" ? "rgb(var(--ok))" : sev === "warn" ? "rgb(var(--warn))" : "rgb(var(--bad))";
   const w = Math.min(50, Math.abs(pct) * 100); // % de medio ancho
   const right = pct >= 0;
   return (

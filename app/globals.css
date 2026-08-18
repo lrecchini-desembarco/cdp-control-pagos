@@ -3,12 +3,48 @@
 @tailwind utilities;
 
 :root {
-  --ring: #155E63;
+  /* Tokens de color en RGB "R G B" (sin comas ni rgb()): así tailwind.config.ts
+     puede armar rgb(var(--x) / <alpha-value>) y los modificadores de opacidad
+     (bg-ink/5, bg-ok/15…) siguen funcionando. Modo oscuro: mismo set de nombres,
+     redefinido bajo :root[data-theme="dark"]. El atributo lo pone
+     components/layout/Tema.tsx, y SOLO para sistemas02@eldesembarco.com (ver
+     app/layout.tsx: al resto de las cuentas ni se les manda el script). */
+  --ink: 24 24 27;
+  --paper: 247 247 245;
+  --surface: 255 255 255;
+  --line: 230 227 219;
+  --muted: 107 104 96;
+  --faint: 156 153 143;
+  --action: 21 94 99;
+  --action-700: 14 73 77;
+  --ok: 46 125 82;
+  --warn: 200 132 28;
+  --bad: 192 57 43;
+  --ring: 21 94 99;
+  --scroll-thumb: 217 214 205;
+  --scroll-thumb-hover: 199 195 184;
+}
+
+:root[data-theme="dark"] {
+  --ink: 236 233 226;
+  --paper: 23 22 19;
+  --surface: 31 30 27;
+  --line: 52 50 44;
+  --muted: 166 162 150;
+  --faint: 125 122 110;
+  --action: 46 154 160;
+  --action-700: 111 201 206;
+  --ok: 63 160 107;
+  --warn: 217 150 58;
+  --bad: 221 97 83;
+  --ring: 46 154 160;
+  --scroll-thumb: 58 56 47;
+  --scroll-thumb-hover: 74 71 60;
 }
 
 html, body {
-  background: #F7F7F5;
-  color: #18181B;
+  background: rgb(var(--paper));
+  color: rgb(var(--ink));
   -webkit-font-smoothing: antialiased;
 }
 
@@ -17,15 +53,15 @@ html, body {
 
 /* foco visible y consistente (Nielsen: visibilidad / accesibilidad) */
 *:focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid rgb(var(--ring));
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 /* scrollbar discreta */
 ::-webkit-scrollbar { height: 10px; width: 10px; }
-::-webkit-scrollbar-thumb { background: #D9D6CD; border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: #C7C3B8; }
+::-webkit-scrollbar-thumb { background: rgb(var(--scroll-thumb)); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--scroll-thumb-hover)); }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
@@ -33,6 +69,8 @@ html, body {
 
 /* Impresión: solo la planilla de reseña (#print-area); oculta menú, topbar y controles */
 @media print {
+  /* Que la impresión salga en claro aunque la pantalla esté en modo oscuro. */
+  body { background: #fff; color: #18181B; }
   body * { visibility: hidden; }
   #print-area, #print-area * { visibility: visible; }
   #print-area { position: absolute; left: 0; top: 0; width: 100%; }

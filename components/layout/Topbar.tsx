@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMobileNav } from "@/components/layout/MobileNav";
 import { OjoPrivacidad } from "@/components/layout/Privacidad";
+import { BotonTema } from "@/components/layout/Tema";
 import TourGuiado from "@/components/layout/TourGuiado";
 
 const LABELS: Record<string, string> = {
@@ -18,7 +19,16 @@ const LABELS: Record<string, string> = {
   guia: "¿Qué puedo hacer?",
 };
 
-export default function Topbar({ email, rolLabel }: { email: string; rolLabel: string }) {
+export default function Topbar({
+  email,
+  rolLabel,
+  temaPermitido = false,
+}: {
+  email: string;
+  rolLabel: string;
+  /** Modo oscuro: hoy, solo para sistemas02@eldesembarco.com (ver lib/tema.ts). */
+  temaPermitido?: boolean;
+}) {
   const path = usePathname();
   const { setAbierto } = useMobileNav();
   const seg = path.split("/").filter(Boolean)[0] ?? "";
@@ -70,6 +80,7 @@ export default function Topbar({ email, rolLabel }: { email: string; rolLabel: s
           {txt}
         </span>
         <OjoPrivacidad />
+        {temaPermitido && <BotonTema />}
         <span className="hidden h-4 w-px bg-line sm:inline-block" />
         <span className="hidden text-faint md:inline">
           {email} · <span className="font-medium text-muted">{rolLabel}</span>
