@@ -1,13 +1,10 @@
 "use client";
 
-// Modo oscuro. Mismo patrón que Privacidad.tsx: contexto + botón, con el estado
-// espejado en localStorage y en document.documentElement.dataset.theme (así
-// globals.css lo puede leer con el selector :root[data-theme="dark"]).
-//
-// La restricción a un solo email NO se resuelve acá: se resuelve en app/layout.tsx,
-// que solo manda el script de anti-flash y el botón cuando corresponde. Este
-// componente solo hace caso a la prop `permitido` como cinturón de seguridad
-// extra (si no está permitido, toggle() no hace nada).
+// Modo oscuro, para cualquier usuario. Mismo patrón que Privacidad.tsx: contexto
+// + botón, con el estado espejado en localStorage y en
+// document.documentElement.dataset.theme (así globals.css lo puede leer con el
+// selector :root[data-theme="dark"]). Default: claro (sin valor guardado, el
+// script anti-flash de app/layout.tsx no toca el atributo).
 
 import { createContext, useContext, useEffect, useState } from "react";
 
@@ -19,18 +16,16 @@ interface Ctx {
 }
 const TemaCtx = createContext<Ctx>({ oscuro: false, toggle: () => {} });
 
-export function TemaProvider({ permitido, children }: { permitido: boolean; children: React.ReactNode }) {
+export function TemaProvider({ children }: { children: React.ReactNode }) {
   const [oscuro, setOscuro] = useState(false);
 
   // El valor real ya lo puso el script anti-flash antes de pintar; acá solo se
   // sincroniza el estado de React con lo que quedó en el <html>.
   useEffect(() => {
-    if (!permitido) return;
     setOscuro(document.documentElement.dataset.theme === "dark");
-  }, [permitido]);
+  }, []);
 
   const toggle = () => {
-    if (!permitido) return;
     setOscuro((prev) => {
       const next = !prev;
       document.documentElement.dataset.theme = next ? "dark" : "light";
@@ -46,7 +41,7 @@ export function TemaProvider({ permitido, children }: { permitido: boolean; chil
 
 export const useTema = () => useContext(TemaCtx);
 
-/** Botón luna/sol para el Topbar. Quien lo monta ya filtró por email. */
+/** Botón luna/sol para el Topbar. */
 export function BotonTema() {
   const { oscuro, toggle } = useTema();
   return (

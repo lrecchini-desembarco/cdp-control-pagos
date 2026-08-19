@@ -23,13 +23,10 @@ const LABELS: Record<string, string> = {
 export default function Topbar({
   email,
   rolLabel,
-  temaPermitido = false,
   panelSistemasPermitido = false,
 }: {
   email: string;
   rolLabel: string;
-  /** Modo oscuro: hoy, solo para sistemas02@eldesembarco.com (ver lib/tema.ts). */
-  temaPermitido?: boolean;
   /** Botón "Panel de sistemas": lista blanca en lib/panel-sistemas.ts + agregados a mano. */
   panelSistemasPermitido?: boolean;
 }) {
@@ -84,7 +81,7 @@ export default function Topbar({
           {txt}
         </span>
         <OjoPrivacidad />
-        {temaPermitido && <BotonTema />}
+        <BotonTema />
         {panelSistemasPermitido && (
           <Link
             href="/panel-sistemas"
