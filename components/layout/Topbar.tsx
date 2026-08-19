@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useMobileNav } from "@/components/layout/MobileNav";
 import { OjoPrivacidad } from "@/components/layout/Privacidad";
 import { BotonTema } from "@/components/layout/Tema";
+import Link from "next/link";
 import TourGuiado from "@/components/layout/TourGuiado";
 
 const LABELS: Record<string, string> = {
@@ -23,11 +24,14 @@ export default function Topbar({
   email,
   rolLabel,
   temaPermitido = false,
+  panelSistemasPermitido = false,
 }: {
   email: string;
   rolLabel: string;
   /** Modo oscuro: hoy, solo para sistemas02@eldesembarco.com (ver lib/tema.ts). */
   temaPermitido?: boolean;
+  /** Botón "Panel de sistemas": lista blanca en lib/panel-sistemas.ts + agregados a mano. */
+  panelSistemasPermitido?: boolean;
 }) {
   const path = usePathname();
   const { setAbierto } = useMobileNav();
@@ -81,6 +85,18 @@ export default function Topbar({
         </span>
         <OjoPrivacidad />
         {temaPermitido && <BotonTema />}
+        {panelSistemasPermitido && (
+          <Link
+            href="/panel-sistemas"
+            className={`hidden items-center gap-1.5 rounded-full border px-3 py-1 text-2xs font-semibold sm:inline-flex ${
+              path.startsWith("/panel-sistemas")
+                ? "border-action bg-action text-white"
+                : "border-action/25 bg-action/10 text-action hover:bg-action/15"
+            }`}
+          >
+            <span aria-hidden>◈</span> Panel de sistemas
+          </Link>
+        )}
         <span className="hidden h-4 w-px bg-line sm:inline-block" />
         <span className="hidden text-faint md:inline">
           {email} · <span className="font-medium text-muted">{rolLabel}</span>

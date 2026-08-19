@@ -14,6 +14,7 @@ import { ROLES, NAV_CATALOG, puedeVerNav, homeDeNav, visiblePara, NAV_POR_EMAIL 
 import { getRolesNav, blindar } from "@/lib/roles-store";
 import { googlePlacesConfigurado } from "@/lib/google-places";
 import { puedeElegirTema } from "@/lib/tema";
+import { puedeVerPanelSistemas } from "@/lib/panel-sistemas-store";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
@@ -58,13 +59,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     if (sesion.rol === "franquiciado" && !sesion.puesto && !enOnboarding) redirect("/franquiciado");
     if (enOnboarding && (sesion.rol !== "franquiciado" || sesion.puesto)) redirect(homeDeNav(miNav));
   }
-  if (sesion && pathname && !esPantallaTv && !enOnboarding && !puedeEntrar(rutaGate)) {
+  // /panel-sistemas no es un ítem del nav (no vive en el sidebar, solo en el
+  // botón del topbar) y su lista de acceso es dinámica (lib/panel-sistemas-store.ts,
+  // se agranda desde la propia pantalla) — no encaja en el gating por nav/rol de
+  // acá arriba. Se exceptúa de esta redirección; la propia página vuelve a
+  // chequear el acceso real antes de renderizar nada.
+  if (sesion && pathname && !esPantallaTv && !enOnboarding && rutaGate !== "/panel-sistemas" && !puedeEntrar(rutaGate)) {
     redirect(homeDeNav(miNav));
   }
   // Items del menú que ve este rol (con su ícono/label del catálogo). Si Google
   // Places está configurado, Reseñas deja de ser "revisar" (foto) y pasa a "en vivo".
   const placesOn = googlePlacesConfigurado();
   const temaPermitido = puedeElegirTema(sesion?.email);
+  const panelSistemasPermitido = await puedeVerPanelSistemas(sesion?.email);
   // visiblePara: saca las pantallas de lista blanca (ej. Credenciales) si este
   // usuario no está en ellas. No las ve ni el admin. La página y su API lo
   // vuelven a chequear igual: esto es solo el menú.
@@ -91,7 +98,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <div className="flex h-screen overflow-hidden">
                   <Sidebar rol={sesion.rol} items={itemsNav} />
                   <div className="flex flex-1 flex-col overflow-hidden">
-                    <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} temaPermitido={temaPermitido} />
+                    <Topbar email={sesion.email} rolLabel={ROLES[sesion.rol].label} temaPermitido={temaPermitido} panelSistemasPermitido={panelSistemasPermitido} />
                     <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
                       <EstadoSeccion />
                       {children}
