@@ -1,4 +1,6 @@
-import EstadoView from "@/components/views/EstadoView";
+import { redirect } from "next/navigation";
+
+// Se mudó adentro del Panel de Sistemas (ver app/panel-sistemas/estado).
 export default function Page() {
-  return <EstadoView />;
+  redirect("/panel-sistemas/estado");
 }

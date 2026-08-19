@@ -105,9 +105,9 @@ const CAPACIDADES: Capacidad[] = [
   },
   {
     titulo: "Inventario de IT",
-    paraQue: "Registrar y aprobar los recursos de infraestructura (notebooks, monitores, etc.).",
-    pasos: ["Entrá a Inventario.", "Agregá o editá un ítem.", "El admin aprueba las altas."],
-    href: "/inventario",
+    paraQue: "Registrar y aprobar los recursos de infraestructura (notebooks, monitores, etc.). Vive dentro del Panel de Sistemas.",
+    pasos: ["Entrá al Panel de Sistemas (botón del topbar) → pestaña Inventario.", "Agregá o editá un ítem.", "El admin aprueba las altas."],
+    href: "/panel-sistemas/inventario",
     cta: "Ir a inventario",
   },
   {

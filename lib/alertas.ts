@@ -227,7 +227,7 @@ export function detectarAlertas(
         detalle: `El dato más fresco de Tango es del ${opts.refFecha} y hoy es ${opts.hoy}. Mientras esté cortado, ninguna alerta por local es confiable: un local frenado no se distingue de la carga frenada.`,
         porque:
           "Si se cortó la carga de Tango, el control queda ciego: todo parece 'al día' aunque no se esté vendiendo. Hay que revisar el push/bridge de la PC de carga.",
-        accion: { label: "Ver salud del sistema", href: "/estado" },
+        accion: { label: "Ver salud del sistema", href: "/panel-sistemas/estado" },
         metrica: `+${dias}d`,
       });
     }

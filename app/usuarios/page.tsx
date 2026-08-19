@@ -1,14 +1,8 @@
 import { redirect } from "next/navigation";
-import { getSesion } from "@/lib/session";
-import { homeDeSesion } from "@/lib/roles-store";
-import UsuariosView from "@/components/views/UsuariosView";
 
-export const dynamic = "force-dynamic";
-
-// Gestión de usuarios: solo admin (por seguridad, aunque esté en el nav de otro).
-export default async function Page() {
-  const s = await getSesion();
-  if (!s) redirect("/login");
-  if (s.rol !== "admin") redirect(await homeDeSesion(s));
-  return <UsuariosView />;
+// Se mudó adentro del Panel de Sistemas (ver app/panel-sistemas/usuarios).
+// Redirect para no romper links/atajos guardados; el chequeo real de acceso
+// vive en el destino (app/panel-sistemas/layout.tsx + su propio candado).
+export default function Page() {
+  redirect("/panel-sistemas/usuarios");
 }

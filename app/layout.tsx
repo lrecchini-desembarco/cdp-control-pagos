@@ -58,12 +58,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     if (sesion.rol === "franquiciado" && !sesion.puesto && !enOnboarding) redirect("/franquiciado");
     if (enOnboarding && (sesion.rol !== "franquiciado" || sesion.puesto)) redirect(homeDeNav(miNav));
   }
-  // /panel-sistemas no es un ítem del nav (no vive en el sidebar, solo en el
-  // botón del topbar) y su lista de acceso es dinámica (lib/panel-sistemas-store.ts,
-  // se agranda desde la propia pantalla) — no encaja en el gating por nav/rol de
-  // acá arriba. Se exceptúa de esta redirección; la propia página vuelve a
-  // chequear el acceso real antes de renderizar nada.
-  if (sesion && pathname && !esPantallaTv && !enOnboarding && rutaGate !== "/panel-sistemas" && !puedeEntrar(rutaGate)) {
+  // /panel-sistemas (y todo lo que cuelga debajo, ej. /panel-sistemas/usuarios:
+  // rutaGate solo mira el primer segmento) no es un ítem del nav —no vive en el
+  // sidebar, solo en el botón del topbar— y su acceso es la lista dinámica de
+  // lib/panel-sistemas-store.ts, no el nav/rol de acá arriba. Las rutas viejas
+  // (/usuarios, /credenciales, /estado, /ip-libres, /inventario) ya no están en
+  // ningún nav —se mudaron adentro del panel— pero se dejan como redirects hacia
+  // la nueva ubicación para no romper links guardados; también se exceptúan, así
+  // el redirect se ejecuta en vez de rebotar antes de llegar a la página.
+  const EXCEPTUADAS_DEL_GATING_NAV = ["/panel-sistemas", "/usuarios", "/credenciales", "/estado", "/ip-libres", "/inventario"];
+  if (
+    sesion &&
+    pathname &&
+    !esPantallaTv &&
+    !enOnboarding &&
+    !EXCEPTUADAS_DEL_GATING_NAV.includes(rutaGate) &&
+    !puedeEntrar(rutaGate)
+  ) {
     redirect(homeDeNav(miNav));
   }
   // Items del menú que ve este rol (con su ícono/label del catálogo). Si Google

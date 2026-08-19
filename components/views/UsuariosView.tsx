@@ -118,7 +118,7 @@ export default function UsuariosView() {
   }
 
   async function toggle(rol: Rol, href: string) {
-    if (fijas.includes(href) || (rol === "admin" && href === "/usuarios")) return; // fijas
+    if (fijas.includes(href)) return; // fijas
     const cur = navByRol[rol] ?? [];
     const nuevo = cur.includes(href) ? cur.filter((h) => h !== href) : [...cur, href];
     setNavByRol((s) => ({ ...s, [rol]: nuevo })); // optimista
@@ -137,7 +137,7 @@ export default function UsuariosView() {
       setGuardandoRol("");
     }
   }
-  const esFija = (rol: Rol, href: string) => fijas.includes(href) || (rol === "admin" && href === "/usuarios");
+  const esFija = (rol: Rol, href: string) => fijas.includes(href);
 
   async function agregar(e: React.FormEvent) {
     e.preventDefault();

@@ -1,7 +1,6 @@
 // Roles y qué ve cada uno. Es config pura (sin fs), así la puede usar el
 // middleware (edge) y también el server.
 
-import { EMAILS_CREDENCIALES } from "./credenciales";
 
 export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia" | "apps-gerencia" | "franquiciado" | "pendiente";
 
@@ -26,7 +25,7 @@ export interface RolInfo {
 export const ROLES: Record<Rol, RolInfo> = {
   admin: {
     label: "Administrador",
-    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/usuarios", "/inventario", "/apertura", "/organigrama", "/estado", "/ip-libres", "/qa", "/firmas", "/guia"],
+    nav: ["/", "/alertas", "/cruce", "/pedidos", "/ventas", "/precios", "/remitos", "/compras", "/actividad", "/facturacion", "/mercadopago", "/bancos", "/franquicias", "/insumos", "/recetas", "/listas", "/apps", "/promos", "/rentabilidad", "/mapeos", "/resenas", "/clientes", "/cupones", "/apertura", "/organigrama", "/qa", "/firmas", "/guia"],
     gestionaUsuarios: true,
   },
   operaciones: {
@@ -154,17 +153,12 @@ export const NAV_CATALOG: NavItem[] = [
   { href: "/cupones", label: "Validar cupón", icon: "◈", section: "Clientes", fresh: "carga", desc: "Validar y canjear un cupón en el local." },
   // Locales
   { href: "/apertura", label: "Apertura de locales", icon: "◱", section: "Locales", fresh: "carga", desc: "Estado de apertura de cada local (para gerencia y la TV)." },
-  { href: "/inventario", label: "Inventario", icon: "▧", section: "Locales", fresh: "carga", desc: "Recursos de IT: qué hay, qué falta comprar y aprobaciones." },
   // Empresa — estructura y personas
   { href: "/organigrama", label: "Organigrama", icon: "⧉", section: "Empresa", fresh: "carga", desc: "Quién reporta a quién; ubicás tu casillero." },
   { href: "/contactos", label: "Contactos", icon: "☏", section: "Empresa", fresh: "carga", desc: "Contactos clave para resolver temas urgentes (Tango, sistemas, proveedores, bancos): teléfono, mail y con qué verlo, con botón directo de WhatsApp y email." },
   { href: "/bienvenida", label: "Bienvenida · Nuevo ingreso", icon: "✋", section: "Empresa", fresh: "carga", desc: "Alta de nuevos ingresos y su tarjeta de bienvenida imprimible con los datos de acceso (email y clave)." },
   // Sistema — configuración y salud
   { href: "/mapeos", label: "Mapeos", icon: "⊞", section: "Sistema", fresh: "carga", desc: "Enseñale al sistema las recetas y los códigos de sucursal." },
-  { href: "/usuarios", label: "Usuarios", icon: "◑", section: "Sistema", fresh: "carga", desc: "Alta de usuarios y qué puede ver cada uno." },
-  { href: "/credenciales", label: "Credenciales", icon: "🔑", section: "Sistema", fresh: "carga", soloEmails: EMAILS_CREDENCIALES, desc: "Bóveda de usuarios y contraseñas de los sistemas. Acceso restringido a sistemas." },
-  { href: "/estado", label: "Salud y endpoints", icon: "⚙", section: "Sistema", fresh: "vivo", desc: "Salud del sistema y de las conexiones, en vivo." },
-  { href: "/ip-libres", label: "IPs libres", icon: "▣", section: "Sistema", fresh: "carga", desc: "Checklist de IPs para el rollout de fijas: se importa el CSV del script de escaneo y se tilda a mano cuál está en uso." },
   { href: "/qa", label: "QA diario", icon: "✓", section: "Sistema", fresh: "vivo", desc: "El bot que audita los datos todos los días (reconciliación, margen, identidad, mapeo, frescura) y avisa si algo se rompe." },
   // Tutoriales — repositorio de instructivos por sistema (los ve todo el mundo)
   { href: "/tutoriales/tango", label: "Tango", icon: "▷", section: "Tutoriales", fresh: "carga", desc: "Instructivos de Tango: verlos online o descargar el archivo original." },

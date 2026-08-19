@@ -1,9 +1,9 @@
 "use client";
 
-// Panel de Sistemas. Arranca con lo concreto que se pidió: quién tiene acceso
-// a esta pantalla y un lugar para sumar gente sin tocar código. El resto del
-// panel (salud en vivo, pendientes, accesos directos) se agrega en una próxima
-// vuelta, sobre el wireframe ya acordado.
+// Pestaña "Inicio" del Panel de Sistemas: quién tiene acceso al panel entero
+// y un lugar para sumar gente sin tocar código. El resto de las pestañas
+// (Usuarios, Credenciales, Salud y endpoints, IPs libres, Inventario) son las
+// pantallas que antes vivían sueltas en el sidebar, ahora movidas para adentro.
 
 import { useEffect, useState } from "react";
 import { Card, Button, inputClass } from "@/components/ui/primitives";
@@ -73,10 +73,10 @@ export default function PanelSistemasView() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Panel de Sistemas</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">Inicio</h1>
         <p className="mt-0.5 max-w-2xl text-sm text-muted">
-          Todo lo que sistemas necesita resolver, en un solo lugar. Acceso restringido: no depende del rol
-          sino de una lista de emails puntual.
+          Quién puede entrar al Panel de Sistemas entero (todas las pestañas). No depende del rol de la
+          cuenta sino de esta lista puntual.
         </p>
       </div>
 
@@ -132,8 +132,8 @@ export default function PanelSistemasView() {
       </Card>
 
       <Card className="border-line/70 bg-ink/[0.015] p-4 text-2xs text-faint">
-        Próximamente en esta pantalla: salud del sistema en vivo, pendientes accionables (usuarios sin rol,
-        compras por aprobar, alertas activas, rollout de IPs) y accesos directos.
+        Próximamente en esta pestaña: salud del sistema en vivo y pendientes accionables (usuarios sin rol,
+        compras por aprobar, alertas activas, rollout de IPs) — el resto del wireframe ya acordado.
       </Card>
     </div>
   );
