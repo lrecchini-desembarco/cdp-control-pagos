@@ -1,5 +1,13 @@
 // Tickets a sistemas: config pura (usable en cliente y servidor).
 
+// Quién puede ABRIR un ticket (la pantalla /tickets). Por ahora, solo
+// sistemas02 mientras se prueba — se agranda cuando se decida abrirlo a
+// todo el mundo. No confundir con el acceso al Panel de Sistemas
+// (lib/panel-sistemas-store.ts): son listas independientes.
+export const EMAILS_TICKETS = ["sistemas02@eldesembarco.com"];
+export const puedeAbrirTicket = (email?: string | null): boolean =>
+  Boolean(email) && EMAILS_TICKETS.includes(String(email).trim().toLowerCase());
+
 export type PrioridadTicket = "baja" | "media" | "alta" | "urgente";
 export type EstadoTicket = "abierto" | "en-curso" | "espera" | "resuelto" | "cerrado";
 

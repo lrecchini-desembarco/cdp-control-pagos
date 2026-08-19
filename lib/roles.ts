@@ -1,6 +1,7 @@
 // Roles y qué ve cada uno. Es config pura (sin fs), así la puede usar el
 // middleware (edge) y también el server.
 
+import { EMAILS_TICKETS } from "./tickets";
 
 export type Rol = "admin" | "operaciones" | "local" | "comparacion" | "resenas" | "gerencia" | "apps-gerencia" | "franquiciado" | "pendiente";
 
@@ -168,7 +169,7 @@ export const NAV_CATALOG: NavItem[] = [
   // Ayuda y herramientas
   { href: "/firmas", label: "Firmas", icon: "✎", section: "Ayuda", fresh: "carga", desc: "Generador de firmas de email para el equipo." },
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?", section: "Ayuda", fresh: "carga", desc: "La guía completa: qué podés hacer y cómo, paso a paso." },
-  { href: "/tickets", label: "Tickets a sistemas", icon: "🎫", section: "Ayuda", fresh: "carga", desc: "Pedile una mano a sistemas: abrí un ticket y seguí la conversación hasta que se resuelva." },
+  { href: "/tickets", label: "Tickets a sistemas", icon: "🎫", section: "Ayuda", fresh: "carga", soloEmails: EMAILS_TICKETS, desc: "Pedile una mano a sistemas: abrí un ticket y seguí la conversación hasta que se resuelva. Por ahora, solo mientras se prueba." },
 ];
 
 // Rutas universales: las ve todo el mundo, no se pueden sacar (evita autobloqueo).
@@ -180,7 +181,7 @@ export const NAV_CATALOG: NavItem[] = [
 // padre "/tutoriales" (routing) son para TODOS, incluso los restringidos. Las 4
 // subpáginas de tutoriales son universales para los roles normales, pero NO para los
 // restringidos (que solo ven las que tengan en su nav) — por eso van aparte.
-export const UNIVERSALES_BASE = ["/guia", "/tutoriales", "/tickets"];
+export const UNIVERSALES_BASE = ["/guia", "/tutoriales"];
 export const TUTORIALES_TODOS = ["/tutoriales/tango", "/tutoriales/ayres", "/tutoriales/raven", "/tutoriales/qlik"];
 export const UNIVERSALES = [...UNIVERSALES_BASE, ...TUTORIALES_TODOS];
 export const NAV_SIEMPRE = UNIVERSALES;
