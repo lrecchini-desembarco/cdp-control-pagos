@@ -7,8 +7,7 @@
      puede armar rgb(var(--x) / <alpha-value>) y los modificadores de opacidad
      (bg-ink/5, bg-ok/15…) siguen funcionando. Modo oscuro: mismo set de nombres,
      redefinido bajo :root[data-theme="dark"]. El atributo lo pone
-     components/layout/Tema.tsx, y SOLO para sistemas02@eldesembarco.com (ver
-     app/layout.tsx: al resto de las cuentas ni se les manda el script). */
+     components/layout/Tema.tsx, para cualquier cuenta (ver app/layout.tsx). */
   --ink: 24 24 27;
   --paper: 247 247 245;
   --surface: 255 255 255;
@@ -23,6 +22,8 @@
   --ring: 21 94 99;
   --scroll-thumb: 217 214 205;
   --scroll-thumb-hover: 199 195 184;
+  --skeleton-base: 236 234 227;
+  --skeleton-shine: 255 255 255;
 }
 
 :root[data-theme="dark"] {
@@ -40,6 +41,8 @@
   --ring: 46 154 160;
   --scroll-thumb: 58 56 47;
   --scroll-thumb-hover: 74 71 60;
+  --skeleton-base: 40 39 34;
+  --skeleton-shine: 58 56 49;
 }
 
 html, body {
@@ -83,7 +86,7 @@ html, body {
 
 /* Organigrama: árbol top-down con conectores CSS (técnica clásica ul/li + pseudo-elementos).
    El contenedor hace scroll horizontal si el árbol es más ancho que la pantalla (escalable). */
-:root { --org-line: #D9D6CD; }
+:root { --org-line: rgb(var(--line)); }
 .org, .org ul { margin: 0; padding: 0; }
 .org { display: flex; justify-content: center; }
 .org ul { display: flex; justify-content: center; padding-top: 22px; position: relative; }
@@ -115,12 +118,12 @@ html, body {
 
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 .skeleton {
-  position: relative; overflow: hidden; background: #ECEAE3;
+  position: relative; overflow: hidden; background: rgb(var(--skeleton-base));
 }
 .skeleton::after {
   content: ""; position: absolute; inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--skeleton-shine) / .6), transparent);
   animation: shimmer 1.3s infinite;
 }
 
@@ -166,5 +169,5 @@ html, body {
 .doc-embebido a { text-decoration: underline; }
 .doc-embebido img { max-width: 100%; height: auto; }
 .doc-embebido table { border-collapse: collapse; margin: .8em 0; width: 100%; }
-.doc-embebido th, .doc-embebido td { border: 1px solid #E5E1D8; padding: .35em .6em; text-align: left; }
+.doc-embebido th, .doc-embebido td { border: 1px solid rgb(var(--line)); padding: .35em .6em; text-align: left; }
 .doc-embebido th { font-weight: 600; }
