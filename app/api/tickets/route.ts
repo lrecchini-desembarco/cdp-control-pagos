@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     // Alta: sin id, cualquier cuenta logueada.
     if (!body?.id) {
-      const items = await crearTicket(body, s.email);
+      const { items } = await crearTicket(body, s.email);
       return NextResponse.json({ ok: true, items });
     }
 

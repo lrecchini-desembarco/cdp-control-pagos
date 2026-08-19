@@ -164,8 +164,21 @@ export default function TicketsView() {
                     <Fragment key={t.id}>
                       <tr className="border-b border-line/70 hover:bg-ink/[0.02]">
                         <td className="px-4 py-2">
-                          <p className="font-medium text-ink">{t.titulo}</p>
-                          <p className="text-2xs text-faint">#{t.nro} · {t.solicitante}</p>
+                          <p className="font-medium text-ink">
+                            {t.titulo}
+                            {t.origen === "whatsapp" && (
+                              <span className="ml-1.5 rounded border border-ok/30 bg-ok/10 px-1.5 py-0.5 text-[10px] font-medium text-ok">WhatsApp</span>
+                            )}
+                          </p>
+                          <p className="text-2xs text-faint">
+                            #{t.nro} · {t.solicitante}
+                            {t.trelloUrl && (
+                              <>
+                                {" · "}
+                                <a href={t.trelloUrl} target="_blank" rel="noreferrer" className="text-action hover:underline">Ver en Trello ↗</a>
+                              </>
+                            )}
+                          </p>
                         </td>
                         <td className="px-3 py-2 text-2xs text-muted">{t.categoria}</td>
                         <td className="px-3 py-2">

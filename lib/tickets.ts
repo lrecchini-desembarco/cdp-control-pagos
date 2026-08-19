@@ -69,11 +69,15 @@ export interface Ticket {
   prioridad: PrioridadTicket;
   estado: EstadoTicket;
   descripcion: string;
-  solicitante: string; // email de quien lo abrió
+  solicitante: string; // email de quien lo abrió (o "WhatsApp: Nombre (+54...)" si vino del webhook)
   asignado?: string; // email de sistemas
   comentarios: Comentario[];
   creado: string;
   actualizado: string;
+  /** De dónde salió. Default "web" (el formulario /tickets). */
+  origen?: "web" | "whatsapp";
+  /** Tarjeta de Trello ya creada por el flujo de n8n, si la mandó. */
+  trelloUrl?: string;
 }
 
 /** Lo que ve el solicitante en "Mis tickets" — no expone nada que no debería ver, pero hoy es igual al completo. */

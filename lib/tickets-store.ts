@@ -24,9 +24,16 @@ export async function getTicketsDe(email: string): Promise<Ticket[]> {
 }
 
 export async function crearTicket(
-  input: { titulo: string; categoria: string; prioridad: PrioridadTicket; descripcion: string },
+  input: {
+    titulo: string;
+    categoria: string;
+    prioridad: PrioridadTicket;
+    descripcion: string;
+    origen?: "web" | "whatsapp";
+    trelloUrl?: string;
+  },
   email: string
-): Promise<Ticket[]> {
+): Promise<{ items: Ticket[]; creado: Ticket }> {
   const titulo = String(input.titulo ?? "").trim();
   const descripcion = String(input.descripcion ?? "").trim();
   if (!titulo) throw new Error("Poné un título.");
@@ -35,7 +42,7 @@ export async function crearTicket(
   const lista = await todos();
   const nro = Math.max(0, ...lista.map((t) => t.nro)) + 1;
   const ahora = new Date().toISOString();
-  lista.push({
+  const creado: Ticket = {
     id: nuevoId(),
     nro,
     titulo,
@@ -47,9 +54,12 @@ export async function crearTicket(
     comentarios: [],
     creado: ahora,
     actualizado: ahora,
-  });
+    ...(input.origen ? { origen: input.origen } : {}),
+    ...(input.trelloUrl ? { trelloUrl: String(input.trelloUrl).trim() } : {}),
+  };
+  lista.push(creado);
   await writeStore(KEY, lista);
-  return getTickets();
+  return { items: await getTickets(), creado };
 }
 
 /** Cambios de sistemas: estado, a quién está asignado, prioridad. */
