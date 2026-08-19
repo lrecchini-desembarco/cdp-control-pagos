@@ -18,6 +18,7 @@ const TABS = [
   { href: "/panel-sistemas/inventario", label: "Inventario" },
   { href: "/panel-sistemas/mapeos", label: "Mapeos" },
   { href: "/panel-sistemas/qa", label: "QA diario" },
+  { href: "/panel-sistemas/tickets", label: "Tickets" },
 ];
 
 export default function PanelSistemasTabs() {
