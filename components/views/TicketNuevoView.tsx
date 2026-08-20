@@ -14,6 +14,7 @@ const VACIO = { titulo: "", categoria: CATEGORIAS_TICKET[0], prioridad: "media",
 export default function TicketNuevoView() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [estado, setEstado] = useState<"loading" | "ok" | "error">("loading");
+  const [categorias, setCategorias] = useState<string[]>(CATEGORIAS_TICKET);
   const [form, setForm] = useState(VACIO);
   const [guardando, setGuardando] = useState(false);
   const [msg, setMsg] = useState("");
@@ -22,9 +23,13 @@ export default function TicketNuevoView() {
   async function cargar() {
     setEstado("loading");
     try {
-      const j = await (await fetch("/api/tickets")).json();
-      if (!j.ok) throw new Error();
-      setTickets(j.items);
+      const [jt, jc] = await Promise.all([
+        (await fetch("/api/tickets")).json(),
+        (await fetch("/api/tickets/categorias")).json(),
+      ]);
+      if (!jt.ok) throw new Error();
+      setTickets(jt.items);
+      if (jc.ok) setCategorias(jc.categorias);
       setEstado("ok");
     } catch {
       setEstado("error");
@@ -90,7 +95,7 @@ export default function TicketNuevoView() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Categoría">
               <select className={inputClass} {...campo("categoria")}>
-                {CATEGORIAS_TICKET.map((c) => <option key={c} value={c}>{c}</option>)}
+                {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
             <Field label="Prioridad">
