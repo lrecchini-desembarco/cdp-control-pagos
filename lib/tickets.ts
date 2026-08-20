@@ -40,6 +40,7 @@ export const ESTADOS_TICKET: EstadoInfo[] = [
 ];
 export const estadoTicket = (id: string): EstadoInfo => ESTADOS_TICKET.find((e) => e.id === id) ?? ESTADOS_TICKET[0];
 
+/** Semilla inicial — el listado real es editable desde el panel (ver lib/tickets-store.ts getCategorias/setCategorias). */
 export const CATEGORIAS_TICKET = ["Hardware", "Software", "Red / IP / WiFi", "Accesos y contraseñas", "Otro"];
 
 /** Mismos tonos que el resto de la app (ver toneCls en lib/parque.ts). */
@@ -75,9 +76,16 @@ export interface Ticket {
   creado: string;
   actualizado: string;
   /** De dónde salió. Default "web" (el formulario /tickets). */
-  origen?: "web" | "whatsapp";
-  /** Tarjeta de Trello ya creada por el flujo de n8n, si la mandó. */
+  origen?: "web" | "whatsapp" | "trello";
+  /** Tarjeta de Trello ya creada por el flujo de n8n, si la mandó, o traída por "Sincronizar con Trello". */
   trelloUrl?: string;
+  /** shortLink de la card de Trello — clave para no importar la misma card dos veces. */
+  trelloCardId?: string;
+  /**
+   * Sistemas cerró la conversación: no puede mandar más mensajes hasta que el
+   * solicitante escriba de nuevo (eso la reabre solo) o alguien la reabra a mano.
+   */
+  conversacionCerrada?: boolean;
 }
 
 /** Lo que ve el solicitante en "Mis tickets" — no expone nada que no debería ver, pero hoy es igual al completo. */

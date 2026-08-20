@@ -13,18 +13,35 @@ const fecha = (iso: string) =>
 export default function TicketThread({
   ticket,
   onComentar,
+  esSistemas = false,
+  onToggleConversacion,
 }: {
   ticket: Ticket;
   onComentar: (id: string, texto: string) => Promise<boolean>;
+  /** Solo sistemas ve el control de cerrar/reabrir — es una acción de gestión, no del solicitante. */
+  esSistemas?: boolean;
+  onToggleConversacion?: (id: string, cerrar: boolean) => Promise<boolean>;
 }) {
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [cambiando, setCambiando] = useState(false);
+
+  const cerrada = Boolean(ticket.conversacionCerrada);
+  // Sistemas no puede escribir si está cerrada; el solicitante siempre puede (eso la reabre solo).
+  const bloqueada = esSistemas && cerrada;
 
   async function enviar() {
     if (!texto.trim()) return;
     setEnviando(true);
     if (await onComentar(ticket.id, texto)) setTexto("");
     setEnviando(false);
+  }
+
+  async function toggle() {
+    if (!onToggleConversacion) return;
+    setCambiando(true);
+    await onToggleConversacion(ticket.id, !cerrada);
+    setCambiando(false);
   }
 
   return (
@@ -43,17 +60,33 @@ export default function TicketThread({
             <p className="mt-1 text-ink">{c.texto}</p>
           </div>
         ))}
+        {cerrada && (
+          <p className="rounded-lg border border-line bg-ink/[0.03] px-2.5 py-2 text-2xs text-faint">
+            Conversación cerrada{esSistemas ? " — se reabre sola si el solicitante escribe" : ""}.
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap items-end gap-2">
         <textarea
           className={`${inputClass} min-h-[38px] flex-1`}
-          placeholder="Responder…"
+          placeholder={bloqueada ? "Reabrí la conversación para responder…" : "Responder…"}
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
+          disabled={bloqueada}
         />
-        <Button onClick={enviar} disabled={!texto.trim() || enviando}>
+        <Button onClick={enviar} disabled={!texto.trim() || enviando || bloqueada}>
           {enviando ? "Enviando…" : "Responder"}
         </Button>
+        {esSistemas && onToggleConversacion && (
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={cambiando}
+            className="text-2xs font-medium text-muted hover:text-ink disabled:opacity-50"
+          >
+            {cambiando ? "…" : cerrada ? "Reabrir conversación" : "Cerrar conversación"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -10,6 +10,22 @@ No hay sincronización de vuelta (por ahora): lo que se comenta o resuelve en
 el dashboard no se refleja en Trello. Es un paso más en el flujo existente,
 no una integración de ida y vuelta.
 
+## Seguimiento: el mismo usuario escribe otra vez
+
+Si el flujo de n8n detecta que la persona escribió de nuevo en el mismo hilo
+de WhatsApp (no un mensaje nuevo, una respuesta al que ya generó el ticket),
+mandá el mismo `id` que devolvió el alta — así se agrega como un comentario
+más en ESE ticket en vez de crear uno nuevo:
+
+```json
+{ "id": "mt09l9oaelcch", "descripcion": "el mensaje que mandó por WhatsApp" }
+```
+
+Esto además **reabre la conversación** si sistemas la había cerrado con el
+botón "Cerrar conversación" del panel — es justamente la señal de "el usuario
+volvió a escribir, hay que seguir atendiendo". Sin el `id`, el mensaje crea
+un ticket nuevo y separado.
+
 ## Node a agregar en n8n
 
 Después del nodo que crea la tarjeta de Trello, un **HTTP Request**:

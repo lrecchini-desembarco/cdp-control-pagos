@@ -6,13 +6,14 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Card, Button, EmptyState, Skeleton, inputClass } from "@/components/ui/primitives";
-import { CATEGORIAS_TICKET, PRIORIDADES, ESTADOS_TICKET, prioridad, estadoTicket, toneClsTicket, type Ticket } from "@/lib/tickets";
+import { PRIORIDADES, ESTADOS_TICKET, prioridad, estadoTicket, toneClsTicket, type Ticket } from "@/lib/tickets";
 import TicketThread from "@/components/views/TicketThread";
 
 export default function TicketsView() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [estadoCarga, setEstadoCarga] = useState<"loading" | "ok" | "error">("loading");
   const [staff, setStaff] = useState<string[]>([]);
+  const [categorias, setCategorias] = useState<string[]>([]);
   const [fEstado, setFEstado] = useState("");
   const [fPrioridad, setFPrioridad] = useState("");
   const [fCategoria, setFCategoria] = useState("");
@@ -20,18 +21,22 @@ export default function TicketsView() {
   const [detalle, setDetalle] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [nuevaCategoria, setNuevaCategoria] = useState("");
 
   async function cargar() {
     setEstadoCarga("loading");
     setCargando(true);
     try {
-      const [jt, ja] = await Promise.all([
+      const [jt, ja, jc] = await Promise.all([
         (await fetch("/api/tickets")).json(),
         (await fetch("/api/panel-sistemas/usuarios")).json(),
+        (await fetch("/api/tickets/categorias")).json(),
       ]);
       if (!jt.ok) throw new Error();
       setTickets(jt.items);
       if (ja.ok) setStaff([...ja.base, ...ja.extra]);
+      if (jc.ok) setCategorias(jc.categorias);
       setEstadoCarga("ok");
     } catch {
       setEstadoCarga("error");
@@ -42,6 +47,42 @@ export default function TicketsView() {
   useEffect(() => {
     cargar();
   }, []);
+
+  async function sincronizarTrello() {
+    setMsg("");
+    setSincronizando(true);
+    try {
+      const j = await (await fetch("/api/tickets/importar-trello", { method: "POST" })).json();
+      if (!j.ok) throw new Error(j.error);
+      setTickets(j.items);
+      setMsg(j.agregados > 0 ? `Se importaron ${j.agregados} ticket${j.agregados === 1 ? "" : "s"} nuevo${j.agregados === 1 ? "" : "s"} desde Trello.` : "No hay cards nuevas en Trello.");
+    } catch (err) {
+      setMsg(err instanceof Error && err.message ? err.message : "No se pudo sincronizar con Trello.");
+    } finally {
+      setSincronizando(false);
+    }
+  }
+
+  async function agregarCategoria() {
+    const c = nuevaCategoria.trim();
+    if (!c || categorias.includes(c)) return;
+    await guardarCategorias([...categorias, c]);
+    setNuevaCategoria("");
+  }
+  async function quitarCategoria(c: string) {
+    await guardarCategorias(categorias.filter((x) => x !== c));
+  }
+  async function guardarCategorias(lista: string[]) {
+    try {
+      const j = await (
+        await fetch("/api/tickets/categorias", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ categorias: lista }) })
+      ).json();
+      if (j.ok) setCategorias(j.categorias);
+      else setMsg(j.error ?? "No se pudo guardar la categoría.");
+    } catch {
+      setMsg("Error de red.");
+    }
+  }
 
   async function actualizar(id: string, patch: Record<string, string>) {
     setMsg("");
@@ -67,6 +108,25 @@ export default function TicketsView() {
       return true;
     } catch (err) {
       setMsg(err instanceof Error && err.message ? err.message : "No se pudo comentar.");
+      return false;
+    }
+  }
+
+  async function toggleConversacion(id: string, cerrar: boolean): Promise<boolean> {
+    setMsg("");
+    try {
+      const j = await (
+        await fetch("/api/tickets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, conversacionCerrada: cerrar }),
+        })
+      ).json();
+      if (!j.ok) throw new Error(j.error);
+      setTickets(j.items);
+      return true;
+    } catch (err) {
+      setMsg(err instanceof Error && err.message ? err.message : "No se pudo cambiar la conversación.");
       return false;
     }
   }
@@ -131,12 +191,15 @@ export default function TicketsView() {
           </select>
           <select className={`${inputClass} max-w-[170px] py-1`} value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
             <option value="">Toda categoría</option>
-            {CATEGORIAS_TICKET.map((c) => <option key={c} value={c}>{c}</option>)}
+            {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <input className={`${inputClass} max-w-[200px] py-1`} placeholder="Buscar ticket, persona…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="flex items-center gap-2">
           <span className="text-2xs text-faint">{filtrados.length} de {tickets.length}</span>
+          <Button variant="outline" onClick={sincronizarTrello} disabled={sincronizando} className="px-2.5 py-1 text-2xs h-auto">
+            {sincronizando ? "Sincronizando…" : "Sincronizar con Trello"}
+          </Button>
           <Button variant="ghost" onClick={cargar} disabled={cargando} className="px-2 py-1 text-2xs h-auto">
             {cargando ? "..." : "↻"}
           </Button>
@@ -144,6 +207,29 @@ export default function TicketsView() {
       </Card>
 
       {msg && <p className="text-2xs text-bad">{msg}</p>}
+
+      {/* Categorías: editable acá, se usa en el filtro de arriba y en el formulario de /tickets */}
+      <Card className="flex flex-wrap items-center gap-2 p-3">
+        <span className="text-2xs font-medium uppercase tracking-wide text-faint">Categorías</span>
+        {categorias.map((c) => (
+          <span key={c} className="flex items-center gap-1 rounded-full border border-line bg-ink/[0.03] px-2.5 py-1 text-2xs text-ink">
+            {c}
+            <button onClick={() => quitarCategoria(c)} title={`Quitar "${c}"`} className="text-faint hover:text-bad">✕</button>
+          </span>
+        ))}
+        <div className="flex items-center gap-1">
+          <input
+            className={`${inputClass} max-w-[160px] py-1`}
+            placeholder="Nueva categoría…"
+            value={nuevaCategoria}
+            onChange={(e) => setNuevaCategoria(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && agregarCategoria()}
+          />
+          <button onClick={agregarCategoria} disabled={!nuevaCategoria.trim()} className="text-2xs font-medium text-action hover:underline disabled:opacity-40">
+            + Agregar
+          </button>
+        </div>
+      </Card>
 
       {estadoCarga === "loading" ? (
         <Card className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</Card>
@@ -179,6 +265,9 @@ export default function TicketsView() {
                             {t.titulo}
                             {t.origen === "whatsapp" && (
                               <span className="ml-1.5 rounded border border-ok/30 bg-ok/10 px-1.5 py-0.5 text-[10px] font-medium text-ok">WhatsApp</span>
+                            )}
+                            {t.origen === "trello" && (
+                              <span className="ml-1.5 rounded border border-action/30 bg-action/10 px-1.5 py-0.5 text-[10px] font-medium text-action">Trello</span>
                             )}
                           </p>
                           <p className="text-2xs text-faint">
@@ -226,7 +315,7 @@ export default function TicketsView() {
                       {ab && (
                         <tr className="border-b border-line/70 bg-ink/[0.02]">
                           <td colSpan={7} className="px-4 py-3">
-                            <TicketThread ticket={t} onComentar={comentar} />
+                            <TicketThread ticket={t} onComentar={comentar} esSistemas onToggleConversacion={toggleConversacion} />
                           </td>
                         </tr>
                       )}
