@@ -9,6 +9,8 @@ import type { Rol, NavItem, Fresh } from "@/lib/roles";
 
 // Secciones del menú que el usuario dejó abiertas (se recuerdan entre visitas).
 const SECCIONES_KEY = "cdp:nav:secciones";
+// Barra colapsada a solo íconos (se recuerda entre visitas, solo aplica en desktop).
+const COLAPSADA_KEY = "cdp:nav:colapsada";
 
 const norm = (s: string) =>
   (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -68,6 +70,23 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
   const buscando = q.trim().length > 0;
   const estaAbierta = (s: string) => buscando || s === seccionActiva || (abiertas ?? []).includes(s);
 
+  // Colapsar la barra entera a solo íconos (desktop). Arranca expandida hasta leer localStorage.
+  const [colapsada, setColapsada] = useState(false);
+  useEffect(() => {
+    try {
+      setColapsada(localStorage.getItem(COLAPSADA_KEY) === "1");
+    } catch {}
+  }, []);
+  const toggleColapsada = () => {
+    setColapsada((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(COLAPSADA_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
+
   const [urgentes, setUrgentes] = useState(0);
   useEffect(() => {
     if (!verAlertas) return;
@@ -87,19 +106,31 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
     <>
     {abierto && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setAbierto(false)} aria-hidden />}
     <aside data-rol={rol}
-      className={`fixed inset-y-0 left-0 z-50 flex w-60 shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${abierto ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 font-display text-sm font-bold">
+      className={`fixed inset-y-0 left-0 z-50 flex w-60 shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-white transition-[transform,width] duration-200 lg:static lg:z-auto lg:translate-x-0 ${abierto ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 ${colapsada ? "lg:w-[68px]" : "lg:w-60"}`}>
+      <div className={`flex items-center gap-2.5 px-5 py-5 ${colapsada ? "lg:justify-center lg:px-0" : ""}`}>
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/10 font-display text-sm font-bold">
           DS
         </div>
-        <div className="leading-tight">
+        <div className={`leading-tight ${colapsada ? "lg:hidden" : ""}`}>
           <p className="font-display text-sm font-semibold">CDP · Control</p>
           <p className="text-2xs text-sidebar-muted">DS Group</p>
         </div>
       </div>
 
+      {/* Colapsar/expandir toda la barra (solo desktop; en mobile ya hay hamburguesa) */}
+      <button
+        type="button"
+        onClick={toggleColapsada}
+        title={colapsada ? "Expandir menú" : "Colapsar menú"}
+        aria-label={colapsada ? "Expandir menú" : "Colapsar menú"}
+        className={`mx-3 mb-2 hidden items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-sidebar-muted transition-colors hover:bg-white/5 hover:text-white lg:flex ${colapsada ? "lg:justify-center" : ""}`}
+      >
+        <span className="text-sm">{colapsada ? "»" : "«"}</span>
+        {!colapsada && <span>Colapsar menú</span>}
+      </button>
+
       {/* Buscador de ítems del menú */}
-      <div className="px-3 pb-2">
+      <div className={`px-3 pb-2 ${colapsada ? "lg:hidden" : ""}`}>
         <div className="relative">
           <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-sidebar-muted">⌕</span>
           <input
@@ -118,11 +149,11 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
           <p className="px-3 py-4 text-xs text-sidebar-muted">Sin resultados para “{q}”.</p>
         )}
         {sueltos.map((n) => (
-          <ItemLink key={n.href} n={n} path={path} urgentes={urgentes} onNavegar={() => setAbierto(false)} />
+          <ItemLink key={n.href} n={n} path={path} urgentes={urgentes} colapsada={colapsada} onNavegar={() => setAbierto(false)} />
         ))}
 
         {grupos.map((g) => {
-          const open = estaAbierta(g.section);
+          const open = colapsada || estaAbierta(g.section);
           const id = `nav-sec-${norm(g.section).replace(/\W+/g, "-")}`;
           return (
             <div key={g.section} className="mt-3 first:mt-2">
@@ -131,16 +162,17 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
                 onClick={() => toggleSeccion(g.section)}
                 aria-expanded={open}
                 aria-controls={id}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted/70 transition-colors hover:bg-white/5 hover:text-white"
+                title={colapsada ? g.section : undefined}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted/70 transition-colors hover:bg-white/5 hover:text-white ${colapsada ? "lg:justify-center lg:px-0" : ""}`}
               >
-                <span className={`shrink-0 text-[9px] transition-transform duration-150 ${open ? "rotate-90" : ""}`}>▶</span>
-                <span className="flex-1 truncate text-left">{g.section}</span>
-                {!open && <span className="shrink-0 tabular-nums opacity-60">{g.items.length}</span>}
+                <span className={`shrink-0 text-[9px] transition-transform duration-150 ${open ? "rotate-90" : ""} ${colapsada ? "lg:hidden" : ""}`}>▶</span>
+                <span className={`flex-1 truncate text-left ${colapsada ? "lg:hidden" : ""}`}>{g.section}</span>
+                {!open && <span className={`shrink-0 tabular-nums opacity-60 ${colapsada ? "lg:hidden" : ""}`}>{g.items.length}</span>}
               </button>
               {open && (
                 <div id={id} className="mt-0.5">
                   {g.items.map((n) => (
-                    <ItemLink key={n.href} n={n} path={path} urgentes={urgentes} onNavegar={() => setAbierto(false)} />
+                    <ItemLink key={n.href} n={n} path={path} urgentes={urgentes} colapsada={colapsada} onNavegar={() => setAbierto(false)} />
                   ))}
                 </div>
               )}
@@ -150,7 +182,7 @@ export default function Sidebar({ rol, items }: { rol: Rol; items: NavItem[] }) 
       </nav>
 
       {/* Leyenda de los tags de frescura */}
-      <div data-tour="fresh" className="border-t border-sidebar-line px-4 py-3 text-[10px] leading-tight text-sidebar-muted">
+      <div data-tour="fresh" className={`border-t border-sidebar-line px-4 py-3 text-[10px] leading-tight text-sidebar-muted ${colapsada ? "lg:hidden" : ""}`}>
         <p className="mb-1.5 font-medium uppercase tracking-wider text-sidebar-muted/70">Origen del dato</p>
         <div className="space-y-1">
           <div className="flex items-center gap-2"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ok/90" /> En vivo · tiempo real</div>
@@ -168,11 +200,13 @@ function ItemLink({
   n,
   path,
   urgentes,
+  colapsada,
   onNavegar,
 }: {
   n: NavItem;
   path: string;
   urgentes: number;
+  colapsada: boolean;
   onNavegar: () => void;
 }) {
   const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
@@ -181,22 +215,24 @@ function ItemLink({
       href={n.href}
       draggable={false}
       onClick={onNavegar}
-      title={n.desc}
+      title={colapsada ? (n.desc ? `${n.label} — ${n.desc}` : n.label) : n.desc}
       aria-current={active ? "page" : undefined}
       className={`group mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
         active ? "bg-white/10 text-white" : "text-sidebar-muted hover:bg-white/5 hover:text-white"
-      }`}
+      } ${colapsada ? "lg:justify-center lg:px-0" : ""}`}
     >
-      <span className="w-4 text-center text-base opacity-80">{n.icon}</span>
-      <span className="flex-1 truncate">{n.label}</span>
+      <span className="w-4 shrink-0 text-center text-base opacity-80">{n.icon}</span>
+      <span className={`flex-1 truncate ${colapsada ? "lg:hidden" : ""}`}>{n.label}</span>
       {n.beta && (
-        <span className="shrink-0 rounded bg-warn/25 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-warn" title="En construcción (beta)">
+        <span className={`shrink-0 rounded bg-warn/25 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-warn ${colapsada ? "lg:hidden" : ""}`} title="En construcción (beta)">
           beta
         </span>
       )}
-      <FreshTag fresh={n.fresh ?? "carga"} />
+      <span className={colapsada ? "lg:hidden" : ""}>
+        <FreshTag fresh={n.fresh ?? "carga"} />
+      </span>
       {n.href === "/alertas" && urgentes > 0 && (
-        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white">
+        <span className={`grid h-5 min-w-5 place-items-center rounded-full bg-bad px-1.5 text-2xs font-semibold text-white ${colapsada ? "lg:hidden" : ""}`}>
           {urgentes}
         </span>
       )}
