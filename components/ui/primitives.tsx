@@ -4,13 +4,15 @@ export function Card({
   children,
   className = "",
   id,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
   id?: string;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }) {
   return (
-    <div id={id} className={`rounded-card border border-line bg-surface ${className}`}>
+    <div id={id} onClick={onClick} className={`rounded-card border border-line bg-surface ${className}`}>
       {children}
     </div>
   );

@@ -12,6 +12,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/panel-sistemas", label: "Inicio" },
   { href: "/panel-sistemas/usuarios", label: "Usuarios" },
+  { href: "/panel-sistemas/workspace", label: "Google Workspace" },
   { href: "/panel-sistemas/credenciales", label: "Credenciales" },
   { href: "/panel-sistemas/estado", label: "Salud y endpoints" },
   { href: "/panel-sistemas/ip-libres", label: "IPs libres" },
