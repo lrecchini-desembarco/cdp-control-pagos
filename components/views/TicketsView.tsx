@@ -19,9 +19,11 @@ export default function TicketsView() {
   const [q, setQ] = useState("");
   const [detalle, setDetalle] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+  const [cargando, setCargando] = useState(false);
 
   async function cargar() {
     setEstadoCarga("loading");
+    setCargando(true);
     try {
       const [jt, ja] = await Promise.all([
         (await fetch("/api/tickets")).json(),
@@ -33,6 +35,8 @@ export default function TicketsView() {
       setEstadoCarga("ok");
     } catch {
       setEstadoCarga("error");
+    } finally {
+      setCargando(false);
     }
   }
   useEffect(() => {
@@ -115,21 +119,28 @@ export default function TicketsView() {
         </Card>
       </div>
 
-      <Card className="flex flex-wrap items-center gap-2 p-3">
-        <select className={`${inputClass} max-w-[170px] py-1`} value={fEstado} onChange={(e) => setFEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {ESTADOS_TICKET.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
-        </select>
-        <select className={`${inputClass} max-w-[150px] py-1`} value={fPrioridad} onChange={(e) => setFPrioridad(e.target.value)}>
-          <option value="">Toda prioridad</option>
-          {PRIORIDADES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-        </select>
-        <select className={`${inputClass} max-w-[170px] py-1`} value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
-          <option value="">Toda categoría</option>
-          {CATEGORIAS_TICKET.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <input className={`${inputClass} max-w-[200px] py-1`} placeholder="Buscar ticket, persona…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <span className="ml-auto text-2xs text-faint">{filtrados.length} de {tickets.length}</span>
+      <Card className="flex flex-wrap items-center justify-between gap-2 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <select className={`${inputClass} max-w-[170px] py-1`} value={fEstado} onChange={(e) => setFEstado(e.target.value)}>
+            <option value="">Todos los estados</option>
+            {ESTADOS_TICKET.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+          </select>
+          <select className={`${inputClass} max-w-[150px] py-1`} value={fPrioridad} onChange={(e) => setFPrioridad(e.target.value)}>
+            <option value="">Toda prioridad</option>
+            {PRIORIDADES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+          <select className={`${inputClass} max-w-[170px] py-1`} value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
+            <option value="">Toda categoría</option>
+            {CATEGORIAS_TICKET.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input className={`${inputClass} max-w-[200px] py-1`} placeholder="Buscar ticket, persona…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-2xs text-faint">{filtrados.length} de {tickets.length}</span>
+          <Button variant="ghost" onClick={cargar} disabled={cargando} className="px-2 py-1 text-2xs h-auto">
+            {cargando ? "..." : "↻"}
+          </Button>
+        </div>
       </Card>
 
       {msg && <p className="text-2xs text-bad">{msg}</p>}
