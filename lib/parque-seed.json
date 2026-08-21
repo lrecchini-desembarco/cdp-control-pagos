@@ -493,5 +493,41 @@
     "correo": "",
     "estado": "en-uso",
     "observaciones": "📱 En uso por Sistemas · Motorola Moto E15 · Color Fresh Lavender (Morado) · Modelo XT2523-8 / PB6U0009AR · IMEI 352286232678624 · SVN SVN8E89927 · MSN UT9CBN4G9Z · RAMATEL H-31479 · EAN 7790894901448 · Cámaras: sistema de 2 cámaras con IA, 32 MP Quad Pixel · Hasta 6 GB de RAM con RAM Boost · Caja: equipo + cargador + cable USB + herramienta SIM + folleto · Fabricado en Tierra del Fuego por Newsan S.A., garantía Motorola Mobility of Argentina · Falta completar CPU/RAM/almacenamiento reales al encenderlo"
+  },
+  {
+    "id": "tab-philco-01",
+    "nro": 30,
+    "usuario": "",
+    "area": "Sistemas",
+    "tipo": "Tablet",
+    "hostname": "",
+    "marca": "Philco",
+    "modelo": "TP7A464",
+    "cpu": "",
+    "ram": "",
+    "almacenamiento": "",
+    "gpu": "",
+    "so": "Android (versión a confirmar)",
+    "correo": "",
+    "estado": "disponible",
+    "observaciones": "📱 Tablet 1 de 2 (unidades iguales) · Philco TP7A464 · S/N TP7A46414520508692 · Cámara trasera 5 MP · Ranura TF Card (microSD) · Puerto USB Type-C · Jack de auriculares · Alimentación 5 Vcc 1,5 A · Hecho en China · Certificación C-29670 · Incluye funda tipo folio negra · Falta completar CPU/RAM/almacenamiento reales al encenderla"
+  },
+  {
+    "id": "tab-philco-02",
+    "nro": 31,
+    "usuario": "",
+    "area": "Sistemas",
+    "tipo": "Tablet",
+    "hostname": "",
+    "marca": "Philco",
+    "modelo": "TP7A464",
+    "cpu": "",
+    "ram": "",
+    "almacenamiento": "",
+    "gpu": "",
+    "so": "Android (versión a confirmar)",
+    "correo": "",
+    "estado": "disponible",
+    "observaciones": "📱 Tablet 2 de 2 (unidades iguales) · Philco TP7A464 · S/N pendiente de relevar · Cámara trasera 5 MP · Ranura TF Card (microSD) · Puerto USB Type-C · Jack de auriculares · Alimentación 5 Vcc 1,5 A · Hecho en China · Certificación C-29670 · Incluye funda tipo folio negra · Falta completar CPU/RAM/almacenamiento reales al encenderla"
   }
 ]
