@@ -475,5 +475,23 @@
     "correo": "",
     "estado": "en-reparacion",
     "observaciones": "📱 EN REPARACIÓN · Motorola Moto G32 · Pantalla 6,5\" IPS LCD 90 Hz, Full HD+ (2400×1080) · Snapdragon 680 · RAM 4/6 GB · Almacenamiento 64/128 GB · MicroSD hasta 1 TB · Cámaras: 50 MP principal + 8 MP ultra gran angular + 2 MP macro/profundidad · Frontal 16 MP · Batería 5.000 mAh, carga rápida 30 W TurboPower · 4G LTE · Wi-Fi a/b/g/n/ac · Bluetooth 5.2 · Parlantes estéreo Dolby Atmos · Jack 3,5 mm · Huella lateral · USB-C · IP52 (repelente al agua) · ~184 g"
+  },
+  {
+    "id": "cel-motoe15",
+    "nro": 29,
+    "usuario": "Sistemas",
+    "area": "Sistemas",
+    "tipo": "Celular",
+    "hostname": "",
+    "marca": "Motorola",
+    "modelo": "Moto E15 (XT2523-8)",
+    "cpu": "",
+    "ram": "",
+    "almacenamiento": "",
+    "gpu": "",
+    "so": "Android (versión a confirmar)",
+    "correo": "",
+    "estado": "en-uso",
+    "observaciones": "📱 En uso por Sistemas · Motorola Moto E15 · Color Fresh Lavender (Morado) · Modelo XT2523-8 / PB6U0009AR · IMEI 352286232678624 · SVN SVN8E89927 · MSN UT9CBN4G9Z · RAMATEL H-31479 · EAN 7790894901448 · Cámaras: sistema de 2 cámaras con IA, 32 MP Quad Pixel · Hasta 6 GB de RAM con RAM Boost · Caja: equipo + cargador + cable USB + herramienta SIM + folleto · Fabricado en Tierra del Fuego por Newsan S.A., garantía Motorola Mobility of Argentina · Falta completar CPU/RAM/almacenamiento reales al encenderlo"
   }
 ]
