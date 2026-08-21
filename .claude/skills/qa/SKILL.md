@@ -41,7 +41,7 @@ ni build roto**. El 404 típico ("This page could not be found") casi siempre es
    - `rm -rf .next && npm run dev` (uno solo).
    - Login y entrar a las pantallas tocadas; confirmar **200** (no 404/500).
      Para chequear varias rutas rápido: login vía `POST /api/auth/login`
-     (`lrecchini@eldesembarco.com` / `cdp2026`) y `curl` con la cookie a cada ruta.
+     (un email de admin + la clave de `APP_PASSWORD`) y `curl` con la cookie a cada ruta.
 
 ## Si aparece un 404 en una ruta que existe
 Es el `.next`/dev, no el código:

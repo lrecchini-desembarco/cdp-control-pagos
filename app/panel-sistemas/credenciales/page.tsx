@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSesion } from "@/lib/session";
 import { homeDeSesion } from "@/lib/roles-store";
 import { puedeVerCredenciales } from "@/lib/credenciales";
-import CredencialesView from "@/components/views/CredencialesView";
+import CredencialesShell from "@/components/views/CredencialesShell";
 
 export const dynamic = "force-dynamic";
 
@@ -14,5 +14,5 @@ export default async function Page() {
   const s = await getSesion();
   if (!s) redirect("/login");
   if (!puedeVerCredenciales(s.email)) redirect(await homeDeSesion(s));
-  return <CredencialesView />;
+  return <CredencialesShell />;
 }

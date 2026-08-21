@@ -10,7 +10,7 @@ Pasos para publicar `cdp-control` en Vercel y que quede funcional.
 
 **a. Base — siempre (entorno Production):**
 ```
-APP_PASSWORD=cdp2026
+APP_PASSWORD=<la clave genérica; NO se versiona>
 DATA_SOURCE=mock
 NEXT_PUBLIC_PUBLIC_URL=https://cdp-control.vercel.app
 NEXT_PUBLIC_FIRMAS_URL=https://lrecchini-desembarco.github.io/firmas-eldesembarco/
@@ -87,7 +87,7 @@ Ver detalle en `docs/notificaciones.md`.
 - Deploy. Listo.
 
 ## 5) Smoke test (post-deploy)
-- `/login` → entrar con `lrecchini@eldesembarco.com` / `cdp2026` (admin).
+- `/login` → entrar con un email de admin y la clave de `APP_PASSWORD` (ver la bóveda de Credenciales).
 - **Resumen** carga; **Reseñas** muestra los 109 locales y la reputación de Google.
 - **/review** (sin login, en el celular): elegir local → "Calificar en Google" → abre Google Maps.
 - Agregar un local de prueba en la consola → si queda guardado tras refrescar, **KV anda**.

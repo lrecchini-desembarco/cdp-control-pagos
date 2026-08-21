@@ -11,7 +11,7 @@ async function tangoGeneral() {
   const login = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email: "lrecchini@eldesembarco.com", password: "cdp2026" }),
+    body: JSON.stringify({ email: process.env.CDP_EMAIL ?? "", password: process.env.APP_PASSWORD ?? "" }),
   });
   const ck = (login.headers.get("set-cookie") || "").split(";")[0];
   const j = await (await fetch(`${BASE}/api/precios`, { headers: { cookie: ck } })).json();

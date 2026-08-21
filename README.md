@@ -24,7 +24,8 @@ persistencia, cron de notificaciones y smoke test).
 
 ## Acceso y roles
 
-Login por **email + clave genérica** (`APP_PASSWORD`, default `cdp2026`). El admin da
+Login por **email + clave genérica** (variable `APP_PASSWORD`; sin ella, solo entran
+los usuarios con clave propia o por Google). El admin da
 de alta emails y su rol en **`/usuarios`**; el rol define qué pantallas ve cada uno:
 
 - **Administrador** — todo + gestión de usuarios.

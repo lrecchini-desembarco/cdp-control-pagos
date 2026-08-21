@@ -8,6 +8,7 @@
 export const EMAILS_CREDENCIALES = [
   "sistemas02@eldesembarco.com",
   "lrecchini@eldesembarco.com",
+  "polejavetzky@eldesembarco.com",
 ];
 
 export const puedeVerCredenciales = (email?: string | null): boolean =>

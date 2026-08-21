@@ -8,6 +8,7 @@
 export const EMAILS_PANEL_SISTEMAS_BASE = [
   "sistemas02@eldesembarco.com",
   "lrecchini@eldesembarco.com",
+  "polejavetzky@eldesembarco.com",
 ];
 
 export const normEmail = (e: string) => e.trim().toLowerCase();
