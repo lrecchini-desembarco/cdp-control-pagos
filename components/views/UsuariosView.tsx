@@ -170,8 +170,8 @@ export default function UsuariosView() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Usuarios</h1>
-        <p className="mt-0.5 text-sm text-muted">
+        <h1 className="font-display text-[23px] font-semibold tracking-[-.02em] text-[#ece9e2]">Usuarios</h1>
+        <p className="mt-1 max-w-[640px] text-[12.5px] leading-[1.5] text-ink/55">
           Quién entra y qué ve. Creás un usuario con <b>email + clave</b> y tildás <b>por usuario</b> qué pantallas puede ver.
         </p>
       </div>
@@ -315,7 +315,7 @@ export default function UsuariosView() {
         </div>
       </Card>
 
-      {/* Lista */}
+      {/* Lista — Sin rol primero: es el pendiente accionable de Guardia */}
       {status === "loading" ? (
         <Card className="space-y-2 p-4">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -325,45 +325,38 @@ export default function UsuariosView() {
       ) : status === "error" ? (
         <EmptyState title="No autorizado" desc="Necesitás rol Administrador para ver esta pantalla." />
       ) : (
-        <Card className="overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-2xs uppercase tracking-wide text-faint">
-                <th className="px-4 py-2 font-medium">Email</th>
-                <th className="px-4 py-2 font-medium">Rol</th>
-                <th className="px-4 py-2 font-medium">Clave</th>
-                <th className="px-4 py-2 font-medium">Ve</th>
-                <th className="px-4 py-2 text-right font-medium">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.email} className="border-b border-line/70 last:border-0">
-                  <td className="px-4 py-2.5 text-ink">{u.email}</td>
-                  <td className="px-4 py-2.5">
-                    <Badge tone={tonoRol[u.rol]}>{ROLES[u.rol].label}</Badge>
-                  </td>
-                  <td className="px-4 py-2.5 text-2xs text-muted">
-                    {u.tieneClave ? "propia" : "genérica"}
-                  </td>
-                  <td className="px-4 py-2.5 text-2xs text-muted">
-                    {u.rol === "admin"
-                      ? "todo"
-                      : `${((u.nav ?? navByRol[u.rol] ?? ROLES[u.rol].nav) as string[]).filter((h) => h !== "/guia").length} pantallas${u.nav ? " · propio" : ""}`}
-                  </td>
-                  <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                    <button onClick={() => editarUsuario(u)} className="text-2xs font-medium text-action hover:underline">
-                      Editar
-                    </button>
-                    <button onClick={() => quitar(u.email)} className="ml-3 text-2xs font-medium text-bad hover:underline">
-                      Quitar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <div>
+          <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-3 border-t border-action/28 border-b border-ink/10 py-2 font-mono text-[9.5px] uppercase tracking-[.16em] text-ink/40">
+            <span>Cuenta</span>
+            <span>Rol</span>
+            <span>Alcance</span>
+            <span className="text-right">Clave</span>
+          </div>
+          {[...usuarios].sort((a, b) => (a.rol === "pendiente" ? -1 : b.rol === "pendiente" ? 1 : 0)).map((u) => (
+            <div key={u.email} className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-3 border-b border-ink/7 py-[11px] hover:bg-ink/[.035]">
+              <span className="truncate font-mono text-[12px] text-ink">{u.email}</span>
+              <span>
+                <span className={`rounded border px-2 py-[3px] text-[11px] font-medium ${u.rol === "pendiente" ? "border-bad/30 bg-bad/10 text-bad" : "border-action/30 bg-action/10 text-action"}`}>
+                  {ROLES[u.rol].label}
+                </span>
+              </span>
+              <span className="truncate text-[11.5px] text-ink/60">
+                {u.rol === "admin"
+                  ? "todo"
+                  : `${((u.nav ?? navByRol[u.rol] ?? ROLES[u.rol].nav) as string[]).filter((h) => h !== "/guia").length} pantallas${u.nav ? " · propio" : ""}`}
+              </span>
+              <span className="flex items-center justify-end gap-3 whitespace-nowrap text-right">
+                <span className="text-[11px] text-ink/45">{u.tieneClave ? "propia" : "genérica"}</span>
+                <button onClick={() => editarUsuario(u)} className="text-[11px] font-medium text-action hover:underline">
+                  Editar
+                </button>
+                <button onClick={() => quitar(u.email)} className="text-[11px] font-medium text-bad hover:underline">
+                  Quitar
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

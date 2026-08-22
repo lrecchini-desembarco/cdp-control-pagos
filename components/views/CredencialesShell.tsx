@@ -25,13 +25,16 @@ export default function CredencialesShell() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1.5">
+      <div>
+        <h1 className="font-display text-[23px] font-semibold tracking-[-.02em] text-[#ece9e2]">Credenciales</h1>
+      </div>
+      <div className="flex flex-wrap gap-1.5 border-b border-ink/10 pb-3">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-full border px-3.5 py-1.5 text-2xs font-medium ${
-              tab === t.id ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"
+            className={`rounded border px-3.5 py-1.5 text-[12px] font-medium transition-colors ${
+              tab === t.id ? "border-action bg-action/10 text-action" : "border-ink/18 bg-transparent text-ink/60 hover:text-action"
             }`}
           >
             {t.label}

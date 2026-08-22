@@ -40,6 +40,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   // Pantallas de TV: tablero puro, SIN menú lateral ni barra superior (aunque haya sesión).
   const esPantallaTv = ruta === "/tv" || ruta === "/cartelera";
+  // Panel de Sistemas es una consola aparte: chrome propio (barra de título +
+  // riel + ⌘K, ver app/panel-sistemas/layout.tsx), no el Sidebar/Topbar del
+  // CDP. El gate de acceso (puedeVerPanelSistemas) sigue viviendo ahí, sin
+  // cambios — esto solo decide qué shell envuelve a `children`.
+  const esPanelSistemas = ruta === "/panel-sistemas";
 
   // Nav del usuario: si tiene nav propio (elegido en Usuarios) lo usa; si no, el del rol.
   const navByRol = sesion ? await getRolesNav() : null;
@@ -96,7 +101,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Modo oscuro: cualquier cuenta puede elegirlo. Default claro (si no hay
             nada guardado, no se toca el atributo y queda el tema claro de siempre). */}
         <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('cdp_theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}` }} />
-        {sesion && !esPantallaTv && !enOnboarding ? (
+        {sesion && !esPantallaTv && !enOnboarding && !esPanelSistemas ? (
           <PrivacidadProvider>
             <TemaProvider>
               <MobileNavProvider>

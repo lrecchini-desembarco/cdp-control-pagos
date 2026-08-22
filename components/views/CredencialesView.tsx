@@ -125,10 +125,10 @@ export default function CredencialesView() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Credenciales</h1>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+        <p className="max-w-[640px] text-[12.5px] leading-[1.5] text-ink/55">
           Usuarios y contraseñas de los sistemas. Acceso restringido: solo {EMAILS_CREDENCIALES.join(" y ")}.
           Las contraseñas se guardan cifradas y viajan al navegador únicamente cuando apretás <b className="font-medium text-ink">Ver</b>.
+          Se revelan de a uno y queda registro de quién miró.
         </p>
       </div>
 
@@ -211,101 +211,79 @@ export default function CredencialesView() {
         </Card>
       )}
 
-      <Card className="overflow-hidden">
-        {estado === "loading" ? (
-          <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
-        ) : estado === "error" ? (
-          <div className="p-4 text-sm text-bad">No se pudieron cargar las credenciales.</div>
-        ) : filtrados.length === 0 ? (
-          <EmptyState
-            title={items.length ? "Sin resultados" : "Todavía no hay credenciales"}
-            desc={items.length ? "Probá aflojando los filtros." : "Agregá la primera con el formulario de arriba."}
-          />
-        ) : (
-          // La tabla scrollea adentro de su caja (no la página): así el encabezado
-          // sticky tiene contra qué pegarse y no se pierde con 40+ credenciales.
-          <div className="max-h-[70vh] overflow-auto">
-            <table className="w-full text-left text-sm">
-              {/* El encabezado acompaña el scroll: con 40+ credenciales, si no, se pierde. */}
-              <thead className="sticky top-0 z-10 bg-surface">
-                <tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
-                  <th className="px-4 py-2 font-medium">Sistema</th>
-                  <th className="px-3 py-2 font-medium">Usuario</th>
-                  <th className="px-3 py-2 font-medium">Contraseña</th>
-                  <th className="px-3 py-2 font-medium">Categoría</th>
-                  <th className="px-3 py-2 font-medium">Actualizada</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtrados.map((c, i) => {
-                  // Un sistema con varias claves (BI Ventas, Cierres de caja…) se escribe
-                  // una sola vez: las filas siguientes cuelgan de la primera.
-                  const primera = filtrados[i - 1]?.sistema !== c.sistema;
-                  const abierta = visibles[c.id] !== undefined;
-                  return (
-                    <tr
-                      key={c.id}
-                      className={`last:border-0 hover:bg-ink/[0.02] ${primera ? "border-t border-line/70" : ""}`}
-                    >
-                      <td className="px-4 py-2 align-top">
-                        {primera ? (
-                          <>
-                            <p className="font-medium text-ink">{c.sistema}</p>
-                            {c.url && (
-                              <a href={c.url} target="_blank" rel="noreferrer" className="text-2xs text-action hover:underline">
-                                {c.url.replace(/^https?:\/\//, "").slice(0, 40)}
-                              </a>
-                            )}
-                          </>
-                        ) : (
-                          <span className="sr-only">{c.sistema}</span>
-                        )}
-                        {c.nota && <p className="max-w-xs text-2xs leading-snug text-faint">{c.nota}</p>}
-                      </td>
-                      <td className="px-3 py-2 align-top font-mono text-2xs text-muted">{c.usuario || "—"}</td>
-                      <td className="px-3 py-2 align-top">
-                        <div className="flex items-center gap-2">
-                          {/* Ancho fijo (no max-): tapada o revelada mide igual, así al
-                              apretar "Ver" la columna no se ensancha ni corre a las demás.
-                              Si la clave no entra, se trunca y queda entera en el title. */}
-                          <code
-                            title={abierta ? visibles[c.id] : undefined}
-                            className="block w-[140px] shrink-0 truncate rounded bg-ink/5 px-2 py-1 font-mono text-2xs text-ink"
-                          >
-                            {visibles[c.id] ?? "••••••••"}
-                          </code>
-                          <button onClick={() => ver(c.id)} className="shrink-0 text-2xs font-medium text-action hover:underline">
-                            {abierta ? "Ocultar" : "Ver"}
-                          </button>
-                          <button onClick={() => copiar(c.id)} className="shrink-0 text-2xs font-medium text-muted hover:text-ink">Copiar</button>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <span className="inline-block whitespace-nowrap rounded-full border border-line bg-ink/5 px-2.5 py-1 text-2xs font-medium text-muted">
-                          {c.categoria}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 align-top text-2xs text-faint">
-                        {fecha(c.actualizado)}
-                        {c.actualizadoPor && <span title={c.actualizadoPor}> · {c.actualizadoPor.split("@")[0]}</span>}
-                      </td>
-                      <td className="px-3 py-2 text-right align-top">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => setEditando(editando === c.id ? null : c.id)} className="text-2xs font-medium text-muted hover:text-ink">
-                            {editando === c.id ? "Cerrar" : "Editar"}
-                          </button>
-                          <button onClick={() => quitar(c)} className="text-2xs font-medium text-bad hover:underline">Borrar</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      {estado === "loading" ? (
+        <Card className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</Card>
+      ) : estado === "error" ? (
+        <p className="p-4 text-sm text-bad">No se pudieron cargar las credenciales.</p>
+      ) : filtrados.length === 0 ? (
+        <EmptyState
+          title={items.length ? "Sin resultados" : "Todavía no hay credenciales"}
+          desc={items.length ? "Probá aflojando los filtros." : "Agregá la primera con el formulario de arriba."}
+        />
+      ) : (
+        <div className="max-h-[70vh] overflow-auto">
+          <div className="sticky top-0 z-10 grid grid-cols-[1.2fr_1.3fr_1fr_auto] gap-3 border-b border-action/28 bg-paper py-2 font-mono text-[9.5px] uppercase tracking-[.16em] text-ink/40">
+            <span>Servicio</span>
+            <span>Usuario</span>
+            <span>Contraseña</span>
+            <span className="text-right">Acción</span>
           </div>
-        )}
-      </Card>
+          {filtrados.map((c, i) => {
+            // Un sistema con varias claves (BI Ventas, Cierres de caja…) se escribe
+            // una sola vez: las filas siguientes cuelgan de la primera.
+            const primera = filtrados[i - 1]?.sistema !== c.sistema;
+            const abierta = visibles[c.id] !== undefined;
+            return (
+              <div
+                key={c.id}
+                className={`grid grid-cols-[1.2fr_1.3fr_1fr_auto] items-start gap-3 border-b border-ink/7 py-[11px] hover:bg-ink/[.035] ${primera ? "border-t border-ink/10" : ""}`}
+              >
+                <div>
+                  {primera ? (
+                    <>
+                      <p className="font-display text-[13.5px] font-semibold text-[#ece9e2]">{c.sistema}</p>
+                      {c.url && (
+                        <a href={c.url} target="_blank" rel="noreferrer" className="text-[11px] text-action hover:underline">
+                          {c.url.replace(/^https?:\/\//, "").slice(0, 40)}
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <span className="sr-only">{c.sistema}</span>
+                  )}
+                  {c.nota && <p className="max-w-xs text-[11px] leading-snug text-ink/45">{c.nota}</p>}
+                  <span className="mt-0.5 inline-block whitespace-nowrap rounded border border-ink/18 px-2 py-[2px] text-[10.5px] text-ink/50">{c.categoria}</span>
+                </div>
+                <div className="font-mono text-[11.5px] text-ink/60">
+                  {c.usuario || "—"}
+                  <p className="mt-0.5 font-sans text-[10.5px] text-ink/35">
+                    {fecha(c.actualizado)}
+                    {c.actualizadoPor && <> · {c.actualizadoPor.split("@")[0]}</>}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code
+                    title={abierta ? visibles[c.id] : undefined}
+                    className="block w-[130px] shrink-0 truncate rounded border border-ink/18 bg-ink/[.03] px-2 py-1 font-mono text-[11px] text-ink tracking-[.1em]"
+                  >
+                    {visibles[c.id] ?? "••••••••"}
+                  </code>
+                  <button onClick={() => ver(c.id)} className="shrink-0 rounded border border-ink/20 px-2 py-1 text-[11px] text-ink/70 transition-colors hover:border-action/60 hover:text-action">
+                    {abierta ? "Ocultar" : "Revelar"}
+                  </button>
+                  <button onClick={() => copiar(c.id)} className="shrink-0 rounded border border-ink/20 px-2 py-1 text-[11px] text-ink/70 transition-colors hover:border-action/60 hover:text-action">Copiar</button>
+                </div>
+                <div className="flex items-center justify-end gap-2 whitespace-nowrap text-right">
+                  <button onClick={() => setEditando(editando === c.id ? null : c.id)} className="text-[11px] font-medium text-ink/55 hover:text-action">
+                    {editando === c.id ? "Cerrar" : "Editar"}
+                  </button>
+                  <button onClick={() => quitar(c)} className="text-[11px] font-medium text-bad hover:underline">Borrar</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {editando && <Editar credencial={items.find((c) => c.id === editando)!} guardando={guardando} onGuardar={guardar} onCerrar={() => setEditando(null)} />}
     </div>

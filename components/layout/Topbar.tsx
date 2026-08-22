@@ -85,6 +85,14 @@ export default function Topbar({
         {panelSistemasPermitido && (
           <Link
             href="/panel-sistemas"
+            onClick={() => {
+              // La consola tiene su propio "← Volver al CDP" — necesita saber a
+              // qué pantalla del CDP volver, así que se guarda acá, justo antes
+              // de entrar (único punto de escritura de esta clave).
+              try {
+                sessionStorage.setItem("cdp:ultima-ruta", path);
+              } catch {}
+            }}
             className={`hidden items-center gap-1.5 rounded-full border px-3 py-1 text-2xs font-semibold sm:inline-flex ${
               path.startsWith("/panel-sistemas")
                 ? "border-action bg-action text-white"

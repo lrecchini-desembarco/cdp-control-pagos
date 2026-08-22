@@ -115,15 +115,33 @@ export default function WorkspaceView() {
     }
   }
 
+  const activos = usuarios.filter((u) => !u.suspendido).length;
+  const suspendidos = usuarios.filter((u) => u.suspendido).length;
+
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Google Workspace</h1>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+        <h1 className="font-display text-[23px] font-semibold tracking-[-.02em] text-[#ece9e2]">Google Workspace</h1>
+        <p className="mt-1 max-w-[640px] text-[12.5px] leading-[1.5] text-ink/55">
           Usuarios del dominio, su unidad organizativa (OU) y sus permisos. Click en un usuario para ver el detalle;
           tildá varios para aplicarles la foto de perfil corporativa.
         </p>
       </div>
+
+      {estado === "ok" && (
+        <div className="grid grid-cols-2 border-t border-action/30 border-b border-ink/10">
+          <div className="border-r border-ink/8 px-4 py-3">
+            <p className="font-mono text-[9.5px] uppercase tracking-[.16em] text-action">Cuentas</p>
+            <p className="tnum font-mono text-[26px] text-[#ece9e2]">{activos}</p>
+            <p className="mt-0.5 text-[11.5px] text-ink/50">activas</p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="font-mono text-[9.5px] uppercase tracking-[.16em] text-action">Suspendidas</p>
+            <p className="tnum font-mono text-[26px] text-bad">{suspendidos}</p>
+            <p className="mt-0.5 text-[11.5px] text-ink/50">de {usuarios.length} totales</p>
+          </div>
+        </div>
+      )}
 
       {estado === "loading" ? (
         <Card className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</Card>
@@ -181,45 +199,32 @@ export default function WorkspaceView() {
           {filtrados.length === 0 ? (
             <EmptyState title="Sin resultados" desc="Probá aflojando los filtros." />
           ) : (
-            <Card className="overflow-hidden">
-              <div className="max-h-[70vh] overflow-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10 bg-surface">
-                    <tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
-                      <th className="w-9 px-4 py-2">
-                        <input type="checkbox" checked={seleccion.size === filtrados.length && filtrados.length > 0} onChange={toggleTodos} />
-                      </th>
-                      <th className="px-3 py-2 font-medium">Usuario</th>
-                      <th className="px-3 py-2 font-medium">OU</th>
-                      <th className="px-3 py-2 font-medium">Estado</th>
-                      <th className="px-3 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtrados.map((u) => (
-                      <tr key={u.email} className="border-b border-line/70 hover:bg-ink/[0.02]">
-                        <td className="px-4 py-2">
-                          <input type="checkbox" checked={seleccion.has(u.email)} onChange={() => toggleSeleccion(u.email)} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <button onClick={() => abrirCard(u)} className="text-left hover:underline">
-                            <p className="font-medium text-ink">{u.nombre}</p>
-                            <p className="text-2xs text-faint">{u.email}</p>
-                          </button>
-                        </td>
-                        <td className="px-3 py-2 text-2xs text-muted">{u.ou}</td>
-                        <td className="px-3 py-2">
-                          <Badge tone={u.suspendido ? "bad" : "ok"}>{u.suspendido ? "Suspendido" : "Activo"}</Badge>
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <button onClick={() => abrirCard(u)} className="text-2xs font-medium text-action hover:underline">Ver permisos</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="max-h-[70vh] overflow-auto">
+              <div className="sticky top-0 z-10 grid grid-cols-[36px_1.5fr_1fr_1fr_132px] items-center gap-3 border-b border-action/28 bg-paper py-2 font-mono text-[9.5px] uppercase tracking-[.16em] text-ink/40">
+                <input type="checkbox" checked={seleccion.size === filtrados.length && filtrados.length > 0} onChange={toggleTodos} />
+                <span>Usuario</span>
+                <span>OU</span>
+                <span>Licencia</span>
+                <span>Estado</span>
               </div>
-            </Card>
+              {filtrados.map((u) => (
+                <div key={u.email} className="grid grid-cols-[36px_1.5fr_1fr_1fr_132px] items-center gap-3 border-b border-ink/7 py-[11px] hover:bg-ink/[.035]">
+                  <input type="checkbox" checked={seleccion.has(u.email)} onChange={() => toggleSeleccion(u.email)} />
+                  <button onClick={() => abrirCard(u)} className="min-w-0 text-left">
+                    <p className="truncate font-display text-[13px] font-semibold text-[#ece9e2]">{u.nombre}</p>
+                    <p className="truncate font-mono text-[11px] text-ink/45">{u.email}</p>
+                  </button>
+                  <span className="truncate text-[11.5px] text-ink/60">{u.ou}</span>
+                  <span className="truncate text-[11.5px] text-ink/40">—</span>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className={`rounded border px-2 py-[3px] text-[11px] font-medium ${u.suspendido ? "border-bad/30 bg-bad/10 text-bad" : "border-ok/30 bg-ok/10 text-ok"}`}>
+                      {u.suspendido ? "Suspendida" : "Activa"}
+                    </span>
+                    <button onClick={() => abrirCard(u)} className="shrink-0 text-[11px] font-medium text-action hover:underline">Ver</button>
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}

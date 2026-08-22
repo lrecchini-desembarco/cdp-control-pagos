@@ -154,17 +154,16 @@ export default function ParquePCs({
         <Button variant="outline" onClick={exportar} disabled={!filtrados.length}>⬇ Exportar</Button>
       </Card>
 
-      <Card className="overflow-hidden">
-        {filtrados.length === 0 ? (
-          <EmptyState title={equipos.length ? "Sin resultados" : vacio.title} desc={equipos.length ? "Probá aflojando los filtros." : vacio.desc} />
-        ) : (
+      {filtrados.length === 0 ? (
+        <EmptyState title={equipos.length ? "Sin resultados" : vacio.title} desc={equipos.length ? "Probá aflojando los filtros." : vacio.desc} />
+      ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
+                <tr className="border-t border-action/28 border-b border-ink/10 font-mono text-[9.5px] uppercase tracking-[.16em] text-ink/40">
                   {COLUMNAS.map((c) => (
                     <th key={c.id} className={`px-3 py-2 font-medium ${c.num ? "text-right" : ""}`}>
-                      <button onClick={() => ordenar(c.id)} className="inline-flex items-center gap-1 hover:text-ink">
+                      <button onClick={() => ordenar(c.id)} className="inline-flex items-center gap-1 hover:text-action">
                         {c.label}
                         {orden.campo === c.id && <span>{orden.asc ? "▲" : "▼"}</span>}
                       </button>
@@ -180,7 +179,7 @@ export default function ParquePCs({
                   const abierto = detalle === e.id;
                   return (
                     <Fragment key={e.id}>
-                      <tr className="border-b border-line/70 hover:bg-ink/[0.02]">
+                      <tr className="border-b border-ink/7 hover:bg-ink/[.035]">
                         <td className="px-3 py-2 text-right font-mono tnum text-2xs text-faint">{e.nro}</td>
                         <td className="px-3 py-2">
                           <p className="font-medium text-ink">{e.usuario || "—"}</p>
@@ -218,12 +217,12 @@ export default function ParquePCs({
                             <select
                               value={e.estado}
                               onChange={(ev) => onEditar(e.id, { estado: ev.target.value })}
-                              className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${toneCls(es.tone)}`}
+                              className={`rounded border px-2.5 py-1 text-2xs font-medium ${toneCls(es.tone)}`}
                             >
                               {ESTADOS_PC.map((x) => <option key={x.id} value={x.id} className="bg-surface text-ink">{x.label}</option>)}
                             </select>
                           ) : (
-                            <span className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${toneCls(es.tone)}`}>{es.label}</span>
+                            <span className={`rounded border px-2.5 py-1 text-2xs font-medium ${toneCls(es.tone)}`}>{es.label}</span>
                           )}
                         </td>
                         <td className="px-3 py-2">
@@ -318,7 +317,6 @@ export default function ParquePCs({
             </table>
           </div>
         )}
-      </Card>
     </div>
   );
 }

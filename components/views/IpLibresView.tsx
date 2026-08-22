@@ -68,15 +68,53 @@ export default function IpLibresView() {
 
   const libres = useMemo(() => items.filter((x) => !x.usada).length, [items]);
 
+  // Ocupación por red/VLAN — a diferencia de un /24 fijo, cada "red" del CSV
+  // puede tener cualquier cantidad de IPs, así que la barra representa las
+  // que hay realmente, no 254 casilleros fijos.
+  const porRed = useMemo(() => {
+    const m = new Map<string, IpEntry[]>();
+    for (const x of items) {
+      const k = x.red || "Sin red asignada";
+      m.set(k, [...(m.get(k) ?? []), x]);
+    }
+    return Array.from(m.entries()).map(([red, entradas]) => ({
+      red,
+      total: entradas.length,
+      libres: entradas.filter((e) => !e.usada).length,
+      entradas,
+    }));
+  }, [items]);
+
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-xl font-semibold text-ink">IPs libres</h1>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+        <h1 className="font-display text-[23px] font-semibold tracking-[-.02em] text-[#ece9e2]">IPs libres</h1>
+        <p className="mt-1 max-w-[640px] text-[12.5px] leading-[1.5] text-ink/55">
           Importá el CSV que genera el script de escaneo y tildá acá qué IP está en uso. La app no escanea nada:
           es solo el checklist para el rollout de IPs fijas.
         </p>
       </div>
+
+      {porRed.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 min-[1100px]:grid-cols-2">
+          {porRed.map((g) => (
+            <div key={g.red} className="rounded border border-ink/12 p-3.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="font-display text-[14px] font-semibold text-[#ece9e2]">{g.red}</p>
+                <span className="font-mono text-[11px] text-ink/40">{g.total} IPs</span>
+              </div>
+              <div className="mt-2.5 flex gap-[2px]">
+                {g.entradas.map((e) => (
+                  <span key={e.id} title={`${e.ip}${e.usada ? " · en uso" : " · libre"}`} className={`h-4 w-full rounded-[1px] ${e.usada ? "bg-ink/14" : "bg-action/55"}`} />
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] text-ink/50">
+                <span className="font-mono text-action">{g.libres}</span> libres de {g.total}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <ImportarCsv onImportado={(l, aviso) => { setItems(l); setMsg(aviso); }} />
 
@@ -110,60 +148,46 @@ export default function IpLibresView() {
       {estado === "loading" ? (
         <Card className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</Card>
       ) : estado === "error" ? (
-        <Card className="p-4 text-sm text-bad">No se pudo cargar la lista.</Card>
+        <p className="p-4 text-sm text-bad">No se pudo cargar la lista.</p>
       ) : filtradas.length === 0 ? (
         <EmptyState
           title={items.length ? "Sin resultados" : "Todavía no se importó ninguna IP"}
           desc={items.length ? "Probá con otro filtro o búsqueda." : "Importá el CSV del script de escaneo para arrancar."}
         />
       ) : (
-        <Card className="overflow-hidden">
-          <div className="max-h-[70vh] overflow-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-surface">
-                <tr className="border-b border-line text-2xs uppercase tracking-wide text-faint">
-                  <th className="px-4 py-2 font-medium">En uso</th>
-                  <th className="px-3 py-2 font-medium">IP</th>
-                  <th className="px-3 py-2 font-medium">Red</th>
-                  <th className="px-3 py-2 font-medium">Nota</th>
-                  <th className="px-3 py-2 font-medium">Vista</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtradas.map((x) => (
-                  <tr key={x.id} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.02]">
-                    <td className="px-4 py-2">
-                      <input
-                        type="checkbox"
-                        checked={x.usada}
-                        onChange={(e) => editar(x.id, { usada: e.target.checked })}
-                        className="h-4 w-4 accent-action"
-                        aria-label={`${x.ip} en uso`}
-                      />
-                    </td>
-                    <td className={`px-3 py-2 font-mono text-sm ${x.usada ? "text-muted" : "text-ink"}`}>{x.ip}</td>
-                    <td className="px-3 py-2 text-2xs text-muted">
-                      {x.red ? <span className="rounded-full border border-line bg-ink/5 px-2 py-0.5">{x.red}</span> : "—"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        defaultValue={x.nota ?? ""}
-                        placeholder="A quién se le asignó…"
-                        onBlur={(ev) => { const v = ev.target.value; if (v !== (x.nota ?? "")) editar(x.id, { nota: v }); }}
-                        className={`${inputClass} min-w-[180px] py-1 text-2xs`}
-                      />
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-2xs text-faint">{fecha(x.vistaEn)}</td>
-                    <td className="px-3 py-2 text-right">
-                      <button onClick={() => quitar(x)} className="text-2xs font-medium text-bad hover:underline">Quitar</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="max-h-[70vh] overflow-auto">
+          <div className="sticky top-0 z-10 grid grid-cols-[64px_130px_140px_1fr_140px_72px] gap-3 border-b border-action/28 bg-paper py-2 font-mono text-[9.5px] uppercase tracking-[.16em] text-ink/40">
+            <span>En uso</span>
+            <span>IP</span>
+            <span>Red</span>
+            <span>Nota</span>
+            <span>Vista</span>
+            <span></span>
           </div>
-        </Card>
+          {filtradas.map((x) => (
+            <div key={x.id} className="grid grid-cols-[64px_130px_140px_1fr_140px_72px] items-center gap-3 border-b border-ink/7 py-[9px] hover:bg-ink/[.035]">
+              <input
+                type="checkbox"
+                checked={x.usada}
+                onChange={(e) => editar(x.id, { usada: e.target.checked })}
+                className="h-4 w-4 accent-action"
+                aria-label={`${x.ip} en uso`}
+              />
+              <span className={`font-mono text-[12.5px] ${x.usada ? "text-ink/45" : "text-ink"}`}>{x.ip}</span>
+              <span className="text-[11.5px] text-ink/55">
+                {x.red ? <span className="rounded border border-ink/18 px-2 py-[2px]">{x.red}</span> : "—"}
+              </span>
+              <input
+                defaultValue={x.nota ?? ""}
+                placeholder="A quién se le asignó…"
+                onBlur={(ev) => { const v = ev.target.value; if (v !== (x.nota ?? "")) editar(x.id, { nota: v }); }}
+                className={`${inputClass} min-w-[140px] py-1 text-[11.5px]`}
+              />
+              <span className="whitespace-nowrap text-[11px] text-ink/40">{fecha(x.vistaEn)}</span>
+              <button onClick={() => quitar(x)} className="text-right text-[11px] font-medium text-bad hover:underline">Quitar</button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

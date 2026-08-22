@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button, Card, Field, Skeleton, inputClass } from "@/components/ui/primitives";
 import { ESTADOS_PC, FLAGS_PC, TIPOS_PC, estadoPC, flagPC, toneCls } from "@/lib/parque";
 import ParquePCs, { type EquipoPC } from "@/components/views/ParquePCs";
@@ -19,10 +20,12 @@ const EQUIPO_VACIO = {
 };
 
 export default function InventarioView() {
+  const params = useSearchParams();
   const [equipos, setEquipos] = useState<EquipoPC[]>([]);
   const [estado, setEstado] = useState<"loading" | "ok" | "error">("loading");
   const [rol, setRol] = useState("");
-  const [tab, setTab] = useState<Tab>("inventario");
+  // Soporta ?tab=compras (deep-link desde Guardia → "Altas de inventario por aprobar").
+  const [tab, setTab] = useState<Tab>((params.get("tab") as Tab) || "inventario");
   const [msg, setMsg] = useState("");
   const [alta, setAlta] = useState(false);
   const [nuevo, setNuevo] = useState(EQUIPO_VACIO);
@@ -127,20 +130,30 @@ export default function InventarioView() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Inventario · IT / Infraestructura</h1>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
-          El parque de computadoras por usuario y área, lo que está en proceso de compra y lo que falta reemplazar.
-        </p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-[23px] font-semibold tracking-[-.02em] text-[#ece9e2]">Inventario</h1>
+          <p className="mt-1 max-w-[640px] text-[12.5px] leading-[1.5] text-ink/55">
+            El parque de computadoras por usuario y área, lo que está en proceso de compra y lo que falta reemplazar.
+          </p>
+        </div>
+        {esAdmin && tab === "inventario" && (
+          <button
+            onClick={() => setAlta((v) => !v)}
+            className="shrink-0 rounded border border-action px-3.5 py-[7px] font-display text-[13px] font-semibold text-action transition-colors hover:bg-action/[.12]"
+          >
+            {alta ? "Cancelar" : "+ Alta de equipo"}
+          </button>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5 border-b border-ink/10 pb-3">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-full border px-3.5 py-1.5 text-2xs font-medium ${
-              tab === t.id ? "border-action bg-action/10 text-action" : "border-line bg-surface text-muted hover:text-ink"
+            className={`rounded border px-3.5 py-1.5 text-[12px] font-medium transition-colors ${
+              tab === t.id ? "border-action bg-action/10 text-action" : "border-ink/18 bg-transparent text-ink/60 hover:text-action"
             }`}
           >
             {t.label}
@@ -159,14 +172,9 @@ export default function InventarioView() {
         <Card className="p-4 text-sm text-bad">No se pudo cargar el parque de computadoras.</Card>
       ) : tab === "inventario" ? (
         <>
-          {esAdmin && (
+          {esAdmin && alta && (
             <Card className="p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-2xs font-medium uppercase tracking-wide text-faint">Agregar equipo a mano</p>
-                <button onClick={() => setAlta((v) => !v)} className="text-2xs font-medium text-action hover:underline">
-                  {alta ? "Cancelar" : "+ Agregar equipo"}
-                </button>
-              </div>
+              <p className="text-2xs font-medium uppercase tracking-wide text-faint">Agregar equipo a mano</p>
               {alta && (
                 <form onSubmit={agregar} className="mt-3 space-y-3">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
