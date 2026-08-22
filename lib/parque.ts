@@ -79,7 +79,16 @@ export interface SpecsPC {
   so?: string;
   hostname?: string;
   observaciones?: string;
+  tipo?: string;
 }
+
+/**
+ * Los umbrales de RAM/disco son para PUESTOS DE TRABAJO (Tango + navegador + Excel).
+ * En un celular o tablet, 8 GB de RAM o 128 GB de disco son normales: marcarlos como
+ * "RAM baja" sería información equivocada, así que esas alertas solo aplican a PCs.
+ */
+const esPuestoDeTrabajo = (tipo?: string) =>
+  !tipo || tipo === "PC Escritorio" || tipo === "Notebook";
 
 /** Las alertas que se muestran como chips. Se recalculan en cada lectura. */
 export function flagsDe(eq: SpecsPC): string[] {
@@ -88,8 +97,10 @@ export function flagsDe(eq: SpecsPC): string[] {
   const ram = gbRam(eq.ram || "");
   const disco = gbDisco(eq.almacenamiento || "");
   const f: string[] = [];
-  if (ram && ram <= RAM_BAJA) f.push("ram-baja");
-  if (disco && disco <= DISCO_CHICO) f.push("ssd-chico");
+  if (esPuestoDeTrabajo(eq.tipo)) {
+    if (ram && ram <= RAM_BAJA) f.push("ram-baja");
+    if (disco && disco <= DISCO_CHICO) f.push("ssd-chico");
+  }
   if (/cuenta local/.test(obs)) f.push("cuenta-local");
   if (/cuenta (microsoft )?personal|@gmail|@hotmail|cuenta personal/.test(obs)) f.push("cuenta-personal");
   if (/sin cuenta corporativa|crear cuenta corporativa|validar y crear cuenta/.test(obs)) f.push("sin-corporativa");

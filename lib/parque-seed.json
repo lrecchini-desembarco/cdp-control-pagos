@@ -529,5 +529,23 @@
     "correo": "",
     "estado": "disponible",
     "observaciones": "📱 Tablet 2 de 2 (unidades iguales) · Philco TP7A464 · S/N pendiente de relevar · Cámara trasera 5 MP · Ranura TF Card (microSD) · Puerto USB Type-C · Jack de auriculares · Alimentación 5 Vcc 1,5 A · Hecho en China · Certificación C-29670 · Incluye funda tipo folio negra · Falta completar CPU/RAM/almacenamiento reales al encenderla"
+  },
+  {
+    "id": "cel-edge60fusion",
+    "nro": 32,
+    "usuario": "",
+    "area": "Sistemas",
+    "tipo": "Celular",
+    "hostname": "",
+    "marca": "Motorola",
+    "modelo": "Edge 60 Fusion (XT2503-1)",
+    "cpu": "",
+    "ram": "8 GB",
+    "almacenamiento": "256 GB",
+    "gpu": "",
+    "so": "Android (versión a confirmar)",
+    "correo": "",
+    "estado": "disponible",
+    "observaciones": "📱 Sin asignar · Motorola Edge 60 Fusion · 8+256 GB · Doble SIM · Color PANTONE Amazonite (Verde) · Modelo XT2503-1 · P/N PB7D0018CR · IMEI1 354424866275872 · IMEI2 354424866275880 · MO# YDM185818OFP · FCC ID IHDT56AU7 · Fabricado semana 34/25 (2025-08-21), hecho en China · Batería de litio 5.100 mAh (no extraíble) · Cargador de viaje hasta 68 W (5V/3A · 9V/3A · 15V/3A · 20V/3,4A · 11V/6,2A) · Caja: teléfono + cargador + cable + herramienta SIM + cubierta protectora + manual · Falta confirmar el procesador al encenderlo"
   }
 ]
