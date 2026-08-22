@@ -22,6 +22,7 @@ export default function TicketsView() {
   const [msg, setMsg] = useState("");
   const [cargando, setCargando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  const [recategorizando, setRecategorizando] = useState(false);
   const [nuevaCategoria, setNuevaCategoria] = useState("");
 
   async function cargar() {
@@ -60,6 +61,23 @@ export default function TicketsView() {
       setMsg(err instanceof Error && err.message ? err.message : "No se pudo sincronizar con Trello.");
     } finally {
       setSincronizando(false);
+    }
+  }
+
+  async function recategorizarTrello() {
+    setMsg("");
+    setRecategorizando(true);
+    try {
+      const j = await (await fetch("/api/tickets/recategorizar-trello", { method: "POST" })).json();
+      if (!j.ok) throw new Error(j.error);
+      setTickets(j.items);
+      const partes = [`Se actualizaron ${j.actualizados} ticket${j.actualizados === 1 ? "" : "s"}.`];
+      if (j.sinCard > 0) partes.push(`${j.sinCard} card${j.sinCard === 1 ? "" : "s"} ya no existe${j.sinCard === 1 ? "" : "n"} en Trello.`);
+      setMsg(partes.join(" "));
+    } catch (err) {
+      setMsg(err instanceof Error && err.message ? err.message : "No se pudo recategorizar desde Trello.");
+    } finally {
+      setRecategorizando(false);
     }
   }
 
@@ -199,6 +217,15 @@ export default function TicketsView() {
           <span className="text-2xs text-faint">{filtrados.length} de {tickets.length}</span>
           <Button variant="outline" onClick={sincronizarTrello} disabled={sincronizando} className="px-2.5 py-1 text-2xs h-auto">
             {sincronizando ? "Sincronizando…" : "Sincronizar con Trello"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={recategorizarTrello}
+            disabled={recategorizando}
+            title="Vuelve a leer la columna actual de cada card ya importada y actualiza su categoría/estado"
+            className="px-2.5 py-1 text-2xs h-auto"
+          >
+            {recategorizando ? "Recategorizando…" : "Recategorizar desde Trello"}
           </Button>
           <Button variant="ghost" onClick={cargar} disabled={cargando} className="px-2 py-1 text-2xs h-auto">
             {cargando ? "..." : "↻"}

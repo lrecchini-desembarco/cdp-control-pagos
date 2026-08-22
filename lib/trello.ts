@@ -21,17 +21,39 @@ export interface TrelloCard {
   name: string;
   desc: string;
   shortUrl: string;
+  /** Columna donde está la card ahora — de acá sale el mapeo a categoría/estado del ticket. */
+  list?: { id: string; name: string };
 }
 
-/** Cards abiertas (no archivadas) del tablero configurado. */
+/** Cards abiertas (no archivadas) del tablero configurado, con su columna. */
 export async function listarCardsTablero(): Promise<TrelloCard[]> {
   const p = new URLSearchParams({
     key: apiKey(),
     token: token(),
     fields: "name,desc,shortLink,shortUrl",
     filter: "open",
+    list: "true",
   });
   const r = await fetch(`${API_BASE}/boards/${boardId()}/cards?${p}`);
+  if (!r.ok) throw new Error(`Trello ${r.status}: ${await r.text().catch(() => "")}`);
+  return r.json();
+}
+
+/**
+ * Una card puntual por id/shortLink, con su columna actual — sirve para
+ * recategorizar tickets ya importados aunque la card se haya movido a otro
+ * tablero (como pasa con "Pasar a Apps"), porque este endpoint no filtra por
+ * tablero. Devuelve null si la card ya no existe (se borró en Trello).
+ */
+export async function buscarCardPorId(cardId: string): Promise<TrelloCard | null> {
+  const p = new URLSearchParams({
+    key: apiKey(),
+    token: token(),
+    fields: "name,desc,shortLink,shortUrl",
+    list: "true",
+  });
+  const r = await fetch(`${API_BASE}/cards/${cardId}?${p}`);
+  if (r.status === 404) return null;
   if (!r.ok) throw new Error(`Trello ${r.status}: ${await r.text().catch(() => "")}`);
   return r.json();
 }

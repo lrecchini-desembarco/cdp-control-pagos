@@ -41,7 +41,54 @@ export const ESTADOS_TICKET: EstadoInfo[] = [
 export const estadoTicket = (id: string): EstadoInfo => ESTADOS_TICKET.find((e) => e.id === id) ?? ESTADOS_TICKET[0];
 
 /** Semilla inicial — el listado real es editable desde el panel (ver lib/tickets-store.ts getCategorias/setCategorias). */
-export const CATEGORIAS_TICKET = ["Hardware", "Software", "Red / IP / WiFi", "Accesos y contraseñas", "Otro"];
+export const CATEGORIAS_TICKET = [
+  "Hardware",
+  "Software",
+  "Red / IP / WiFi",
+  "Accesos y contraseñas",
+  "Apps",
+  "WhatsApp",
+  "Nuevas Aperturas",
+  "Duplicado",
+  "Google Workspace",
+  "Qlik",
+  "Tango",
+  "Ayres",
+  "Contabilidad",
+  "Otro",
+];
+
+/**
+ * Columna (lista) del tablero de Trello -> categoría del ticket. Refleja las
+ * automatizaciones ya armadas en Trello (ver docs/tickets-trello-import.md):
+ * varias columnas del mismo flujo (ej. "Qlik" y "En poder de Qlik") caen en
+ * la misma categoría porque son pasos del mismo trámite, no trámites distintos.
+ */
+export const TRELLO_LISTA_CATEGORIA: Record<string, string> = {
+  "Pasar a Apps": "Apps",
+  "Entrantes": "WhatsApp",
+  "Nuevas Aperturas": "Nuevas Aperturas",
+  "Tickets duplicados": "Duplicado",
+  "Google Workspace": "Google Workspace",
+  "Resetear clave": "Google Workspace",
+  "Contabilidad": "Contabilidad",
+  "Qlik": "Qlik",
+  "En poder de Qlik": "Qlik",
+  "Pasó a Mesa de Ayuda Ayres": "Ayres",
+  "Lo tomó Ayres": "Ayres",
+  "Pasó a Mesa de Ayuda Tango": "Tango",
+  "Lo tomó Tango": "Tango",
+};
+
+/**
+ * Columnas que además dicen algo del ESTADO del ticket (no solo la
+ * categoría): "Bloqueantes" es la columna de "se espera al usuario o hay un
+ * impedimento" y "Resuelto" cierra el ticket sin importar de qué categoría sea.
+ */
+export const TRELLO_LISTA_ESTADO: Record<string, EstadoTicket> = {
+  "Bloqueantes": "espera",
+  "Resuelto": "resuelto",
+};
 
 /** Mismos tonos que el resto de la app (ver toneCls en lib/parque.ts). */
 export const toneClsTicket = (t: string) =>

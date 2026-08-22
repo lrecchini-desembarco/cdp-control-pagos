@@ -10,10 +10,14 @@ cualquier otra vía) y nunca pasaron por ese flujo.
 
 ## Cómo importa
 
-- Trae **solo las cards abiertas** (no archivadas) del tablero.
-- Cada card entra como ticket **abierto**, categoría **"Otro"**, prioridad
-  **media** — sistemas la categoriza/prioriza a mano, como cualquier ticket
-  nuevo.
+- Trae **solo las cards abiertas** (no archivadas) del tablero, junto con la
+  columna (lista) donde está cada una.
+- La columna define categoría y, en algunos casos, estado — ver
+  `TRELLO_LISTA_CATEGORIA` / `TRELLO_LISTA_ESTADO` en `lib/tickets.ts` (por
+  ejemplo "Qlik" y "En poder de Qlik" → categoría `Qlik`; "Resuelto" → estado
+  `resuelto`). Si la columna no tiene mapeo, entra como categoría **"Otro"**,
+  estado **abierto**. Prioridad siempre entra **media** — eso sí lo pone
+  sistemas a mano.
 - `solicitante` queda como `"Trello"` (no hay un email real detrás de una
   card creada en el tablero).
 - No duplica: cada card tiene un `shortLink` único en Trello: si esa card ya
@@ -45,12 +49,36 @@ todavía" en vez de romper.
 
 ## Implementación
 - `lib/trello.ts` — `listarCardsTablero()` (GET `/1/boards/{id}/cards`, solo
-  lectura).
-- `lib/tickets-store.ts` `importarDesdeTrello()` — dedup y alta de tickets.
+  lectura, con `list=true` para traer la columna) y `buscarCardPorId()` (GET
+  `/1/cards/{id}`, una card puntual — no filtra por tablero, así que
+  funciona aunque la card ya se haya movido a otro).
+- `lib/tickets-store.ts` `importarDesdeTrello()` — dedup, alta de tickets y
+  mapeo columna→categoría/estado.
 - `app/api/tickets/importar-trello/route.ts` — el endpoint del botón (gate:
   acceso al Panel de Sistemas).
 - `components/views/TicketsView.tsx` — botón "Sincronizar con Trello" y el
   chip "Trello" en la fila de tickets que vinieron de ahí.
+
+## "Recategorizar desde Trello"
+
+Segundo botón, al lado del anterior. Para los tickets que **ya** son de
+Trello (no trae cards nuevas), vuelve a consultar en qué columna está cada
+card **hoy** y actualiza categoría/estado según el mismo mapeo — pensado
+para poner al día tickets que se importaron antes de que existiera el
+mapeo (por eso quedaron en "Otro"/"abierto" aunque en Trello ya estén, por
+ejemplo, resueltos).
+
+- `lib/tickets-store.ts` `recategorizarDesdeTrello()` — usa
+  `buscarCardPorId()` por cada ticket (no la lista del tablero), así
+  alcanza también a las cards que se movieron a otro tablero (ej. "Pasar a
+  Apps"). No pisa el estado de un ticket que sistemas ya cerró a mano
+  (`estado: "cerrado"`) — esa es la última palabra de sistemas.
+- Si una card ya no existe en Trello (se borró), se cuenta aparte
+  (`sinCard`) y el ticket no se toca.
+- `app/api/tickets/recategorizar-trello/route.ts` — el endpoint (mismo gate
+  que el de sincronizar).
+- Es manual, se corre cuando se necesite — no hay por qué dejarlo en un
+  cron.
 
 ## Categorías editables
 

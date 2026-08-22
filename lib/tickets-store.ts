@@ -1,7 +1,8 @@
 import { readStore, writeStore } from "./store";
-import { CATEGORIAS_TICKET } from "./tickets";
+import { CATEGORIAS_TICKET, TRELLO_LISTA_CATEGORIA, TRELLO_LISTA_ESTADO } from "./tickets";
 import type { Ticket, EstadoTicket, PrioridadTicket, Comentario } from "./tickets";
 import type { TrelloCard } from "./trello";
+import { buscarCardPorId } from "./trello";
 
 // Tickets a sistemas: CRUD simple persistido (KV en prod), mismo patrón que
 // credenciales/inventario. Cualquier cuenta logueada puede crear un ticket y
@@ -12,6 +13,14 @@ const KEY = "tickets";
 const KEY_CATEGORIAS = "tickets-categorias";
 
 const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/** Categoría que corresponde a esa columna de Trello, o undefined si no hay mapeo para ella. */
+const categoriaDesdeLista = (nombreLista?: string): string | undefined =>
+  TRELLO_LISTA_CATEGORIA[(nombreLista ?? "").trim()];
+
+/** Estado que corresponde a esa columna de Trello, o undefined si esa columna no dice nada del estado. */
+const estadoDesdeLista = (nombreLista?: string): EstadoTicket | undefined =>
+  TRELLO_LISTA_ESTADO[(nombreLista ?? "").trim()];
 
 const todos = async (): Promise<Ticket[]> => (await readStore<Ticket[] | null>(KEY, null)) ?? [];
 
@@ -49,7 +58,7 @@ export async function crearTicket(
     id: nuevoId(),
     nro,
     titulo,
-    categoria: input.categoria || "Otro",
+    categoria: input.categoria || (input.origen === "whatsapp" ? "WhatsApp" : "Otro"),
     prioridad: input.prioridad || "media",
     estado: "abierto",
     descripcion,
@@ -126,9 +135,10 @@ export const getTicket = async (id: string): Promise<Ticket | null> => (await to
 /**
  * Trae las cards del tablero que todavía no son un ticket (por trelloCardId,
  * chequeando también contra el trelloUrl viejo de los que vinieron por el
- * webhook de n8n antes de que existiera este campo). Entran como "abierto",
- * categoría "Otro" — sistemas las categoriza/prioriza a mano como cualquier
- * ticket nuevo.
+ * webhook de n8n antes de que existiera este campo). La categoría y el
+ * estado salen de en qué columna está la card (ver TRELLO_LISTA_CATEGORIA /
+ * TRELLO_LISTA_ESTADO en lib/tickets.ts); si la columna no tiene mapeo,
+ * entran como "Otro" / "abierto" y sistemas las clasifica a mano.
  */
 export async function importarDesdeTrello(cards: TrelloCard[]): Promise<{ items: Ticket[]; agregados: number }> {
   const lista = await todos();
@@ -145,9 +155,9 @@ export async function importarDesdeTrello(cards: TrelloCard[]): Promise<{ items:
       id: nuevoId(),
       nro,
       titulo: c.name || `Card ${c.shortLink}`,
-      categoria: "Otro",
+      categoria: categoriaDesdeLista(c.list?.name) ?? "Otro",
       prioridad: "media",
-      estado: "abierto",
+      estado: estadoDesdeLista(c.list?.name) ?? "abierto",
       descripcion: c.desc?.trim() || c.name || "(la card no tiene descripción en Trello)",
       solicitante: "Trello",
       comentarios: [],
@@ -164,6 +174,57 @@ export async function importarDesdeTrello(cards: TrelloCard[]): Promise<{ items:
 
 function extraerShortLink(url?: string): string | undefined {
   return url?.match(/trello\.com\/c\/([a-zA-Z0-9]+)/)?.[1];
+}
+
+/**
+ * Backfill único: recorre los tickets ya importados de Trello y les
+ * actualiza categoría/estado según la columna en la que está la card HOY.
+ * Sirve para los que quedaron con categoría "Otro" (se importaron antes de
+ * que existiera este mapeo) o que en Trello ya están resueltos/bloqueados
+ * pero acá seguían marcados como abiertos.
+ *
+ * Usa buscarCardPorId (no la lista del tablero) porque funciona aunque la
+ * card ya se haya movido a otro tablero — pasa con "Pasar a Apps". No pisa
+ * el estado de un ticket que sistemas ya cerró a mano ("cerrado"): esa es la
+ * última palabra de sistemas, no algo que la sync deba revertir.
+ */
+export async function recategorizarDesdeTrello(): Promise<{ items: Ticket[]; actualizados: number; sinCard: number }> {
+  // Si el panel ya tenía su propia lista de categorías guardada en KV (de antes de
+  // este mapeo), asegurarse de que las categorías nuevas existan igual.
+  const categoriasActuales = await getCategorias();
+  const faltantes = CATEGORIAS_TICKET.filter((c) => !categoriasActuales.includes(c));
+  if (faltantes.length) await setCategorias([...categoriasActuales, ...faltantes]);
+
+  const lista = await todos();
+  let actualizados = 0;
+  let sinCard = 0;
+  const ahora = new Date().toISOString();
+  for (const t of lista) {
+    if (t.origen !== "trello" || !t.trelloCardId) continue;
+    const card = await buscarCardPorId(t.trelloCardId).catch(() => undefined);
+    if (card === undefined) continue; // error de red/API — no tocar el ticket
+    if (card === null) {
+      sinCard += 1;
+      continue;
+    }
+    const nuevaCategoria = categoriaDesdeLista(card.list?.name);
+    const nuevoEstado = estadoDesdeLista(card.list?.name);
+    let cambio = false;
+    if (nuevaCategoria && nuevaCategoria !== t.categoria) {
+      t.categoria = nuevaCategoria;
+      cambio = true;
+    }
+    if (nuevoEstado && nuevoEstado !== t.estado && t.estado !== "cerrado") {
+      t.estado = nuevoEstado;
+      cambio = true;
+    }
+    if (cambio) {
+      t.actualizado = ahora;
+      actualizados += 1;
+    }
+  }
+  if (actualizados) await writeStore(KEY, lista);
+  return { items: await getTickets(), actualizados, sinCard };
 }
 
 /** Categorías disponibles al abrir/clasificar un ticket. Editable desde el panel. */
